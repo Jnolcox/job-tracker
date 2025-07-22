@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { jobApplicationsAPI } from '../services/api';
+import { APPLICATION_STATUS, STATUS_CONFIG, ERROR_MESSAGES } from '../constants';
 
 const Dashboard = () => {
   const [applications, setApplications] = useState([]);
@@ -29,19 +30,19 @@ const Dashboard = () => {
       
       // Calculate statistics
       const total = applicationsData.length;
-      const applied = applicationsData.filter(app => app.status === 'APPLIED').length;
+      const applied = applicationsData.filter(app => app.status === APPLICATION_STATUS.APPLIED).length;
       const interviewed = applicationsData.filter(app => 
-        app.status === 'INTERVIEWED' || app.status === 'INTERVIEW_SCHEDULED'
+        app.status === APPLICATION_STATUS.INTERVIEWED || app.status === APPLICATION_STATUS.INTERVIEW_SCHEDULED
       ).length;
-      const offers = applicationsData.filter(app => app.status === 'OFFER_RECEIVED').length;
+      const offers = applicationsData.filter(app => app.status === APPLICATION_STATUS.OFFER_RECEIVED).length;
       const rejected = applicationsData.filter(app => 
-        app.status === 'REJECTED' || app.status === 'WITHDRAWN'
+        app.status === APPLICATION_STATUS.REJECTED || app.status === APPLICATION_STATUS.WITHDRAWN
       ).length;
       
       setStats({ total, applied, interviewed, offers, rejected });
       setError('');
     } catch (err) {
-      setError('Failed to fetch job applications');
+      setError(ERROR_MESSAGES.SERVER_ERROR);
       console.error('Error fetching applications:', err);
     } finally {
       setLoading(false);
@@ -54,21 +55,14 @@ const Dashboard = () => {
         await jobApplicationsAPI.delete(id);
         setApplications(applications.filter(app => app.id !== id));
       } catch (err) {
-        setError('Failed to delete application');
+        setError(ERROR_MESSAGES.SERVER_ERROR);
       }
     }
   };
 
   const getStatusClass = (status) => {
-    const statusMap = {
-      APPLIED: 'status-applied',
-      INTERVIEWED: 'status-interviewed',
-      INTERVIEW_SCHEDULED: 'status-interviewed',
-      OFFER_RECEIVED: 'status-offer',
-      REJECTED: 'status-rejected',
-      WITHDRAWN: 'status-rejected'
-    };
-    return `status ${statusMap[status] || 'status-applied'}`;
+    const config = STATUS_CONFIG[status];
+    return `status ${config?.className || 'status-applied'}`;
   };
 
   const formatDate = (dateString) => {
@@ -196,7 +190,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <span className={getStatusClass(app.status)} style={{ marginBottom: '1rem' }}>
-                    {app.status.replace(/_/g, ' ')}
+                    {STATUS_CONFIG[app.status]?.label || app.status}
                   </span>
                 </div>
               </div>

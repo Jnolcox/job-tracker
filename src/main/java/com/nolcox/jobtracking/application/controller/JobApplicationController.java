@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
+import static com.nolcox.jobtracking.common.constants.ApiConstants.JOB_APPLICATIONS_BASE_PATH;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
@@ -21,7 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/v1/job-applications")
+@RequestMapping(JOB_APPLICATIONS_BASE_PATH)
 @RequiredArgsConstructor
 @Tag(name = "Job Application", description = "Job application management endpoints")
 public class JobApplicationController {

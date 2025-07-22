@@ -36,3 +36,12 @@ build/
 
 ### Mac OS ###
 .DS_Store
+/.idea/aws.xml
+/.idea/.gitignore
+/backend.log
+/CLAUDE.md
+/.idea/encodings.xml
+/.idea/material_theme_project_new.xml
+/.idea/misc.xml
+/.idea/dictionaries/project.xml
+/.idea/vcs.xml
