@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  
+  h2:
+    console:
+      enabled: false
+
+app:
+  jwt:
+    secret: testSecretKeyForJWTTokenGenerationWhichShouldBeAtLeast256Bits
+    expiration: 86400000
+
+logging:
+  level:
+    com.nolcox.jobtracking: DEBUG
+    org.springframework.security: DEBUG

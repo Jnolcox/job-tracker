@@ -1,0 +1,546 @@
+package com.nolcox.jobtracking.integration;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.domain.repository.UserRepository;
+import com.nolcox.jobtracking.infrastructure.security.JwtService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * Integration tests for Job Application functionality.
+ * Tests the complete CRUD operations with database interactions,
+ * security integration, and business rules validation.
+ */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class JobApplicationIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JobApplicationRepository jobApplicationRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
+    private User testUser;
+    private User otherUser;
+    private String userToken;
+    private String otherUserToken;
+
+    private final String TEST_COMPANY = "Tech Corp";
+    private final String TEST_POSITION = "Software Engineer";
+    private final String TEST_DESCRIPTION = "Exciting opportunity to work with cutting-edge technology";
+    private final BigDecimal TEST_SALARY = new BigDecimal("75000.00");
+
+    @BeforeEach
+    void setUp() {
+        // Clean up database
+        jobApplicationRepository.deleteAll();
+        userRepository.deleteAll();
+
+        // Create test users
+        testUser = User.builder()
+                .email("test@example.com")
+                .password(passwordEncoder.encode("password123"))
+                .firstName("Test")
+                .lastName("User")
+                .role(Role.USER)
+                .enabled(true)
+                .build();
+        testUser = userRepository.save(testUser);
+
+        otherUser = User.builder()
+                .email("other@example.com")
+                .password(passwordEncoder.encode("password123"))
+                .firstName("Other")
+                .lastName("User")
+                .role(Role.USER)
+                .enabled(true)
+                .build();
+        otherUser = userRepository.save(otherUser);
+
+        // Generate JWT tokens
+        userToken = jwtService.generateToken(testUser);
+        otherUserToken = jwtService.generateToken(otherUser);
+    }
+
+    @Test
+    @DisplayName("Should create job application successfully")
+    void shouldCreateJobApplicationSuccessfully() throws Exception {
+        // Given
+        JobApplicationCreateRequest request = new JobApplicationCreateRequest(
+                TEST_COMPANY,
+                TEST_POSITION,
+                TEST_DESCRIPTION,
+                "https://example.com/job",
+                TEST_SALARY,
+                "Looks like a great opportunity",
+                "Jane Smith",
+                "jane.smith@techcorp.com",
+                "+1-555-0123"
+        );
+
+        // When
+        MvcResult result = mockMvc.perform(post("/api/v1/applications")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.companyName").value(TEST_COMPANY))
+                .andExpect(jsonPath("$.positionTitle").value(TEST_POSITION))
+                .andExpect(jsonPath("$.jobDescription").value(TEST_DESCRIPTION))
+                .andExpect(jsonPath("$.status").value("APPLIED"))
+                .andExpect(jsonPath("$.salaryExpectation").value(TEST_SALARY))
+                .andExpect(jsonPath("$.appliedDate").exists())
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andReturn();
+
+        // Then
+        String responseBody = result.getResponse().getContentAsString();
+        JobApplicationResponse response = objectMapper.readValue(responseBody, JobApplicationResponse.class);
+
+        // Verify in database
+        JobApplication savedApplication = jobApplicationRepository.findById(response.id()).orElse(null);
+        assertThat(savedApplication).isNotNull();
+        assertThat(savedApplication.getCompanyName()).isEqualTo(TEST_COMPANY);
+        assertThat(savedApplication.getPositionTitle()).isEqualTo(TEST_POSITION);
+        assertThat(savedApplication.getUser().getId()).isEqualTo(testUser.getId());
+        assertThat(savedApplication.getStatus()).isEqualTo(ApplicationStatus.APPLIED);
+    }
+
+    @Test
+    @DisplayName("Should fail to create job application with invalid data")
+    void shouldFailToCreateJobApplicationWithInvalidData() throws Exception {
+        // Given - Missing required fields
+        JobApplicationCreateRequest request = new JobApplicationCreateRequest(
+                "", // Empty company name
+                "", // Empty position title
+                TEST_DESCRIPTION,
+                "https://example.com/job",
+                TEST_SALARY,
+                "Notes",
+                "Jane Smith",
+                "invalid-email", // Invalid email format
+                "+1-555-0123"
+        );
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/applications")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors").exists());
+    }
+
+    @Test
+    @DisplayName("Should get all job applications for authenticated user")
+    void shouldGetAllJobApplicationsForUser() throws Exception {
+        // Given - Create test applications for both users
+        JobApplication app1 = createJobApplication(testUser, "Company A", "Role A");
+        JobApplication app2 = createJobApplication(testUser, "Company B", "Role B");
+        JobApplication otherApp = createJobApplication(otherUser, "Company C", "Role C");
+
+        // When
+        mockMvc.perform(get("/api/v1/applications")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].companyName").value("Company A"))
+                .andExpect(jsonPath("$.content[1].companyName").value("Company B"));
+
+        // Verify other user's application is not included
+        MvcResult result = mockMvc.perform(get("/api/v1/applications")
+                        .header("Authorization", "Bearer " + userToken))
+                .andReturn();
+
+        String responseBody = result.getResponse().getContentAsString();
+        assertThat(responseBody).doesNotContain("Company C");
+    }
+
+    @Test
+    @DisplayName("Should filter job applications by status")
+    void shouldFilterJobApplicationsByStatus() throws Exception {
+        // Given
+        JobApplication appliedApp = createJobApplication(testUser, "Company A", "Role A");
+        appliedApp.setStatus(ApplicationStatus.APPLIED);
+        jobApplicationRepository.save(appliedApp);
+
+        JobApplication interviewApp = createJobApplication(testUser, "Company B", "Role B");
+        interviewApp.setStatus(ApplicationStatus.INTERVIEW_SCHEDULED);
+        jobApplicationRepository.save(interviewApp);
+
+        // When - Filter by APPLIED status
+        mockMvc.perform(get("/api/v1/applications")
+                        .param("status", "APPLIED")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("APPLIED"))
+                .andExpect(jsonPath("$.content[0].companyName").value("Company A"));
+    }
+
+    @Test
+    @DisplayName("Should filter job applications by company name")
+    void shouldFilterJobApplicationsByCompanyName() throws Exception {
+        // Given
+        createJobApplication(testUser, "Tech Corp", "Developer");
+        createJobApplication(testUser, "Other Corp", "Engineer");
+
+        // When - Filter by company name
+        mockMvc.perform(get("/api/v1/applications")
+                        .param("companyName", "Tech Corp")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].companyName").value("Tech Corp"));
+    }
+
+    @Test
+    @DisplayName("Should get specific job application by ID")
+    void shouldGetJobApplicationById() throws Exception {
+        // Given
+        JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
+
+        // When
+        mockMvc.perform(get("/api/v1/applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(application.getId()))
+                .andExpect(jsonPath("$.companyName").value(TEST_COMPANY))
+                .andExpect(jsonPath("$.positionTitle").value(TEST_POSITION));
+    }
+
+    @Test
+    @DisplayName("Should fail to get another user's job application")
+    void shouldFailToGetOtherUsersJobApplication() throws Exception {
+        // Given - Create application for other user
+        JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
+
+        // When - Try to access with different user's token
+        mockMvc.perform(get("/api/v1/applications/{id}", otherApplication.getId())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should update job application successfully")
+    void shouldUpdateJobApplicationSuccessfully() throws Exception {
+        // Given
+        JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
+        
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                "Updated Company",
+                "Updated Position",
+                "Updated description",
+                ApplicationStatus.INTERVIEW_SCHEDULED,
+                LocalDateTime.now().plusDays(3),
+                new BigDecimal("80000.00"),
+                "Updated notes",
+                "John Doe",
+                "john.doe@updated.com",
+                "+1-555-9999"
+        );
+
+        // When
+        mockMvc.perform(put("/api/v1/applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value("Updated Company"))
+                .andExpect(jsonPath("$.positionTitle").value("Updated Position"))
+                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"))
+                .andExpect(jsonPath("$.salaryExpectation").value(80000.00));
+
+        // Verify in database
+        JobApplication updatedApplication = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedApplication).isNotNull();
+        assertThat(updatedApplication.getCompanyName()).isEqualTo("Updated Company");
+        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+    }
+
+    @Test
+    @DisplayName("Should fail to update another user's job application")
+    void shouldFailToUpdateOtherUsersJobApplication() throws Exception {
+        // Given - Create application for other user
+        JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
+        
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                "Hacked Company",
+                "Hacked Position",
+                "Should not work",
+                ApplicationStatus.REJECTED,
+                null,
+                new BigDecimal("1000000.00"),
+                "Hacking attempt",
+                "Hacker",
+                "hacker@evil.com",
+                "+1-555-HACK"
+        );
+
+        // When - Try to update with different user's token
+        mockMvc.perform(put("/api/v1/applications/{id}", otherApplication.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound());
+
+        // Verify original data is unchanged
+        JobApplication unchanged = jobApplicationRepository.findById(otherApplication.getId()).orElse(null);
+        assertThat(unchanged).isNotNull();
+        assertThat(unchanged.getCompanyName()).isEqualTo(TEST_COMPANY);
+        assertThat(unchanged.getPositionTitle()).isEqualTo(TEST_POSITION);
+    }
+
+    @Test
+    @DisplayName("Should delete job application successfully")
+    void shouldDeleteJobApplicationSuccessfully() throws Exception {
+        // Given
+        JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
+        Long applicationId = application.getId();
+
+        // When
+        mockMvc.perform(delete("/api/v1/applications/{id}", applicationId)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNoContent());
+
+        // Then - Verify deletion
+        assertThat(jobApplicationRepository.findById(applicationId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should fail to delete another user's job application")
+    void shouldFailToDeleteOtherUsersJobApplication() throws Exception {
+        // Given - Create application for other user
+        JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
+        Long applicationId = otherApplication.getId();
+
+        // When - Try to delete with different user's token
+        mockMvc.perform(delete("/api/v1/applications/{id}", applicationId)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNotFound());
+
+        // Then - Verify application still exists
+        assertThat(jobApplicationRepository.findById(applicationId)).isPresent();
+    }
+
+    @Test
+    @DisplayName("Should handle non-existent job application gracefully")
+    void shouldHandleNonExistentJobApplication() throws Exception {
+        // Given
+        Long nonExistentId = 99999L;
+
+        // When & Then - GET
+        mockMvc.perform(get("/api/v1/applications/{id}", nonExistentId)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNotFound());
+
+        // When & Then - PUT
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                "Company", "Position", "Description", ApplicationStatus.APPLIED,
+                null, null, null, null, null, null
+        );
+
+        mockMvc.perform(put("/api/v1/applications/{id}", nonExistentId)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound());
+
+        // When & Then - DELETE
+        mockMvc.perform(delete("/api/v1/applications/{id}", nonExistentId)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should require authentication for all endpoints")
+    void shouldRequireAuthentication() throws Exception {
+        // Given
+        JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
+        
+        JobApplicationCreateRequest createRequest = new JobApplicationCreateRequest(
+                "Company", "Position", "Description", null, null, null, null, null, null
+        );
+
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                "Company", "Position", "Description", ApplicationStatus.APPLIED,
+                null, null, null, null, null, null
+        );
+
+        // When & Then - All endpoints should require authentication
+        mockMvc.perform(get("/api/v1/applications"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/applications/{id}", application.getId()))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(put("/api/v1/applications/{id}", application.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(delete("/api/v1/applications/{id}", application.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Should support pagination")
+    void shouldSupportPagination() throws Exception {
+        // Given - Create multiple applications
+        for (int i = 1; i <= 5; i++) {
+            createJobApplication(testUser, "Company " + i, "Position " + i);
+        }
+
+        // When - Request with pagination
+        mockMvc.perform(get("/api/v1/applications")
+                        .param("page", "0")
+                        .param("size", "2")
+                        .param("sort", "companyName,asc")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(2));
+    }
+
+    @Test
+    @DisplayName("Should complete full CRUD lifecycle")
+    void shouldCompleteFullCrudLifecycle() throws Exception {
+        // Step 1: Create application
+        JobApplicationCreateRequest createRequest = new JobApplicationCreateRequest(
+                TEST_COMPANY,
+                TEST_POSITION,
+                TEST_DESCRIPTION,
+                "https://example.com/job",
+                TEST_SALARY,
+                "Initial notes",
+                "Jane Smith",
+                "jane@example.com",
+                "+1-555-0123"
+        );
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/applications")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JobApplicationResponse created = objectMapper.readValue(
+                createResult.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // Step 2: Read the created application
+        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value(TEST_COMPANY));
+
+        // Step 3: Update the application
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                TEST_COMPANY,
+                TEST_POSITION,
+                TEST_DESCRIPTION,
+                ApplicationStatus.INTERVIEW_SCHEDULED,
+                LocalDateTime.now().plusDays(2),
+                TEST_SALARY,
+                "Updated after interview scheduled",
+                "Jane Smith",
+                "jane@example.com",
+                "+1-555-0123"
+        );
+
+        mockMvc.perform(put("/api/v1/applications/{id}", created.id())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
+
+        // Step 4: Verify the update
+        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
+
+        // Step 5: Delete the application
+        mockMvc.perform(delete("/api/v1/applications/{id}", created.id())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNoContent());
+
+        // Step 6: Verify deletion
+        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isNotFound());
+    }
+
+    // Helper method to create job applications
+    private JobApplication createJobApplication(User user, String companyName, String positionTitle) {
+        JobApplication application = JobApplication.builder()
+                .user(user)
+                .companyName(companyName)
+                .positionTitle(positionTitle)
+                .jobDescription("Test job description")
+                .status(ApplicationStatus.APPLIED)
+                .appliedDate(LocalDateTime.now())
+                .salaryExpectation(TEST_SALARY)
+                .notes("Test notes")
+                .build();
+        return jobApplicationRepository.save(application);
+    }
+}
