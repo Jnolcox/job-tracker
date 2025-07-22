@@ -74,7 +74,7 @@ class AuthIntegrationTest {
         );
 
         // When
-        MvcResult result = mockMvc.perform(post("/api/auth/register")
+        MvcResult result = mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk())
@@ -117,7 +117,7 @@ class AuthIntegrationTest {
         );
 
         // When & Then
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest())
@@ -136,7 +136,7 @@ class AuthIntegrationTest {
         );
 
         // When & Then
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest())
@@ -165,7 +165,7 @@ class AuthIntegrationTest {
         );
 
         // When & Then
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isBadRequest());
@@ -188,7 +188,7 @@ class AuthIntegrationTest {
         AuthRequest authRequest = new AuthRequest(TEST_EMAIL, TEST_PASSWORD);
 
         // When
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authRequest)))
                 .andExpect(status().isOk())
@@ -226,7 +226,7 @@ class AuthIntegrationTest {
         AuthRequest authRequest = new AuthRequest(TEST_EMAIL, "wrongpassword");
 
         // When & Then
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authRequest)))
                 .andExpect(status().isUnauthorized());
@@ -239,7 +239,7 @@ class AuthIntegrationTest {
         AuthRequest authRequest = new AuthRequest("nonexistent@example.com", TEST_PASSWORD);
 
         // When & Then
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authRequest)))
                 .andExpect(status().isUnauthorized());
@@ -262,7 +262,7 @@ class AuthIntegrationTest {
         String token = jwtService.generateToken(savedUser);
 
         // When & Then
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
@@ -272,7 +272,7 @@ class AuthIntegrationTest {
     @DisplayName("Should deny access to protected endpoint without token")
     void shouldDenyAccessWithoutToken() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/v1/applications"))
+        mockMvc.perform(get("/v1/job-applications"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -280,7 +280,7 @@ class AuthIntegrationTest {
     @DisplayName("Should deny access to protected endpoint with invalid token")
     void shouldDenyAccessWithInvalidToken() throws Exception {
         // When & Then
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized());
     }
@@ -306,7 +306,7 @@ class AuthIntegrationTest {
         String invalidToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid.signature";
 
         // When & Then
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + invalidToken))
                 .andExpect(status().isUnauthorized());
     }
@@ -322,7 +322,7 @@ class AuthIntegrationTest {
                 TEST_PASSWORD
         );
 
-        MvcResult registerResult = mockMvc.perform(post("/api/auth/register")
+        MvcResult registerResult = mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk())
@@ -334,14 +334,14 @@ class AuthIntegrationTest {
         );
 
         // Step 2: Use registration token to access protected resource
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + registerResponse.token()))
                 .andExpect(status().isOk());
 
         // Step 3: Login with same credentials
         AuthRequest authRequest = new AuthRequest(TEST_EMAIL, TEST_PASSWORD);
 
-        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+        MvcResult loginResult = mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(authRequest)))
                 .andExpect(status().isOk())
@@ -353,7 +353,7 @@ class AuthIntegrationTest {
         );
 
         // Step 4: Use login token to access protected resource
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + loginResponse.token()))
                 .andExpect(status().isOk());
 

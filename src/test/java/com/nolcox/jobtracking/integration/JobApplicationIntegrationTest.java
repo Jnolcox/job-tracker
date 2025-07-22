@@ -121,7 +121,7 @@ class JobApplicationIntegrationTest {
         );
 
         // When
-        MvcResult result = mockMvc.perform(post("/api/v1/applications")
+        MvcResult result = mockMvc.perform(post("/v1/job-applications")
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -168,7 +168,7 @@ class JobApplicationIntegrationTest {
         );
 
         // When & Then
-        mockMvc.perform(post("/api/v1/applications")
+        mockMvc.perform(post("/v1/job-applications")
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -185,7 +185,7 @@ class JobApplicationIntegrationTest {
         JobApplication otherApp = createJobApplication(otherUser, "Company C", "Role C");
 
         // When
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -195,7 +195,7 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.content[1].companyName").value("Company B"));
 
         // Verify other user's application is not included
-        MvcResult result = mockMvc.perform(get("/api/v1/applications")
+        MvcResult result = mockMvc.perform(get("/v1/job-applications")
                         .header("Authorization", "Bearer " + userToken))
                 .andReturn();
 
@@ -216,7 +216,7 @@ class JobApplicationIntegrationTest {
         jobApplicationRepository.save(interviewApp);
 
         // When - Filter by APPLIED status
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .param("status", "APPLIED")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
@@ -233,7 +233,7 @@ class JobApplicationIntegrationTest {
         createJobApplication(testUser, "Other Corp", "Engineer");
 
         // When - Filter by company name
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .param("companyName", "Tech Corp")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
@@ -248,7 +248,7 @@ class JobApplicationIntegrationTest {
         JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
 
         // When
-        mockMvc.perform(get("/api/v1/applications/{id}", application.getId())
+        mockMvc.perform(get("/v1/job-applications/{id}", application.getId())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(application.getId()))
@@ -263,7 +263,7 @@ class JobApplicationIntegrationTest {
         JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
 
         // When - Try to access with different user's token
-        mockMvc.perform(get("/api/v1/applications/{id}", otherApplication.getId())
+        mockMvc.perform(get("/v1/job-applications/{id}", otherApplication.getId())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
     }
@@ -288,7 +288,7 @@ class JobApplicationIntegrationTest {
         );
 
         // When
-        mockMvc.perform(put("/api/v1/applications/{id}", application.getId())
+        mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -325,7 +325,7 @@ class JobApplicationIntegrationTest {
         );
 
         // When - Try to update with different user's token
-        mockMvc.perform(put("/api/v1/applications/{id}", otherApplication.getId())
+        mockMvc.perform(put("/v1/job-applications/{id}", otherApplication.getId())
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -346,7 +346,7 @@ class JobApplicationIntegrationTest {
         Long applicationId = application.getId();
 
         // When
-        mockMvc.perform(delete("/api/v1/applications/{id}", applicationId)
+        mockMvc.perform(delete("/v1/job-applications/{id}", applicationId)
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNoContent());
 
@@ -362,7 +362,7 @@ class JobApplicationIntegrationTest {
         Long applicationId = otherApplication.getId();
 
         // When - Try to delete with different user's token
-        mockMvc.perform(delete("/api/v1/applications/{id}", applicationId)
+        mockMvc.perform(delete("/v1/job-applications/{id}", applicationId)
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
 
@@ -377,7 +377,7 @@ class JobApplicationIntegrationTest {
         Long nonExistentId = 99999L;
 
         // When & Then - GET
-        mockMvc.perform(get("/api/v1/applications/{id}", nonExistentId)
+        mockMvc.perform(get("/v1/job-applications/{id}", nonExistentId)
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
 
@@ -387,14 +387,14 @@ class JobApplicationIntegrationTest {
                 null, null, null, null, null, null
         );
 
-        mockMvc.perform(put("/api/v1/applications/{id}", nonExistentId)
+        mockMvc.perform(put("/v1/job-applications/{id}", nonExistentId)
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isNotFound());
 
         // When & Then - DELETE
-        mockMvc.perform(delete("/api/v1/applications/{id}", nonExistentId)
+        mockMvc.perform(delete("/v1/job-applications/{id}", nonExistentId)
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
     }
@@ -415,18 +415,18 @@ class JobApplicationIntegrationTest {
         );
 
         // When & Then - All endpoints should require authentication
-        mockMvc.perform(get("/api/v1/applications"))
+        mockMvc.perform(get("/v1/job-applications"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/api/v1/applications/{id}", application.getId()))
+        mockMvc.perform(get("/v1/job-applications/{id}", application.getId()))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(post("/api/v1/applications")
+        mockMvc.perform(post("/v1/job-applications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(put("/api/v1/applications/{id}", application.getId())
+        mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isUnauthorized());
@@ -444,7 +444,7 @@ class JobApplicationIntegrationTest {
         }
 
         // When - Request with pagination
-        mockMvc.perform(get("/api/v1/applications")
+        mockMvc.perform(get("/v1/job-applications")
                         .param("page", "0")
                         .param("size", "2")
                         .param("sort", "companyName,asc")
@@ -473,7 +473,7 @@ class JobApplicationIntegrationTest {
                 "+1-555-0123"
         );
 
-        MvcResult createResult = mockMvc.perform(post("/api/v1/applications")
+        MvcResult createResult = mockMvc.perform(post("/v1/job-applications")
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -486,7 +486,7 @@ class JobApplicationIntegrationTest {
         );
 
         // Step 2: Read the created application
-        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+        mockMvc.perform(get("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyName").value(TEST_COMPANY));
@@ -505,7 +505,7 @@ class JobApplicationIntegrationTest {
                 "+1-555-0123"
         );
 
-        mockMvc.perform(put("/api/v1/applications/{id}", created.id())
+        mockMvc.perform(put("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -513,18 +513,18 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
 
         // Step 4: Verify the update
-        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+        mockMvc.perform(get("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
 
         // Step 5: Delete the application
-        mockMvc.perform(delete("/api/v1/applications/{id}", created.id())
+        mockMvc.perform(delete("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNoContent());
 
         // Step 6: Verify deletion
-        mockMvc.perform(get("/api/v1/applications/{id}", created.id())
+        mockMvc.perform(get("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
     }

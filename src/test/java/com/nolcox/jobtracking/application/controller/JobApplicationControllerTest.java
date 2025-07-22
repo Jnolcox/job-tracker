@@ -81,7 +81,7 @@ class JobApplicationControllerTest {
                     .thenReturn(page);
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications")
+            mockMvc.perform(get("/v1/job-applications")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -115,7 +115,7 @@ class JobApplicationControllerTest {
                     .thenReturn(page);
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications")
+            mockMvc.perform(get("/v1/job-applications")
                             .param("status", "INTERVIEW_SCHEDULED")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isOk())
@@ -144,7 +144,7 @@ class JobApplicationControllerTest {
                     .thenReturn(page);
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications")
+            mockMvc.perform(get("/v1/job-applications")
                             .param("companyName", "Specific Company")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isOk())
@@ -169,7 +169,7 @@ class JobApplicationControllerTest {
                     .thenReturn(page);
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications")
+            mockMvc.perform(get("/v1/job-applications")
                             .param("page", "1")
                             .param("size", "5")
                             .with(authentication(mockAuthentication)))
@@ -183,7 +183,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void shouldReturn401WhenNotAuthenticated() throws Exception {
             // When & Then
-            mockMvc.perform(get("/api/v1/applications"))
+            mockMvc.perform(get("/v1/job-applications"))
                     .andExpect(status().isUnauthorized());
         }
     }
@@ -201,7 +201,7 @@ class JobApplicationControllerTest {
             when(applicationService.getApplication(1L, 1L)).thenReturn(app);
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications/1")
+            mockMvc.perform(get("/v1/job-applications/1")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -219,7 +219,7 @@ class JobApplicationControllerTest {
                     .thenThrow(new BusinessException("Application not found"));
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications/999")
+            mockMvc.perform(get("/v1/job-applications/999")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isNotFound())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -235,7 +235,7 @@ class JobApplicationControllerTest {
                     .thenThrow(new BusinessException("Access denied"));
 
             // When & Then
-            mockMvc.perform(get("/api/v1/applications/1")
+            mockMvc.perform(get("/v1/job-applications/1")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isForbidden())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -246,7 +246,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void shouldReturn401WhenNotAuthenticated() throws Exception {
             // When & Then
-            mockMvc.perform(get("/api/v1/applications/1"))
+            mockMvc.perform(get("/v1/job-applications/1"))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -255,7 +255,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 400 when ID is invalid")
         void shouldReturn400WhenIdIsInvalid() throws Exception {
             // When & Then
-            mockMvc.perform(get("/api/v1/applications/invalid")
+            mockMvc.perform(get("/v1/job-applications/invalid")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isBadRequest());
         }
@@ -278,13 +278,13 @@ class JobApplicationControllerTest {
                     .thenReturn(response);
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isCreated())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/api/v1/applications/1")))
+                    .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/v1/job-applications/1")))
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.companyName").value("Test Company"))
                     .andExpect(jsonPath("$.positionTitle").value("Software Engineer"));
@@ -300,7 +300,7 @@ class JobApplicationControllerTest {
                     .buildCreateRequest();
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -320,7 +320,7 @@ class JobApplicationControllerTest {
                     .buildCreateRequest();
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -340,7 +340,7 @@ class JobApplicationControllerTest {
                     .buildCreateRequest();
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -370,7 +370,7 @@ class JobApplicationControllerTest {
                     .thenReturn(response);
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -386,7 +386,7 @@ class JobApplicationControllerTest {
                     .buildCreateRequest();
 
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized());
@@ -397,7 +397,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 400 when request body is empty")
         void shouldReturn400WhenRequestBodyIsEmpty() throws Exception {
             // When & Then
-            mockMvc.perform(post("/api/v1/applications")
+            mockMvc.perform(post("/v1/job-applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}")
                             .with(authentication(mockAuthentication)))
@@ -426,7 +426,7 @@ class JobApplicationControllerTest {
                     .thenReturn(response);
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -446,7 +446,7 @@ class JobApplicationControllerTest {
                     .buildUpdateRequest();
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -466,7 +466,7 @@ class JobApplicationControllerTest {
                     .buildUpdateRequest();
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -486,7 +486,7 @@ class JobApplicationControllerTest {
                     .buildUpdateRequest();
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -507,7 +507,7 @@ class JobApplicationControllerTest {
                     .thenThrow(new BusinessException("Application not found"));
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/999")
+            mockMvc.perform(put("/v1/job-applications/999")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -527,7 +527,7 @@ class JobApplicationControllerTest {
                     .thenThrow(new BusinessException("Access denied"));
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(authentication(mockAuthentication)))
@@ -544,7 +544,7 @@ class JobApplicationControllerTest {
                     .buildUpdateRequest();
 
             // When & Then
-            mockMvc.perform(put("/api/v1/applications/1")
+            mockMvc.perform(put("/v1/job-applications/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized());
@@ -560,7 +560,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should delete application successfully")
         void shouldDeleteApplicationSuccessfully() throws Exception {
             // When & Then
-            mockMvc.perform(delete("/api/v1/applications/1")
+            mockMvc.perform(delete("/v1/job-applications/1")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isNoContent());
         }
@@ -574,7 +574,7 @@ class JobApplicationControllerTest {
                     .when(applicationService).deleteApplication(999L, 1L);
 
             // When & Then
-            mockMvc.perform(delete("/api/v1/applications/999")
+            mockMvc.perform(delete("/v1/job-applications/999")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isNotFound())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -590,7 +590,7 @@ class JobApplicationControllerTest {
                     .when(applicationService).deleteApplication(1L, 1L);
 
             // When & Then
-            mockMvc.perform(delete("/api/v1/applications/1")
+            mockMvc.perform(delete("/v1/job-applications/1")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isForbidden())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -601,7 +601,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void shouldReturn401WhenNotAuthenticated() throws Exception {
             // When & Then
-            mockMvc.perform(delete("/api/v1/applications/1"))
+            mockMvc.perform(delete("/v1/job-applications/1"))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -610,7 +610,7 @@ class JobApplicationControllerTest {
         @DisplayName("Should return 400 when ID is invalid")
         void shouldReturn400WhenIdIsInvalid() throws Exception {
             // When & Then
-            mockMvc.perform(delete("/api/v1/applications/invalid")
+            mockMvc.perform(delete("/v1/job-applications/invalid")
                             .with(authentication(mockAuthentication)))
                     .andExpect(status().isBadRequest());
         }

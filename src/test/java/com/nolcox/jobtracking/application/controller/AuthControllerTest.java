@@ -63,7 +63,7 @@ class AuthControllerTest {
             when(authService.register(any(RegisterRequest.class))).thenReturn(response);
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -87,7 +87,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -105,7 +105,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -123,7 +123,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -141,7 +141,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -159,7 +159,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -177,7 +177,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -195,7 +195,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -208,7 +208,7 @@ class AuthControllerTest {
         @DisplayName("Should return 400 when request body is empty")
         void shouldReturn400WhenRequestBodyIsEmpty() throws Exception {
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isBadRequest())
@@ -223,7 +223,7 @@ class AuthControllerTest {
             RegisterRequest request = RegisterRequestFixture.aRegisterRequest().build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.TEXT_PLAIN)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnsupportedMediaType());
@@ -238,7 +238,7 @@ class AuthControllerTest {
                     .thenThrow(new BusinessException("Email already exists"));
 
             // When & Then
-            mockMvc.perform(post("/api/auth/register")
+            mockMvc.perform(post("/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
@@ -266,7 +266,7 @@ class AuthControllerTest {
             when(authService.authenticate(any(AuthRequest.class))).thenReturn(response);
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -290,7 +290,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -308,7 +308,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -326,7 +326,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -344,7 +344,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -362,7 +362,7 @@ class AuthControllerTest {
                     .build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -375,7 +375,7 @@ class AuthControllerTest {
         @DisplayName("Should return 400 when request body is empty")
         void shouldReturn400WhenRequestBodyIsEmpty() throws Exception {
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}"))
                     .andExpect(status().isBadRequest())
@@ -392,7 +392,7 @@ class AuthControllerTest {
                     .thenThrow(new BusinessException("Invalid credentials"));
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized())
@@ -407,7 +407,7 @@ class AuthControllerTest {
             AuthRequest request = AuthRequestFixture.anAuthRequest().build();
 
             // When & Then
-            mockMvc.perform(post("/api/auth/login")
+            mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.TEXT_PLAIN)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnsupportedMediaType());
