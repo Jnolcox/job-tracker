@@ -39,9 +39,45 @@ const Login = () => {
   return (
     <div className="container">
       <div className="form-container">
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem', color: '#2c3e50' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1rem', color: '#2c3e50' }}>
           Login to Job Tracker
         </h2>
+        
+        {/* Test Credentials Info */}
+        <div style={{ 
+          backgroundColor: '#e8f4fd', 
+          border: '1px solid #3498db', 
+          borderRadius: '4px', 
+          padding: '1rem', 
+          marginBottom: '2rem',
+          textAlign: 'center' 
+        }}>
+          <h4 style={{ margin: '0 0 0.5rem 0', color: '#2c3e50' }}>🔑 Test Credentials</h4>
+          <p style={{ margin: '0.25rem 0', color: '#34495e' }}>
+            <strong>Email:</strong> test@example.com
+          </p>
+          <p style={{ margin: '0.25rem 0', color: '#34495e' }}>
+            <strong>Password:</strong> password123
+          </p>
+          <button 
+            type="button"
+            onClick={() => {
+              setFormData({ email: 'test@example.com', password: 'password123' });
+            }}
+            style={{
+              background: 'none',
+              border: '1px solid #3498db',
+              color: '#3498db',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              marginTop: '0.5rem'
+            }}
+          >
+            Fill Test Credentials
+          </button>
+        </div>
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">

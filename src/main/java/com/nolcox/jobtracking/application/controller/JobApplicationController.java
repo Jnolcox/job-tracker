@@ -21,7 +21,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/api/v1/applications")
+@RequestMapping("/v1/job-applications")
 @RequiredArgsConstructor
 @Tag(name = "Job Application", description = "Job application management endpoints")
 public class JobApplicationController {

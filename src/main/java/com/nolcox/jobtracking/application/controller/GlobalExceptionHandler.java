@@ -2,10 +2,12 @@ package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.response.ApiErrorResponse;
 import com.nolcox.jobtracking.application.dto.response.ValidationErrorResponse;
+import com.nolcox.jobtracking.shared.exception.BusinessException;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -58,6 +60,33 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 LocalDateTime.now()
         );
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiErrorResponse> handleBusinessException(BusinessException ex) {
+        // Check if this is an authentication-related business exception
+        String message = ex.getMessage().toLowerCase();
+        if (message.contains("invalid email or password") || 
+            message.contains("authentication failed")) {
+            log.warn("Authentication failure: {}", ex.getMessage());
+            ApiErrorResponse errorResponse = new ApiErrorResponse(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication Failed",
+                    ex.getMessage(),
+                    LocalDateTime.now()
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+        
+        // For other business exceptions, return 400 Bad Request
+        log.warn("Business logic error: {}", ex.getMessage());
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Business Logic Error",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)
