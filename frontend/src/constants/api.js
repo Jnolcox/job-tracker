@@ -6,7 +6,7 @@ export const API_CONFIG = {
   
   // Construct full base URL
   get BASE_URL() {
-    return `${this.BASE_PATH}/${this.BASE_PATH}/${this.VERSION}`;
+    return `${this.BASE_PATH}/${this.VERSION}`;
   },
   
   // API Endpoints

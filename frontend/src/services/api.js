@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_CONFIG, AUTH, HTTP_STATUS } from '../constants';
 
 // Base API configuration
-const API_BASE_URL = API_CONFIG.BASE_URL;
+const API_BASE_URL = '/api/v1';
 
 // Create axios instance
 const api = axios.create({

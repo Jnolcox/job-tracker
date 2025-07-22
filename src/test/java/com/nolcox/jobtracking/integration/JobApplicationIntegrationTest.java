@@ -431,7 +431,7 @@ class JobApplicationIntegrationTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(delete("/api/v1/applications/{id}", application.getId()))
+        mockMvc.perform(delete("/v1/job-applications/{id}", application.getId()))
                 .andExpect(status().isUnauthorized());
     }
 
