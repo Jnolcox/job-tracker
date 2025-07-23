@@ -19,7 +19,7 @@ public class DatabaseConfig {
         
         // Configure BigDecimal to serialize with 2 decimal places
         SimpleModule bigDecimalModule = new SimpleModule();
-        bigDecimalModule.addSerializer(BigDecimal.class, new com.fasterxml.jackson.databind.JsonSerializer<BigDecimal>() {
+        bigDecimalModule.addSerializer(BigDecimal.class, new com.fasterxml.jackson.databind.JsonSerializer<>() {
             @Override
             public void serialize(BigDecimal value, com.fasterxml.jackson.core.JsonGenerator gen, 
                                 com.fasterxml.jackson.databind.SerializerProvider serializers) 

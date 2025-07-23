@@ -20,7 +20,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +64,6 @@ class JobApplicationIntegrationTest {
     private User testUser;
     private User otherUser;
     private String userToken;
-    private String otherUserToken;
 
     private final String TEST_COMPANY = "Tech Corp";
     private final String TEST_POSITION = "Software Engineer";
@@ -101,7 +99,6 @@ class JobApplicationIntegrationTest {
 
         // Generate JWT tokens
         userToken = jwtService.generateToken(testUser);
-        otherUserToken = jwtService.generateToken(otherUser);
     }
 
     @Test
@@ -180,9 +177,9 @@ class JobApplicationIntegrationTest {
     @DisplayName("Should get all job applications for authenticated user")
     void shouldGetAllJobApplicationsForUser() throws Exception {
         // Given - Create test applications for both users
-        JobApplication app1 = createJobApplication(testUser, "Company A", "Role A");
-        JobApplication app2 = createJobApplication(testUser, "Company B", "Role B");
-        JobApplication otherApp = createJobApplication(otherUser, "Company C", "Role C");
+        createJobApplication(testUser, "Company A", "Role A");
+        createJobApplication(testUser, "Company B", "Role B");
+        createJobApplication(otherUser, "Company C", "Role C");
 
         // When
         mockMvc.perform(get("/v1/job-applications")

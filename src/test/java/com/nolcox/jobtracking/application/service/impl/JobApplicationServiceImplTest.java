@@ -41,17 +41,11 @@ class JobApplicationServiceImplTest {
     @Mock
     private JobApplicationRepository repository;
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private ModelMapper modelMapper;
 
     @InjectMocks
     private JobApplicationServiceImpl jobApplicationService;
 
     private User testUser;
-    private User otherUser;
     private JobApplication testApplication;
 
     @BeforeEach
@@ -61,10 +55,6 @@ class JobApplicationServiceImplTest {
             .withEmail("test@example.com")
             .build();
 
-        otherUser = UserFixture.aUser()
-            .withId(2L)
-            .withEmail("other@example.com")
-            .build();
 
         testApplication = JobApplicationFixture.aJobApplication()
             .withId(1L)
