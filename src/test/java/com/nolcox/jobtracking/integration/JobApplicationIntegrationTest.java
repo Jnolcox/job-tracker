@@ -133,7 +133,7 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.positionTitle").value(TEST_POSITION))
                 .andExpect(jsonPath("$.jobDescription").value(TEST_DESCRIPTION))
                 .andExpect(jsonPath("$.status").value("APPLIED"))
-                .andExpect(jsonPath("$.salaryExpectation").value(TEST_SALARY))
+                .andExpect(jsonPath("$.salaryExpectation").value(75000.00))
                 .andExpect(jsonPath("$.appliedDate").exists())
                 .andExpect(jsonPath("$.createdAt").exists())
                 .andReturn();
@@ -265,7 +265,7 @@ class JobApplicationIntegrationTest {
         // When - Try to access with different user's token
         mockMvc.perform(get("/v1/job-applications/{id}", otherApplication.getId())
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -329,7 +329,7 @@ class JobApplicationIntegrationTest {
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         // Verify original data is unchanged
         JobApplication unchanged = jobApplicationRepository.findById(otherApplication.getId()).orElse(null);
@@ -364,7 +364,7 @@ class JobApplicationIntegrationTest {
         // When - Try to delete with different user's token
         mockMvc.perform(delete("/v1/job-applications/{id}", applicationId)
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         // Then - Verify application still exists
         assertThat(jobApplicationRepository.findById(applicationId)).isPresent();

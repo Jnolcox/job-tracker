@@ -39,7 +39,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         Page<JobApplication> applications = repository
                 .findByUserIdWithFilters(userId, status, companyName, pageable);
 
-        return applications.map(app -> modelMapper.map(app, JobApplicationResponse.class));
+        return applications.map(this::mapToResponse);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             throw new UnauthorizedException("Access denied");
         }
 
-        return modelMapper.map(application, JobApplicationResponse.class);
+        return mapToResponse(application);
     }
 
     @Override
@@ -68,7 +68,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         application.setStatus(ApplicationStatus.APPLIED);
 
         JobApplication saved = repository.save(application);
-        return modelMapper.map(saved, JobApplicationResponse.class);
+        return mapToResponse(saved);
     }
 
     @Override
@@ -86,7 +86,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         modelMapper.map(request, application);
         JobApplication updated = repository.save(application);
 
-        return modelMapper.map(updated, JobApplicationResponse.class);
+        return mapToResponse(updated);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
                                                                 Pageable pageable) {
         Page<JobApplication> applications = repository
                 .findByUserIdAndStatus(userId, status, pageable);
-        return applications.map(app -> modelMapper.map(app, JobApplicationResponse.class));
+        return applications.map(this::mapToResponse);
     }
 
     @Override
@@ -123,7 +123,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
                                                            Pageable pageable) {
         Page<JobApplication> applications = repository
                 .searchApplications(userId, searchTerm, status, pageable);
-        return applications.map(app -> modelMapper.map(app, JobApplicationResponse.class));
+        return applications.map(this::mapToResponse);
     }
 
     @Override
@@ -141,7 +141,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         application.setStatus(status);
         JobApplication updated = repository.save(application);
 
-        return modelMapper.map(updated, JobApplicationResponse.class);
+        return mapToResponse(updated);
     }
 
     @Override
@@ -149,7 +149,27 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         List<JobApplication> applications = repository
                 .findRecentApplicationsByUserId(userId, limit);
         return applications.stream()
-                .map(app -> modelMapper.map(app, JobApplicationResponse.class))
+                .map(this::mapToResponse)
                 .toList();
+    }
+
+    private JobApplicationResponse mapToResponse(JobApplication application) {
+        return new JobApplicationResponse(
+                application.getId(),
+                application.getCompanyName(),
+                application.getPositionTitle(),
+                application.getJobDescription(),
+                application.getStatus(),
+                application.getAppliedDate(),
+                application.getInterviewDate(),
+                application.getSalaryExpectation(),
+                application.getNotes(),
+                application.getJobUrl(),
+                application.getContactName(),
+                application.getContactEmail(),
+                application.getContactPhone(),
+                application.getCreatedAt(),
+                application.getUpdatedAt()
+        );
     }
 }
