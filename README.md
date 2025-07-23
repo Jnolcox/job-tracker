@@ -160,7 +160,7 @@ graph TB
         L[Repositories]
     end
     
-    B -.->|@ExtendWith(MockitoExtension)| I
+    B -.->|ExtendWith MockitoExtension| I
     A -.->|Mock dependencies| J
     C -.->|Test JWT & Auth| K
     D -.->|Real HTTP calls| I
@@ -182,10 +182,10 @@ graph LR
     
     subgraph "Protected Endpoints"
         C[GET /api/v1/job-applications]
-        D[GET /api/v1/job-applications/{id}]
+        D[GET /api/v1/job-applications/id]
         E[POST /api/v1/job-applications]
-        F[PUT /api/v1/job-applications/{id}]
-        G[DELETE /api/v1/job-applications/{id}]
+        F[PUT /api/v1/job-applications/id]
+        G[DELETE /api/v1/job-applications/id]
     end
     
     subgraph "Security Layer"
