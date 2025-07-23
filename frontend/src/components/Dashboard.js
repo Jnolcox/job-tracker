@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { jobApplicationsAPI } from '../services/api';
 import { APPLICATION_STATUS, STATUS_CONFIG, ERROR_MESSAGES } from '../constants';
+import ApplicationModal from './ApplicationModal';
 
 const Dashboard = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingApplication, setEditingApplication] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     applied: 0,
@@ -58,6 +61,25 @@ const Dashboard = () => {
         setError(ERROR_MESSAGES.SERVER_ERROR);
       }
     }
+  };
+
+  const handleEdit = (application) => {
+    setEditingApplication(application);
+    setModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingApplication(null);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setEditingApplication(null);
+  };
+
+  const handleModalSuccess = () => {
+    fetchApplications();
   };
 
   const getStatusClass = (status) => {
@@ -128,7 +150,7 @@ const Dashboard = () => {
         <h2 style={{ margin: 0, color: '#2c3e50' }}>Recent Applications</h2>
         <button 
           className="btn"
-          onClick={() => navigate('/applications/new')}
+          onClick={handleAdd}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
           ➕ Add New Application
@@ -150,7 +172,7 @@ const Dashboard = () => {
           </p>
           <button 
             className="btn" 
-            onClick={() => navigate('/applications/new')}
+            onClick={handleAdd}
             style={{ fontSize: '1.1rem', padding: '1rem 2rem' }}
           >
             🚀 Add Your First Application
@@ -211,7 +233,7 @@ const Dashboard = () => {
               <div className="card-actions" style={{ marginTop: '1rem' }}>
                 <button 
                   className="btn btn-secondary"
-                  onClick={() => navigate(`/applications/edit/${app.id}`)}
+                  onClick={() => handleEdit(app)}
                   style={{ marginRight: '0.5rem' }}
                 >
                   ✏️ Edit
@@ -241,6 +263,14 @@ const Dashboard = () => {
           )}
         </div>
       )}
+
+      {/* Application Modal */}
+      <ApplicationModal
+        isOpen={modalOpen}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        application={editingApplication}
+      />
     </div>
   );
 };
