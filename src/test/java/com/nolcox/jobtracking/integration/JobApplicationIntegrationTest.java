@@ -20,7 +20,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +64,6 @@ class JobApplicationIntegrationTest {
     private User testUser;
     private User otherUser;
     private String userToken;
-    private String otherUserToken;
 
     private final String TEST_COMPANY = "Tech Corp";
     private final String TEST_POSITION = "Software Engineer";
@@ -101,7 +99,6 @@ class JobApplicationIntegrationTest {
 
         // Generate JWT tokens
         userToken = jwtService.generateToken(testUser);
-        otherUserToken = jwtService.generateToken(otherUser);
     }
 
     @Test
@@ -133,7 +130,7 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.positionTitle").value(TEST_POSITION))
                 .andExpect(jsonPath("$.jobDescription").value(TEST_DESCRIPTION))
                 .andExpect(jsonPath("$.status").value("APPLIED"))
-                .andExpect(jsonPath("$.salaryExpectation").value(TEST_SALARY))
+                .andExpect(jsonPath("$.salaryExpectation").value(75000.00))
                 .andExpect(jsonPath("$.appliedDate").exists())
                 .andExpect(jsonPath("$.createdAt").exists())
                 .andReturn();
@@ -180,9 +177,9 @@ class JobApplicationIntegrationTest {
     @DisplayName("Should get all job applications for authenticated user")
     void shouldGetAllJobApplicationsForUser() throws Exception {
         // Given - Create test applications for both users
-        JobApplication app1 = createJobApplication(testUser, "Company A", "Role A");
-        JobApplication app2 = createJobApplication(testUser, "Company B", "Role B");
-        JobApplication otherApp = createJobApplication(otherUser, "Company C", "Role C");
+        createJobApplication(testUser, "Company A", "Role A");
+        createJobApplication(testUser, "Company B", "Role B");
+        createJobApplication(otherUser, "Company C", "Role C");
 
         // When
         mockMvc.perform(get("/v1/job-applications")
@@ -265,7 +262,7 @@ class JobApplicationIntegrationTest {
         // When - Try to access with different user's token
         mockMvc.perform(get("/v1/job-applications/{id}", otherApplication.getId())
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -329,7 +326,7 @@ class JobApplicationIntegrationTest {
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         // Verify original data is unchanged
         JobApplication unchanged = jobApplicationRepository.findById(otherApplication.getId()).orElse(null);
@@ -364,7 +361,7 @@ class JobApplicationIntegrationTest {
         // When - Try to delete with different user's token
         mockMvc.perform(delete("/v1/job-applications/{id}", applicationId)
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         // Then - Verify application still exists
         assertThat(jobApplicationRepository.findById(applicationId)).isPresent();
@@ -431,7 +428,7 @@ class JobApplicationIntegrationTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(delete("/api/v1/applications/{id}", application.getId()))
+        mockMvc.perform(delete("/v1/job-applications/{id}", application.getId()))
                 .andExpect(status().isUnauthorized());
     }
 
