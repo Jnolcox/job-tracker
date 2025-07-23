@@ -18,7 +18,6 @@ const Header = () => {
           <h1 onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             Job Tracker
           </h1>
-          
           <div className="nav-links">
             {isAuthenticated ? (
               <>
@@ -28,13 +27,7 @@ const Header = () => {
                 <button onClick={() => navigate('/applications/new')}>
                   Add Application
                 </button>
-                <span style={{ marginLeft: '1rem', color: '#ecf0f1' }}>
-                  Welcome, {user?.firstName}!
-                </span>
-                <button 
-                  onClick={handleLogout}
-                  style={{ marginLeft: '1rem' }}
-                >
+                <button onClick={handleLogout}>
                   Logout
                 </button>
               </>
