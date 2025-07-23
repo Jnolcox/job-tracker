@@ -160,7 +160,7 @@ graph TB
         L[Repositories]
     end
     
-    B -.->|ExtendWith(MockitoExtension)| I
+    B -.->|ExtendWith MockitoExtension| I
     A -.->|Mock dependencies| J
     C -.->|Test JWT & Auth| K
     D -.->|Real HTTP calls| I
