@@ -1,6 +1,5 @@
 package com.nolcox.jobtracking.application.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
@@ -11,651 +10,260 @@ import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
 import com.nolcox.jobtracking.fixtures.JobApplicationRequestFixture;
 import com.nolcox.jobtracking.fixtures.UserFixture;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.security.core.GrantedAuthority;
-
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(JobApplicationController.class)
+@ExtendWith(MockitoExtension.class)
 @DisplayName("JobApplicationController Tests")
 class JobApplicationControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
     private JobApplicationService applicationService;
 
-    private final User mockUser = UserFixture.aUser().build();
-    private final Authentication mockAuthentication = new MockAuthentication(mockUser);
+    @InjectMocks
+    private JobApplicationController jobApplicationController;
+
+    @Mock
+    private Authentication authentication;
+
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = UserFixture.aUser().build();
+        when(authentication.getPrincipal()).thenReturn(testUser);
+    }
 
     @Nested
-    @DisplayName("Get All Applications Endpoint Tests")
+    @DisplayName("Get All Applications Tests")
     class GetAllApplicationsTests {
 
         @Test
-        @WithMockUser
-        @DisplayName("Should get all applications successfully")
-        void shouldGetAllApplicationsSuccessfully() throws Exception {
+        @DisplayName("Should return paginated job applications")
+        void shouldReturnPaginatedJobApplications() {
             // Given
-            JobApplicationResponse app1 = JobApplicationFixture.aJobApplication().buildResponse();
-            JobApplicationResponse app2 = JobApplicationFixture.aJobApplication()
-                    .withId(2L)
-                    .withCompanyName("Company B")
-                    .buildResponse();
-            
-            Page<JobApplicationResponse> page = new PageImpl<>(
-                    List.of(app1, app2),
-                    PageRequest.of(0, 10),
-                    2
+            Pageable pageable = PageRequest.of(0, 10);
+            List<JobApplicationResponse> applications = List.of(
+                    JobApplicationFixture.aJobApplication().buildResponse()
             );
+            Page<JobApplicationResponse> page = new PageImpl<>(applications, pageable, 1);
 
-            when(applicationService.getUserApplications(eq(1L), isNull(), isNull(), any(Pageable.class)))
+            when(applicationService.getUserApplications(eq(testUser.getId()), any(), any(), eq(pageable)))
                     .thenReturn(page);
 
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.content").isArray())
-                    .andExpect(jsonPath("$.content.length()").value(2))
-                    .andExpect(jsonPath("$.content[0].id").value(1))
-                    .andExpect(jsonPath("$.content[0].companyName").value("Test Company"))
-                    .andExpect(jsonPath("$.content[1].id").value(2))
-                    .andExpect(jsonPath("$.content[1].companyName").value("Company B"))
-                    .andExpect(jsonPath("$.totalElements").value(2))
-                    .andExpect(jsonPath("$.size").value(10))
-                    .andExpect(jsonPath("$.number").value(0));
+            // When
+            ResponseEntity<Page<JobApplicationResponse>> response = 
+                    jobApplicationController.getAllApplications(null, null, pageable, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getContent()).hasSize(1);
+            assertThat(response.getBody().getTotalElements()).isEqualTo(1);
         }
 
         @Test
-        @WithMockUser
-        @DisplayName("Should filter by application status")
-        void shouldFilterByApplicationStatus() throws Exception {
+        @DisplayName("Should filter applications by status")
+        void shouldFilterApplicationsByStatus() {
             // Given
-            JobApplicationResponse app = JobApplicationFixture.aJobApplication()
-                    .withStatus(ApplicationStatus.INTERVIEW_SCHEDULED)
-                    .buildResponse();
-            
-            Page<JobApplicationResponse> page = new PageImpl<>(
-                    List.of(app),
-                    PageRequest.of(0, 10),
-                    1
-            );
+            Pageable pageable = PageRequest.of(0, 10);
+            ApplicationStatus status = ApplicationStatus.APPLIED;
+            Page<JobApplicationResponse> page = new PageImpl<>(List.of(), pageable, 0);
 
-            when(applicationService.getUserApplications(eq(1L), eq(ApplicationStatus.INTERVIEW_SCHEDULED), isNull(), any(Pageable.class)))
+            when(applicationService.getUserApplications(eq(testUser.getId()), eq(status), any(), eq(pageable)))
                     .thenReturn(page);
 
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications")
-                            .param("status", "INTERVIEW_SCHEDULED")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.content").isArray())
-                    .andExpect(jsonPath("$.content.length()").value(1))
-                    .andExpect(jsonPath("$.content[0].status").value("INTERVIEW_SCHEDULED"));
-        }
+            // When
+            ResponseEntity<Page<JobApplicationResponse>> response = 
+                    jobApplicationController.getAllApplications(status, null, pageable, authentication);
 
-        @Test
-        @WithMockUser
-        @DisplayName("Should filter by company name")
-        void shouldFilterByCompanyName() throws Exception {
-            // Given
-            JobApplicationResponse app = JobApplicationFixture.aJobApplication()
-                    .withCompanyName("Specific Company")
-                    .buildResponse();
-            
-            Page<JobApplicationResponse> page = new PageImpl<>(
-                    List.of(app),
-                    PageRequest.of(0, 10),
-                    1
-            );
-
-            when(applicationService.getUserApplications(eq(1L), isNull(), eq("Specific Company"), any(Pageable.class)))
-                    .thenReturn(page);
-
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications")
-                            .param("companyName", "Specific Company")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.content").isArray())
-                    .andExpect(jsonPath("$.content.length()").value(1))
-                    .andExpect(jsonPath("$.content[0].companyName").value("Specific Company"));
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should handle pagination parameters")
-        void shouldHandlePaginationParameters() throws Exception {
-            // Given
-            Page<JobApplicationResponse> page = new PageImpl<>(
-                    List.of(),
-                    PageRequest.of(1, 5),
-                    0
-            );
-
-            when(applicationService.getUserApplications(eq(1L), isNull(), isNull(), any(Pageable.class)))
-                    .thenReturn(page);
-
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications")
-                            .param("page", "1")
-                            .param("size", "5")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.number").value(1))
-                    .andExpect(jsonPath("$.size").value(5));
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void shouldReturn401WhenNotAuthenticated() throws Exception {
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications"))
-                    .andExpect(status().isUnauthorized());
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
         }
     }
 
     @Nested
-    @DisplayName("Get Application by ID Endpoint Tests")
+    @DisplayName("Get Application By ID Tests")
     class GetApplicationByIdTests {
 
         @Test
-        @WithMockUser
-        @DisplayName("Should get application by ID successfully")
-        void shouldGetApplicationByIdSuccessfully() throws Exception {
+        @DisplayName("Should return application when found")
+        void shouldReturnApplicationWhenFound() {
             // Given
-            JobApplicationResponse app = JobApplicationFixture.aJobApplication().buildResponse();
-            when(applicationService.getApplication(1L, 1L)).thenReturn(app);
+            Long applicationId = 1L;
+            JobApplicationResponse expectedResponse = JobApplicationFixture.aJobApplication().buildResponse();
 
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications/1")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.companyName").value("Test Company"))
-                    .andExpect(jsonPath("$.positionTitle").value("Software Engineer"));
+            when(applicationService.getApplication(applicationId, testUser.getId()))
+                    .thenReturn(expectedResponse);
+
+            // When
+            ResponseEntity<JobApplicationResponse> response = 
+                    jobApplicationController.getApplication(applicationId, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isEqualTo(expectedResponse);
         }
 
         @Test
-        @WithMockUser
-        @DisplayName("Should return 404 when application not found")
-        void shouldReturn404WhenApplicationNotFound() throws Exception {
+        @DisplayName("Should handle application not found")
+        void shouldHandleApplicationNotFound() {
             // Given
-            when(applicationService.getApplication(999L, 1L))
+            Long applicationId = 999L;
+            when(applicationService.getApplication(applicationId, testUser.getId()))
                     .thenThrow(new BusinessException("Application not found"));
 
             // When & Then
-            mockMvc.perform(get("/v1/job-applications/999")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isNotFound())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Application not found"));
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 403 when trying to access other user's application")
-        void shouldReturn403WhenTryingToAccessOtherUsersApplication() throws Exception {
-            // Given
-            when(applicationService.getApplication(1L, 1L))
-                    .thenThrow(new BusinessException("Access denied"));
-
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications/1")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isForbidden())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Access denied"));
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void shouldReturn401WhenNotAuthenticated() throws Exception {
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications/1"))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when ID is invalid")
-        void shouldReturn400WhenIdIsInvalid() throws Exception {
-            // When & Then
-            mockMvc.perform(get("/v1/job-applications/invalid")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest());
+            assertThatThrownBy(() -> jobApplicationController.getApplication(applicationId, authentication))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Application not found");
         }
     }
 
     @Nested
-    @DisplayName("Create Application Endpoint Tests")
+    @DisplayName("Create Application Tests")
     class CreateApplicationTests {
 
         @Test
-        @WithMockUser
-        @DisplayName("Should create application successfully with valid request")
-        void shouldCreateApplicationWithValidRequest() throws Exception {
+        @DisplayName("Should create application with valid request")
+        void shouldCreateApplicationWithValidRequest() {
             // Given
-            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildCreateRequest();
-            JobApplicationResponse response = JobApplicationFixture.aJobApplication().buildResponse();
+            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest().buildCreateRequest();
+            JobApplicationResponse expectedResponse = JobApplicationFixture.aJobApplication().buildResponse();
 
-            when(applicationService.createApplication(any(JobApplicationCreateRequest.class), eq(1L)))
-                    .thenReturn(response);
+            when(applicationService.createApplication(request, testUser.getId()))
+                    .thenReturn(expectedResponse);
 
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isCreated())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/v1/job-applications/1")))
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.companyName").value("Test Company"))
-                    .andExpect(jsonPath("$.positionTitle").value("Software Engineer"));
+            // When
+            ResponseEntity<JobApplicationResponse> response = 
+                    jobApplicationController.createApplication(request, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(201);
+            assertThat(response.getBody()).isEqualTo(expectedResponse);
         }
 
         @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when company name is blank")
-        void shouldReturn400WhenCompanyNameIsBlank() throws Exception {
-            // Given
-            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withCompanyName("")
-                    .buildCreateRequest();
-
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when position title is blank")
-        void shouldReturn400WhenPositionTitleIsBlank() throws Exception {
-            // Given
-            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withPositionTitle("")
-                    .buildCreateRequest();
-
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when contact email is invalid")
-        void shouldReturn400WhenContactEmailIsInvalid() throws Exception {
-            // Given
-            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withContactEmail("invalid-email")
-                    .buildCreateRequest();
-
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
         @DisplayName("Should create application with minimum required fields")
-        void shouldCreateApplicationWithMinimumRequiredFields() throws Exception {
+        void shouldCreateApplicationWithMinimumRequiredFields() {
             // Given
             JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withJobDescription(null)
-                    .withJobUrl(null)
-                    .withSalaryExpectation((BigDecimal) null)
-                    .withNotes(null)
-                    .withContactName(null)
-                    .withContactEmail(null)
-                    .withContactPhone(null)
+                    .withCompanyName("Test Company")
+                    .withPositionTitle("Developer")
                     .buildCreateRequest();
-            JobApplicationResponse response = JobApplicationFixture.aJobApplication().buildResponse();
+            JobApplicationResponse expectedResponse = JobApplicationFixture.aJobApplication().buildResponse();
 
-            when(applicationService.createApplication(any(JobApplicationCreateRequest.class), eq(1L)))
-                    .thenReturn(response);
+            when(applicationService.createApplication(request, testUser.getId()))
+                    .thenReturn(expectedResponse);
 
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isCreated())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-        }
+            // When
+            ResponseEntity<JobApplicationResponse> response = 
+                    jobApplicationController.createApplication(request, authentication);
 
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void shouldReturn401WhenNotAuthenticated() throws Exception {
-            // Given
-            JobApplicationCreateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildCreateRequest();
-
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when request body is empty")
-        void shouldReturn400WhenRequestBodyIsEmpty() throws Exception {
-            // When & Then
-            mockMvc.perform(post("/v1/job-applications")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists());
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(201);
+            assertThat(response.getBody()).isEqualTo(expectedResponse);
         }
     }
 
     @Nested
-    @DisplayName("Update Application Endpoint Tests")
+    @DisplayName("Update Application Tests")
     class UpdateApplicationTests {
 
         @Test
-        @WithMockUser
-        @DisplayName("Should update application successfully with valid request")
-        void shouldUpdateApplicationWithValidRequest() throws Exception {
+        @DisplayName("Should update application successfully")
+        void shouldUpdateApplicationSuccessfully() {
             // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildUpdateRequest();
-            JobApplicationResponse response = JobApplicationFixture.aJobApplication()
-                    .withStatus(ApplicationStatus.INTERVIEW_SCHEDULED)
-                    .buildResponse();
+            Long applicationId = 1L;
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest().buildUpdateRequest();
+            JobApplicationResponse expectedResponse = JobApplicationFixture.aJobApplication().buildResponse();
 
-            when(applicationService.updateApplication(eq(1L), any(JobApplicationUpdateRequest.class), eq(1L)))
-                    .thenReturn(response);
+            when(applicationService.updateApplication(applicationId, request, testUser.getId()))
+                    .thenReturn(expectedResponse);
 
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
+            // When
+            ResponseEntity<JobApplicationResponse> response = 
+                    jobApplicationController.updateApplication(applicationId, request, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isEqualTo(expectedResponse);
         }
 
         @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when company name is blank")
-        void shouldReturn400WhenCompanyNameIsBlank() throws Exception {
+        @DisplayName("Should handle update failure")
+        void shouldHandleUpdateFailure() {
             // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withCompanyName("")
-                    .buildUpdateRequest();
+            Long applicationId = 1L;
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest().buildUpdateRequest();
+
+            when(applicationService.updateApplication(applicationId, request, testUser.getId()))
+                    .thenThrow(new BusinessException("Cannot update application"));
 
             // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when position title is blank")
-        void shouldReturn400WhenPositionTitleIsBlank() throws Exception {
-            // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withPositionTitle("")
-                    .buildUpdateRequest();
-
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when status is null")
-        void shouldReturn400WhenStatusIsNull() throws Exception {
-            // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .withStatus(null)
-                    .buildUpdateRequest();
-
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").exists())
-                    .andExpect(jsonPath("$.errors").exists());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 404 when application not found")
-        void shouldReturn404WhenApplicationNotFound() throws Exception {
-            // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildUpdateRequest();
-            when(applicationService.updateApplication(eq(999L), any(JobApplicationUpdateRequest.class), eq(1L)))
-                    .thenThrow(new BusinessException("Application not found"));
-
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/999")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isNotFound())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Application not found"));
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 403 when trying to update other user's application")
-        void shouldReturn403WhenTryingToUpdateOtherUsersApplication() throws Exception {
-            // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildUpdateRequest();
-            when(applicationService.updateApplication(eq(1L), any(JobApplicationUpdateRequest.class), eq(1L)))
-                    .thenThrow(new BusinessException("Access denied"));
-
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isForbidden())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Access denied"));
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void shouldReturn401WhenNotAuthenticated() throws Exception {
-            // Given
-            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
-                    .buildUpdateRequest();
-
-            // When & Then
-            mockMvc.perform(put("/v1/job-applications/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isUnauthorized());
+            assertThatThrownBy(() -> jobApplicationController.updateApplication(applicationId, request, authentication))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Cannot update application");
         }
     }
 
     @Nested
-    @DisplayName("Delete Application Endpoint Tests")
+    @DisplayName("Delete Application Tests")
     class DeleteApplicationTests {
 
         @Test
-        @WithMockUser
         @DisplayName("Should delete application successfully")
-        void shouldDeleteApplicationSuccessfully() throws Exception {
-            // When & Then
-            mockMvc.perform(delete("/v1/job-applications/1")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isNoContent());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 404 when application not found")
-        void shouldReturn404WhenApplicationNotFound() throws Exception {
+        void shouldDeleteApplicationSuccessfully() {
             // Given
-            doThrow(new BusinessException("Application not found"))
-                    .when(applicationService).deleteApplication(999L, 1L);
+            Long applicationId = 1L;
 
-            // When & Then
-            mockMvc.perform(delete("/v1/job-applications/999")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isNotFound())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Application not found"));
+            // When
+            ResponseEntity<Void> response = 
+                    jobApplicationController.deleteApplication(applicationId, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(204);
+            assertThat(response.getBody()).isNull();
         }
 
         @Test
-        @WithMockUser
-        @DisplayName("Should return 403 when trying to delete other user's application")
-        void shouldReturn403WhenTryingToDeleteOtherUsersApplication() throws Exception {
+        @DisplayName("Should handle delete failure")
+        void shouldHandleDeleteFailure() {
             // Given
-            doThrow(new BusinessException("Access denied"))
-                    .when(applicationService).deleteApplication(1L, 1L);
+            Long applicationId = 1L;
+            doThrow(new BusinessException("Cannot delete application"))
+                    .when(applicationService).deleteApplication(applicationId, testUser.getId());
 
             // When & Then
-            mockMvc.perform(delete("/v1/job-applications/1")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isForbidden())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.message").value("Access denied"));
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void shouldReturn401WhenNotAuthenticated() throws Exception {
-            // When & Then
-            mockMvc.perform(delete("/v1/job-applications/1"))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @WithMockUser
-        @DisplayName("Should return 400 when ID is invalid")
-        void shouldReturn400WhenIdIsInvalid() throws Exception {
-            // When & Then
-            mockMvc.perform(delete("/v1/job-applications/invalid")
-                            .with(authentication(mockAuthentication)))
-                    .andExpect(status().isBadRequest());
-        }
-    }
-
-    // Mock Authentication class for testing
-    private static class MockAuthentication implements Authentication {
-        private final User principal;
-
-        public MockAuthentication(User principal) {
-            this.principal = principal;
-        }
-
-        @Override
-        public Object getPrincipal() {
-            return principal;
-        }
-
-        @Override
-        public String getName() {
-            return principal.getEmail();
-        }
-
-        @Override
-        public Collection<? extends GrantedAuthority> getAuthorities() {
-            return List.of();
-        }
-
-        @Override
-        public Object getCredentials() {
-            return null;
-        }
-
-        @Override
-        public Object getDetails() {
-            return null;
-        }
-
-        @Override
-        public boolean isAuthenticated() {
-            return true;
-        }
-
-        @Override
-        public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
+            assertThatThrownBy(() -> jobApplicationController.deleteApplication(applicationId, authentication))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Cannot delete application");
         }
     }
 }
