@@ -24,10 +24,33 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
 
   useEffect(() => {
     if (application) {
+      // Helper function to convert date to YYYY-MM-DD format for input fields
+      const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        
+        let date;
+        if (Array.isArray(dateValue)) {
+          // Handle Java LocalDateTime array format [year, month, day, hour, minute, second, nano]
+          const [year, month, day] = dateValue;
+          date = new Date(year, month - 1, day);
+        } else if (typeof dateValue === 'string') {
+          // Handle ISO string format
+          date = new Date(dateValue);
+        } else {
+          return '';
+        }
+        
+        // Format as YYYY-MM-DD for input[type="date"]
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       setFormData({
         ...application,
-        appliedDate: application.appliedDate ? application.appliedDate.split('T')[0] : '',
-        interviewDate: application.interviewDate ? application.interviewDate.split('T')[0] : '',
+        appliedDate: formatDateForInput(application.appliedDate),
+        interviewDate: formatDateForInput(application.interviewDate),
         salaryExpectation: application.salaryExpectation || ''
       });
     } else {

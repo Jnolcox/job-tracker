@@ -6,6 +6,12 @@ server:
 spring:
   application:
     name: job-tracking-system
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
   datasource:
     url: jdbc:h2:mem:testdb
