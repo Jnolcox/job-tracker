@@ -25,27 +25,27 @@ const ApplicationForm = () => {
   const isEditing = !!id;
 
   useEffect(() => {
+    const fetchApplication = async () => {
+      try {
+        const response = await jobApplicationsAPI.getById(id);
+        const app = response.data;
+
+        setFormData({
+          ...app,
+          appliedDate: app.appliedDate ? app.appliedDate.split('T')[0] : '',
+          interviewDate: app.interviewDate ? app.interviewDate.split('T')[0] : '',
+          salaryExpectation: app.salaryExpectation || ''
+        });
+      } catch (err) {
+        setError('Failed to fetch application details');
+        console.error('Error fetching application:', err);
+      }
+    };
+
     if (isEditing) {
       fetchApplication();
     }
   }, [id, isEditing]);
-
-  const fetchApplication = async () => {
-    try {
-      const response = await jobApplicationsAPI.getById(id);
-      const app = response.data;
-      
-      setFormData({
-        ...app,
-        appliedDate: app.appliedDate ? app.appliedDate.split('T')[0] : '',
-        interviewDate: app.interviewDate ? app.interviewDate.split('T')[0] : '',
-        salaryExpectation: app.salaryExpectation || ''
-      });
-    } catch (err) {
-      setError('Failed to fetch application details');
-      console.error('Error fetching application:', err);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;

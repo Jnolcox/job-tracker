@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { jobApplicationsAPI } from '../services/api';
 import { APPLICATION_STATUS, STATUS_CONFIG, ERROR_MESSAGES } from '../constants';
@@ -21,7 +20,6 @@ const Dashboard = () => {
     rejected: 0
   });
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchApplications();
