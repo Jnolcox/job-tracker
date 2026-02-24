@@ -1,12 +1,12 @@
 package com.nolcox.jobtracking.fixtures;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.User;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class JobApplicationFixture {
 
@@ -26,6 +26,7 @@ public class JobApplicationFixture {
     private String contactPhone = "+1-555-0123";
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime statusChangedAt = LocalDateTime.now();
     private Long version = 0L;
 
     public static JobApplicationFixture aJobApplication() {
@@ -123,6 +124,11 @@ public class JobApplicationFixture {
         return this;
     }
 
+    public JobApplicationFixture withStatusChangedAt(LocalDateTime statusChangedAt) {
+        this.statusChangedAt = statusChangedAt;
+        return this;
+    }
+
     public JobApplicationFixture withVersion(Long version) {
         this.version = version;
         return this;
@@ -161,6 +167,7 @@ public class JobApplicationFixture {
                 .contactPhone(contactPhone)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
+                .statusChangedAt(statusChangedAt)
                 .version(version)
                 .build();
     }
@@ -181,7 +188,8 @@ public class JobApplicationFixture {
                 contactEmail,
                 contactPhone,
                 createdAt,
-                updatedAt
+                updatedAt,
+                statusChangedAt
         );
     }
 }

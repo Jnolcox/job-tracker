@@ -66,6 +66,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         application.setUser(user);
         application.setAppliedDate(LocalDateTime.now());
         application.setStatus(ApplicationStatus.APPLIED);
+        application.setStatusChangedAt(LocalDateTime.now());
 
         JobApplication saved = repository.save(application);
         return mapToResponse(saved);
@@ -83,7 +84,13 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             throw new UnauthorizedException("Access denied");
         }
 
+        // Track status changes
+        ApplicationStatus oldStatus = application.getStatus();
         modelMapper.map(request, application);
+        if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
+            application.setStatusChangedAt(LocalDateTime.now());
+        }
+
         JobApplication updated = repository.save(application);
 
         return mapToResponse(updated);
@@ -139,6 +146,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         }
 
         application.setStatus(status);
+        application.setStatusChangedAt(LocalDateTime.now());
         JobApplication updated = repository.save(application);
 
         return mapToResponse(updated);
@@ -169,7 +177,8 @@ public class JobApplicationServiceImpl implements JobApplicationService {
                 application.getContactEmail(),
                 application.getContactPhone(),
                 application.getCreatedAt(),
-                application.getUpdatedAt()
+                application.getUpdatedAt(),
+                application.getStatusChangedAt()
         );
     }
 }

@@ -29,5 +29,6 @@ CREATE TABLE IF NOT EXISTS job_applications (
     version BIGINT DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
+    status_changed_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );

@@ -1,11 +1,14 @@
 package com.nolcox.jobtracking.application.dto.request;
 
+import java.math.BigDecimal;
+
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
 
 public record JobApplicationCreateRequest(
         @NotBlank(message = "Company name is required")
@@ -18,6 +21,9 @@ public record JobApplicationCreateRequest(
 
         @Size(max = 10000, message = "Job description must not exceed 10000 characters")
         String jobDescription,
+
+        @NotNull(message = "Status is required")
+        ApplicationStatus status,
 
         @Size(max = 500, message = "Job URL must not exceed 500 characters")
         String jobUrl,

@@ -114,6 +114,7 @@ class JobApplicationIntegrationTest {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
+                ApplicationStatus.APPLIED,
                 "https://example.com/job",
                 TEST_SALARY,
                 "Looks like a great opportunity",
@@ -161,6 +162,7 @@ class JobApplicationIntegrationTest {
                 "", // Empty company name
                 "", // Empty position title
                 TEST_DESCRIPTION,
+                ApplicationStatus.APPLIED,
                 "https://example.com/job",
                 TEST_SALARY,
                 "Notes",
@@ -410,7 +412,16 @@ class JobApplicationIntegrationTest {
         JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
         
         JobApplicationCreateRequest createRequest = new JobApplicationCreateRequest(
-                "Company", "Position", "Description", null, null, null, null, null, null
+                "Company", 
+                "Position",
+                "Description", 
+                ApplicationStatus.APPLIED, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null
         );
 
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
@@ -469,6 +480,7 @@ class JobApplicationIntegrationTest {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
+                ApplicationStatus.APPLIED,
                 "https://example.com/job",
                 TEST_SALARY,
                 "Initial notes",

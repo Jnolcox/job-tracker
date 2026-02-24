@@ -1,11 +1,11 @@
 package com.nolcox.jobtracking.fixtures;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class JobApplicationRequestFixture {
 
@@ -145,6 +145,7 @@ public class JobApplicationRequestFixture {
                 companyName,
                 positionTitle,
                 jobDescription,
+                status,
                 jobUrl,
                 salaryExpectation,
                 notes,

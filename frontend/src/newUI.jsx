@@ -1,48 +1,36 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "./context/AuthContext";
+import { jobApplicationsAPI } from "./services/api";
+import { toUIFormat, toBackendFormat, UI_STAGES, STAGE_COLORS } from "./utils/dataAdapter";
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-const STAGES = ["Applied", "Phone Screen", "Technical", "Onsite", "Offer", "Rejected", "Withdrawn"];
+// ─── Constants ────────────────────────────────────────────────────────────────
+const STAGES = UI_STAGES;
 
-const STAGE_COLOR = {
-  Applied:       "#4E9AF1",
-  "Phone Screen":"#A78BFA",
-  Technical:     "#F59E0B",
-  Onsite:        "#34D399",
-  Offer:         "#10B981",
-  Rejected:      "#F87171",
-  Withdrawn:     "#6B7280",
-};
-
-const COMPANIES = [
-  { id:1,  company:"Wealthfront",  role:"Staff Software Engineer",         stage:"Technical",     appliedAt:"2025-03-10T09:15:00", lastUpdate:"2025-03-18T14:00:00", notes:"Referral from Maya" },
-  { id:2,  company:"Gusto",        role:"Senior Software Engineer",        stage:"Phone Screen",  appliedAt:"2025-03-12T14:32:00", lastUpdate:"2025-03-14T10:00:00", notes:"Cold apply via LinkedIn" },
-  { id:3,  company:"Ro",           role:"Staff Engineer – FinTech",        stage:"Onsite",        appliedAt:"2025-03-05T11:00:00", lastUpdate:"2025-03-20T16:30:00", notes:"Loop interview scheduled" },
-  { id:4,  company:"CLEAR",        role:"Senior Software Engineer",        stage:"Applied",       appliedAt:"2025-03-22T08:45:00", lastUpdate:"2025-03-22T08:45:00", notes:"" },
-  { id:5,  company:"BlinkRX",      role:"Lead Software Engineer",         stage:"Rejected",      appliedAt:"2025-02-28T16:00:00", lastUpdate:"2025-03-15T12:00:00", notes:"No feedback provided" },
-  { id:6,  company:"Stripe",       role:"Senior Engineer – Platform",      stage:"Applied",       appliedAt:"2025-03-20T10:20:00", lastUpdate:"2025-03-20T10:20:00", notes:"" },
-  { id:7,  company:"Plaid",        role:"Staff Software Engineer",         stage:"Phone Screen",  appliedAt:"2025-03-14T13:00:00", lastUpdate:"2025-03-16T09:00:00", notes:"Recruiter reached out" },
-  { id:8,  company:"Chime",        role:"Senior Full-Stack Engineer",      stage:"Technical",     appliedAt:"2025-03-08T09:30:00", lastUpdate:"2025-03-17T15:00:00", notes:"Take-home assigned" },
-  { id:9,  company:"Brex",         role:"Senior Software Engineer",        stage:"Applied",       appliedAt:"2025-03-21T07:55:00", lastUpdate:"2025-03-21T07:55:00", notes:"" },
-  { id:10, company:"Robinhood",    role:"Staff Engineer – Infrastructure", stage:"Withdrawn",     appliedAt:"2025-03-01T15:10:00", lastUpdate:"2025-03-10T11:00:00", notes:"Accepted better opportunity" },
-  { id:11, company:"Mercury",      role:"Senior Software Engineer",        stage:"Offer",         appliedAt:"2025-02-20T10:00:00", lastUpdate:"2025-03-22T09:00:00", notes:"Offer: $210k + equity" },
-  { id:12, company:"Affirm",       role:"Staff Engineer – Payments",       stage:"Rejected",      appliedAt:"2025-03-03T14:00:00", lastUpdate:"2025-03-18T16:00:00", notes:"Post-onsite rejection" },
-  { id:13, company:"Coinbase",     role:"Senior Software Engineer",        stage:"Applied",       appliedAt:"2025-03-19T08:00:00", lastUpdate:"2025-03-19T08:00:00", notes:"" },
-  { id:14, company:"Ramp",         role:"Staff Software Engineer",         stage:"Phone Screen",  appliedAt:"2025-03-15T11:30:00", lastUpdate:"2025-03-18T13:00:00", notes:"" },
-  { id:15, company:"Navan",        role:"Senior Engineer",                 stage:"Technical",     appliedAt:"2025-03-11T16:45:00", lastUpdate:"2025-03-19T10:00:00", notes:"System design round" },
-];
+const STAGE_COLOR = STAGE_COLORS;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const daysBetween = (a, b) => Math.floor((new Date(b) - new Date(a)) / 86400000);
-const today = new Date("2025-03-23T12:00:00");
+const daysBetween = (a, b) => {
+  if (!a || !b) return 0;
+  const dateA = new Date(a);
+  const dateB = new Date(b);
+  if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+  return Math.floor((dateB - dateA) / 86400000);
+};
+
+// Use function to always get fresh current date
+const getToday = () => new Date();
 
 function timeInStage(app) {
-  return daysBetween(app.lastUpdate, today.toISOString());
+  if (!app || !app.lastUpdate) return 0;
+  const days = daysBetween(app.lastUpdate, getToday().toISOString());
+  return Math.max(0, days); // Never show negative days
 }
 function totalDaysActive(app) {
+  if (!app || !app.appliedAt) return 0;
   if (app.stage === "Rejected" || app.stage === "Withdrawn" || app.stage === "Offer") {
-    return daysBetween(app.appliedAt, app.lastUpdate);
+    return Math.max(0, daysBetween(app.appliedAt, app.lastUpdate || app.appliedAt));
   }
-  return daysBetween(app.appliedAt, today.toISOString());
+  return Math.max(0, daysBetween(app.appliedAt, getToday().toISOString()));
 }
 
 // ─── Heatmap helpers ──────────────────────────────────────────────────────────
@@ -52,8 +40,11 @@ const DAYS  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 function buildHeatmap(apps) {
   const grid = {};
   DAYS.forEach(d => { grid[d] = {}; HOURS.forEach(h => { grid[d][h] = 0; }); });
+  if (!apps || !Array.isArray(apps)) return grid;
   apps.forEach(a => {
+    if (!a || !a.appliedAt) return;
     const dt = new Date(a.appliedAt);
+    if (isNaN(dt.getTime())) return; // Skip invalid dates
     const d  = DAYS[dt.getDay()];
     const h  = dt.getHours();
     grid[d][h]++;
@@ -88,7 +79,7 @@ function StatCard({ label, value, sub, accent }) {
 
 function StageFunnel({ apps }) {
   const counts = STAGES.reduce((acc,s) => { acc[s]=0; return acc; }, {});
-  apps.forEach(a => { if(counts[a.stage]!==undefined) counts[a.stage]++; });
+  (apps || []).forEach(a => { if(a && counts[a.stage]!==undefined) counts[a.stage]++; });
   const max = Math.max(...Object.values(counts), 1);
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
@@ -116,7 +107,7 @@ function StageFunnel({ apps }) {
 }
 
 function TimeInStageChart({ apps }) {
-  const active = apps.filter(a => !["Rejected","Withdrawn","Offer"].includes(a.stage));
+  const active = (apps || []).filter(a => a && !["Rejected","Withdrawn","Offer"].includes(a.stage));
   const sorted = [...active].sort((a,b) => timeInStage(b) - timeInStage(a)).slice(0,8);
   const max = Math.max(...sorted.map(a => timeInStage(a)), 1);
   return (
@@ -150,7 +141,8 @@ function MaxTimePerStageChart({ apps }) {
   const stageCompany = {};
   STAGES.forEach(s => { stageMax[s] = 0; stageCompany[s] = null; });
 
-  apps.forEach(a => {
+  (apps || []).forEach(a => {
+    if (!a) return;
     const days = totalDaysActive(a);
     if (days > (stageMax[a.stage] || 0)) {
       stageMax[a.stage] = days;
@@ -269,7 +261,13 @@ function ActivityHeatmap({ apps }) {
 
 function DayOfWeekBar({ apps }) {
   const counts = DAYS.reduce((a,d)=>{a[d]=0;return a;},{});
-  apps.forEach(a => { const d = DAYS[new Date(a.appliedAt).getDay()]; counts[d]++; });
+  (apps || []).forEach(a => {
+    if (!a || !a.appliedAt) return;
+    const dt = new Date(a.appliedAt);
+    if (isNaN(dt.getTime())) return;
+    const d = DAYS[dt.getDay()];
+    counts[d]++;
+  });
   const max = Math.max(...Object.values(counts),1);
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
@@ -293,7 +291,13 @@ function DayOfWeekBar({ apps }) {
 
 function HourBar({ apps }) {
   const counts = HOURS.reduce((a,h)=>{a[h]=0;return a;},{});
-  apps.forEach(a => { const h = new Date(a.appliedAt).getHours(); counts[h]++; });
+  (apps || []).forEach(a => {
+    if (!a || !a.appliedAt) return;
+    const dt = new Date(a.appliedAt);
+    if (isNaN(dt.getTime())) return;
+    const h = dt.getHours();
+    counts[h]++;
+  });
   const max = Math.max(...Object.values(counts),1);
   const AM_PM = h => h===0?"12a":h<12?`${h}a`:h===12?"12p":`${h-12}p`;
   const labeled = [0,6,9,12,15,18,21,23];
@@ -333,10 +337,29 @@ function Badge({ stage }) {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function Modal({ app, onClose, onSave }) {
+// Helper to convert ISO/date string to local datetime format for input
+function toLocalDateTimeInput(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Helper to get current local datetime for new applications
+function getCurrentLocalDateTime() {
+  return toLocalDateTimeInput(new Date().toISOString());
+}
+
+function Modal({ app, onClose, onSave, saving }) {
   const [form, setForm] = useState({...app});
   if (!app) return null;
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const isNew = !app.id;
   return (
     <div onClick={onClose} style={{
       position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
@@ -352,29 +375,45 @@ function Modal({ app, onClose, onSave }) {
         {[
           ["Company",  "company", "text"],
           ["Role",     "role",    "text"],
-          ["Applied",  "appliedAt","datetime-local"],
-          ["Last Update","lastUpdate","datetime-local"],
         ].map(([label,key,type])=>(
           <label key={key} style={{display:"flex",flexDirection:"column",gap:6}}>
             <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>{label.toUpperCase()}</span>
             <input
               type={type}
-              value={type==="datetime-local" ? form[key]?.slice(0,16) : form[key]}
-              onChange={e=>set(key, type==="datetime-local"?e.target.value+":00":e.target.value)}
+              value={form[key] || ''}
+              onChange={e=>set(key, e.target.value)}
               style={{
                 background:"#111827",border:"1px solid #374151",borderRadius:8,
                 padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,
                 outline:"none",
               }}
+              disabled={saving}
             />
           </label>
         ))}
+        {/* Show dates as read-only info for existing apps */}
+        {!isNew && (
+          <div style={{display:"flex",gap:16}}>
+            <div style={{flex:1}}>
+              <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>APPLIED</span>
+              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
+                {form.appliedAt ? new Date(form.appliedAt).toLocaleString() : '—'}
+              </p>
+            </div>
+            <div style={{flex:1}}>
+              <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>LAST UPDATE</span>
+              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
+                {form.lastUpdate ? new Date(form.lastUpdate).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+        )}
         <label style={{display:"flex",flexDirection:"column",gap:6}}>
           <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>STAGE</span>
           <select value={form.stage} onChange={e=>set("stage",e.target.value)} style={{
             background:"#111827",border:"1px solid #374151",borderRadius:8,
             padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,
-          }}>
+          }} disabled={saving}>
             {STAGES.map(s=><option key={s}>{s}</option>)}
           </select>
         </label>
@@ -383,11 +422,13 @@ function Modal({ app, onClose, onSave }) {
           <textarea value={form.notes} onChange={e=>set("notes",e.target.value)} rows={2} style={{
             background:"#111827",border:"1px solid #374151",borderRadius:8,
             padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,resize:"vertical",
-          }}/>
+          }} disabled={saving}/>
         </label>
         <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-          <button onClick={onClose} style={{padding:"8px 20px",borderRadius:8,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12}}>Cancel</button>
-          <button onClick={()=>onSave(form)} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>Save</button>
+          <button onClick={onClose} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,opacity:saving?0.5:1}}>Cancel</button>
+          <button onClick={()=>onSave(form)} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"none",background:saving?"#374151":"#4E9AF1",color:"#fff",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
+            {saving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
     </div>
@@ -453,7 +494,7 @@ function AppTable({ apps, onEdit, onDelete }) {
             }}>{s}</button>
           ))}
         </div>
-        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",appliedAt:new Date().toISOString(),lastUpdate:new Date().toISOString(),notes:""})}
+        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
           + Add
         </button>
@@ -514,39 +555,123 @@ function AppTable({ apps, onEdit, onDelete }) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [apps,    setApps]    = useState(COMPANIES);
+export default function JobTracker() {
+  const { user, logout, isAuthenticated } = useAuth();
+  const [apps, setApps] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = (form) => {
-    if (form.id) {
-      setApps(prev => prev.map(a => a.id===form.id ? form : a));
-    } else {
-      setApps(prev => [...prev, {...form, id: Date.now()}]);
+  // Fetch applications on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchApplications();
     }
-    setEditing(null);
+  }, [isAuthenticated]);
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await jobApplicationsAPI.getAll(0, 100);
+      const data = response.data.content || response.data || [];
+      setApps(data.map(toUIFormat));
+    } catch (err) {
+      console.error("Failed to fetch applications:", err);
+      setError("Failed to load applications. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleDelete = (id) => setApps(prev => prev.filter(a=>a.id!==id));
+
+  const handleSave = async (form) => {
+    try {
+      setSaving(true);
+      setError(null);
+      const backendData = toBackendFormat(form);
+
+      if (form.id) {
+        // Update existing
+        const response = await jobApplicationsAPI.update(form.id, backendData);
+        const updated = toUIFormat(response.data);
+        setApps(prev => prev.map(a => a.id === form.id ? updated : a));
+      } else {
+        // Create new
+        const response = await jobApplicationsAPI.create(backendData);
+        const created = toUIFormat(response.data);
+        setApps(prev => [...prev, created]);
+      }
+      setEditing(null);
+    } catch (err) {
+      console.error("Failed to save application:", err);
+      setError("Failed to save application. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this application?")) {
+      return;
+    }
+    try {
+      setError(null);
+      await jobApplicationsAPI.delete(id);
+      setApps(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error("Failed to delete application:", err);
+      setError("Failed to delete application. Please try again.");
+    }
+  };
 
   // ── Derived metrics ──
   const activeApps    = apps.filter(a=>!["Rejected","Withdrawn"].includes(a.stage));
   const offers        = apps.filter(a=>a.stage==="Offer").length;
   const rejected      = apps.filter(a=>a.stage==="Rejected").length;
-  const responseRate  = Math.round((apps.filter(a=>a.stage!=="Applied").length/apps.length)*100);
-  const avgDays       = Math.round(apps.reduce((s,a)=>s+totalDaysActive(a),0)/apps.length);
+  const responseRate  = apps.length > 0 ? Math.round((apps.filter(a=>a.stage!=="Applied").length/apps.length)*100) : 0;
+  const avgDays       = apps.length > 0 ? Math.round(apps.reduce((s,a)=>s+totalDaysActive(a),0)/apps.length) : 0;
   const inInterview   = apps.filter(a=>a.stage==="Technical"||a.stage==="Onsite").length;
-  const offerRate     = Math.round((offers / apps.length) * 100);
-  const maxStageDays  = Math.max(...apps.map(a=>timeInStage(a)));
+  const offerRate     = apps.length > 0 ? Math.round((offers / apps.length) * 100) : 0;
+  const maxStageDays  = apps.length > 0 ? Math.max(...apps.map(a=>timeInStage(a))) : 0;
   const stalestApp    = apps.find(a=>timeInStage(a)===maxStageDays);
   const weeklyPace    = (() => {
+    if (apps.length === 0) return "0.0";
     const dates = apps.map(a=>new Date(a.appliedAt));
     const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
     const weeks = Math.max((maxD - minD) / (7*86400000), 1);
     return (apps.length / weeks).toFixed(1);
   })();
-  const phoneScreenRate = Math.round(
+  const phoneScreenRate = apps.length > 0 ? Math.round(
     (apps.filter(a=>["Phone Screen","Technical","Onsite","Offer"].includes(a.stage)).length / apps.length) * 100
-  );
+  ) : 0;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{
+        minHeight:"100vh",
+        background:"#070B10",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"center",
+        fontFamily:"'DM Mono',monospace",
+      }}>
+        <div style={{textAlign:"center"}}>
+          <div style={{
+            width:40, height:40,
+            border:"3px solid #1F2937",
+            borderTopColor:"#4E9AF1",
+            borderRadius:"50%",
+            animation:"spin 1s linear infinite",
+            margin:"0 auto 16px",
+          }}/>
+          <p style={{color:"#6B7280",fontSize:12}}>Loading applications...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -579,20 +704,68 @@ export default function App() {
               lineHeight:1,
             }}>Job Tracker</h1>
             <p style={{color:"#4B5563",fontSize:11,letterSpacing:"0.1em",marginTop:4}}>
-              SEARCH COHORT · Q1 2025 · {apps.length} APPLICATIONS
+              {user?.firstName ? `${user.firstName}'s ` : ""}JOB SEARCH · {apps.length} APPLICATIONS
             </p>
           </div>
-          <span style={{color:"#374151",fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.08em"}}>
-            AS OF {today.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}
-          </span>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
+            {user && (
+              <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
+                {user.email}
+              </span>
+            )}
+            <button
+              onClick={logout}
+              style={{
+                padding:"6px 12px",
+                borderRadius:6,
+                border:"1px solid #374151",
+                background:"transparent",
+                color:"#9CA3AF",
+                cursor:"pointer",
+                fontSize:10,
+                fontFamily:"'DM Mono',monospace",
+              }}
+            >
+              Logout
+            </button>
+            <span style={{color:"#374151",fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.08em"}}>
+              AS OF {new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase()}
+            </span>
+          </div>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <div style={{
+            background:"#7F1D1D",
+            border:"1px solid #991B1B",
+            borderRadius:8,
+            padding:"12px 16px",
+            marginBottom:20,
+            display:"flex",
+            justifyContent:"space-between",
+            alignItems:"center",
+          }}>
+            <span style={{color:"#FCA5A5",fontSize:12,fontFamily:"'DM Mono',monospace"}}>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              style={{
+                background:"transparent",
+                border:"none",
+                color:"#FCA5A5",
+                cursor:"pointer",
+                fontSize:14,
+              }}
+            >x</button>
+          </div>
+        )}
+
         {/* Stat Cards — 5 × 2 grid */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:20}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:24}}>
           {/* Row 1 */}
           <StatCard label="Total Applied"    value={apps.length}         sub={`${activeApps.length} still active`}           accent="#4E9AF1" />
           <StatCard label="Response Rate"    value={`${responseRate}%`}  sub="moved past Applied"                            accent="#A78BFA" />
-          <StatCard label="Offers"           value={offers}              sub={offers ? "🎉 negotiate hard" : "keep pushing"}  accent="#10B981" />
+          <StatCard label="Offers"           value={offers}              sub={offers ? "negotiate hard" : "keep pushing"}  accent="#10B981" />
           <StatCard label="Avg Days Active"  value={`${avgDays}d`}       sub="per application"                               accent="#F59E0B" />
           <StatCard label="In Interviews"    value={inInterview}         sub={`${apps.filter(a=>a.stage==="Onsite").length} at onsite`} accent="#34D399" />
           {/* Row 2 */}
@@ -604,21 +777,21 @@ export default function App() {
         </div>
 
         {/* Charts row 1 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
           <StageFunnel         apps={apps} />
-          <TimeInStageChart    apps={apps} />
+          {/* <TimeInStageChart    apps={apps} /> */}
           <MaxTimePerStageChart apps={apps} />
-        </div>
-
-        {/* Charts row 2 */}
-        <div style={{marginBottom:12}}>
-          <ActivityHeatmap apps={apps} />
         </div>
 
         {/* Charts row 3 */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
           <DayOfWeekBar apps={apps} />
           <HourBar      apps={apps} />
+        </div>
+
+        {/* Charts row 2 */}
+        <div style={{marginBottom:12}}>
+          <ActivityHeatmap apps={apps} />
         </div>
 
         {/* Divider */}
@@ -634,7 +807,7 @@ export default function App() {
         <AppTable apps={apps} onEdit={setEditing} onDelete={handleDelete} />
       </div>
 
-      {editing && <Modal app={editing} onClose={()=>setEditing(null)} onSave={handleSave} />}
+      {editing && <Modal app={editing} onClose={()=>setEditing(null)} onSave={handleSave} saving={saving} />}
     </>
   );
 }

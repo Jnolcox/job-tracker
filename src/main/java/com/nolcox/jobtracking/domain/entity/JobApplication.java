@@ -82,6 +82,9 @@ public class JobApplication {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "status_changed_at")
+    private LocalDateTime statusChangedAt;
+
     @Version
     private Long version;
 }

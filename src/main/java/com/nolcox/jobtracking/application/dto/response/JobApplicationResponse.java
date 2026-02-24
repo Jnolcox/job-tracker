@@ -20,5 +20,6 @@ public record JobApplicationResponse(
         String contactEmail,
         String contactPhone,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        LocalDateTime statusChangedAt
 ) {}
