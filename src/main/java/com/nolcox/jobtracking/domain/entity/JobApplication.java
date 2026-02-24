@@ -12,7 +12,6 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -55,8 +54,11 @@ public class JobApplication {
     @Column(name = "interview_date")
     private LocalDateTime interviewDate;
 
-    @Column(name = "salary_expectation")
-    private BigDecimal salaryExpectation;
+    @Column(name = "salary_min")
+    private Double salaryMin;
+
+    @Column(name = "salary_max")
+    private Double salaryMax;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;

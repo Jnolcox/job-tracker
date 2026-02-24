@@ -1,6 +1,5 @@
 package com.nolcox.jobtracking.fixtures;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
@@ -18,7 +17,8 @@ public class JobApplicationFixture {
     private ApplicationStatus status = ApplicationStatus.APPLIED;
     private LocalDateTime appliedDate = LocalDateTime.now();
     private LocalDateTime interviewDate = null;
-    private BigDecimal salaryExpectation = new BigDecimal("120000");
+    private Double salaryMin = 100000.0;
+    private Double salaryMax = 150000.0;
     private String notes = "Great company culture";
     private String jobUrl = "https://example.com/jobs/123";
     private String contactName = "Jane Smith";
@@ -79,13 +79,13 @@ public class JobApplicationFixture {
         return this;
     }
 
-    public JobApplicationFixture withSalaryExpectation(BigDecimal salaryExpectation) {
-        this.salaryExpectation = salaryExpectation;
+    public JobApplicationFixture withSalaryMin(Double salaryMin) {
+        this.salaryMin = salaryMin;
         return this;
     }
 
-    public JobApplicationFixture withSalaryExpectation(String salaryExpectation) {
-        this.salaryExpectation = new BigDecimal(salaryExpectation);
+    public JobApplicationFixture withSalaryMax(Double salaryMax) {
+        this.salaryMax = salaryMax;
         return this;
     }
 
@@ -159,7 +159,8 @@ public class JobApplicationFixture {
                 .status(status)
                 .appliedDate(appliedDate)
                 .interviewDate(interviewDate)
-                .salaryExpectation(salaryExpectation)
+                .salaryMin(salaryMin)
+                .salaryMax(salaryMax)
                 .notes(notes)
                 .jobUrl(jobUrl)
                 .contactName(contactName)
@@ -181,7 +182,8 @@ public class JobApplicationFixture {
                 status,
                 appliedDate,
                 interviewDate,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
                 notes,
                 jobUrl,
                 contactName,

@@ -1,7 +1,5 @@
 package com.nolcox.jobtracking.application.dto.request;
 
-import java.math.BigDecimal;
-
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 
 import jakarta.validation.constraints.Email;
@@ -28,8 +26,11 @@ public record JobApplicationCreateRequest(
         @Size(max = 500, message = "Job URL must not exceed 500 characters")
         String jobUrl,
 
-        @PositiveOrZero(message = "Salary expectation must be zero or positive")
-        BigDecimal salaryExpectation,
+        @PositiveOrZero(message = "Salary min must be zero or positive")
+        Double salaryMin,
+
+        @PositiveOrZero(message = "Salary max must be zero or positive")
+        Double salaryMax,
 
         @Size(max = 5000, message = "Notes must not exceed 5000 characters")
         String notes,

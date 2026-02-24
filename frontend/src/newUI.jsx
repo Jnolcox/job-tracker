@@ -192,6 +192,178 @@ function MaxTimePerStageChart({ apps }) {
   );
 }
 
+function SalaryRangeChart({ apps }) {
+  // Filter active apps with salary data
+  const activeWithSalary = (apps || [])
+    .filter(a => a && !["Rejected","Withdrawn"].includes(a.stage) && (a.salaryMin || a.salaryMax))
+    .sort((a,b) => (a.salaryMin || 0) - (b.salaryMin || 0));
+
+  if (activeWithSalary.length === 0) {
+    return (
+      <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
+        <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:16}}>
+          Salary Range Distribution
+        </h3>
+        <p style={{color:"#4B5563",fontSize:11,fontFamily:"'DM Mono',monospace",textAlign:"center",padding:40}}>
+          No active applications with salary data
+        </p>
+      </div>
+    );
+  }
+
+  // Calculate stats
+  const allMins = activeWithSalary.map(a => a.salaryMin || a.salaryMax || 0);
+  const allMaxs = activeWithSalary.map(a => a.salaryMax || a.salaryMin || 0);
+  const globalMin = Math.min(...allMins);
+  const globalMax = Math.max(...allMaxs);
+  const range = globalMax - globalMin || 1;
+
+  // Calculate average
+  const avgMin = allMins.reduce((s,v) => s+v, 0) / allMins.length;
+  const avgMax = allMaxs.reduce((s,v) => s+v, 0) / allMaxs.length;
+  const avgMid = (avgMin + avgMax) / 2;
+
+  const formatSalary = (val) => {
+    if (val >= 1000) return `$${Math.round(val/1000)}k`;
+    return `$${val}`;
+  };
+
+  const chartHeight = 200;
+  const padding = 5;
+
+  // Calculate coordinates with padding
+  const getX = (i) => padding + (i / Math.max(activeWithSalary.length - 1, 1)) * (100 - 2 * padding);
+  const getY = (val) => padding + ((globalMax - val) / range) * (100 - 2 * padding);
+
+  // Generate smooth curve path using cubic bezier
+  const smoothPath = (points) => {
+    if (points.length < 2) return `M ${points[0]?.x || 0},${points[0]?.y || 0}`;
+
+    let path = `M ${points[0].x},${points[0].y}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+
+      // Calculate control points using Catmull-Rom to Bezier conversion
+      const tension = 0.3;
+      const cp1x = p1.x + (p2.x - p0.x) * tension;
+      const cp1y = p1.y + (p2.y - p0.y) * tension;
+      const cp2x = p2.x - (p3.x - p1.x) * tension;
+      const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+      path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+    return path;
+  };
+
+  // Get points for max and min lines
+  const maxPoints = activeWithSalary.map((a, i) => ({
+    x: getX(i),
+    y: getY(a.salaryMax || a.salaryMin || 0)
+  }));
+  const minPoints = activeWithSalary.map((a, i) => ({
+    x: getX(i),
+    y: getY(a.salaryMin || a.salaryMax || 0)
+  }));
+
+  // Create smooth paths
+  const maxPath = smoothPath(maxPoints);
+  const minPath = smoothPath(minPoints);
+
+  // Create filled area path (max path forward, min path backward)
+  const minPointsReversed = [...minPoints].reverse();
+  const fillPath = maxPath + ` L ${minPointsReversed[0].x},${minPointsReversed[0].y}` +
+    smoothPath(minPointsReversed).substring(smoothPath(minPointsReversed).indexOf(' ')) + ' Z';
+
+  const avgY = getY(avgMid);
+
+  return (
+    <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
+      <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>
+        Salary Range Distribution
+      </h3>
+      <p style={{color:"#4B5563",fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:16}}>
+        Min/Max spread for {activeWithSalary.length} active applications
+      </p>
+
+      {/* Chart container */}
+      <div style={{position:"relative",height:chartHeight,marginBottom:8}}>
+        {/* Y-axis labels */}
+        <div style={{position:"absolute",left:0,top:0,bottom:0,width:50,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+          <span style={{color:"#6B7280",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{formatSalary(globalMax)}</span>
+          <span style={{color:"#F59E0B",fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{formatSalary(avgMid)}</span>
+          <span style={{color:"#6B7280",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{formatSalary(globalMin)}</span>
+        </div>
+
+        {/* Chart area */}
+        <div style={{position:"absolute",left:55,right:0,top:0,bottom:0,background:"#111827",borderRadius:6,overflow:"hidden"}}>
+          {/* Grid lines */}
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"0 8px"}}>
+            {[0,1,2,3,4].map(i => (
+              <div key={i} style={{borderBottom:"1px solid #1F2937",width:"100%"}}/>
+            ))}
+          </div>
+
+          {/* SVG for the range area and average line */}
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{width:"100%",height:"100%",position:"absolute",top:0,left:0}}
+          >
+            {/* Range polygon (filled area between min and max) */}
+            <defs>
+              <linearGradient id="salaryGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.5"/>
+                <stop offset="100%" stopColor="#4E9AF1" stopOpacity="0.5"/>
+              </linearGradient>
+            </defs>
+            {/* Filled area between curves */}
+            <path
+              fill="url(#salaryGradient)"
+              stroke="none"
+              d={fillPath}
+            />
+
+            {/* Max line (smooth) */}
+            <path
+              fill="none"
+              stroke="#A78BFA"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+              d={maxPath}
+            />
+
+            {/* Min line (smooth) */}
+            <path
+              fill="none"
+              stroke="#4E9AF1"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+              d={minPath}
+            />
+
+            {/* Average line */}
+            <line
+              x1="0"
+              y1={avgY}
+              x2="100"
+              y2={avgY}
+              stroke="#F59E0B"
+              strokeWidth="1.5"
+              strokeDasharray="4,3"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 function ActivityHeatmap({ apps }) {
   const grid = buildHeatmap(apps);
   const allVals = DAYS.flatMap(d => HOURS.map(h => grid[d][h]));
@@ -360,6 +532,14 @@ function Modal({ app, onClose, onSave, saving }) {
   if (!app) return null;
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const isNew = !app.id;
+
+  const inputStyle = {
+    background:"#111827",border:"1px solid #374151",borderRadius:8,
+    padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,
+    outline:"none",width:"100%",boxSizing:"border-box",
+  };
+  const labelStyle = {color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"};
+
   return (
     <div onClick={onClose} style={{
       position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
@@ -367,64 +547,114 @@ function Modal({ app, onClose, onSave, saving }) {
     }}>
       <div onClick={e=>e.stopPropagation()} style={{
         background:"#0E1117",border:"1px solid #374151",borderRadius:16,
-        padding:32,width:480,display:"flex",flexDirection:"column",gap:16,
+        padding:32,width:560,maxHeight:"90vh",display:"flex",flexDirection:"column",gap:16,
+        overflow:"hidden",
       }}>
-        <h2 style={{color:"#F9FAFB",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:"0.04em",margin:0}}>
+        <h2 style={{color:"#F9FAFB",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,letterSpacing:"0.04em",margin:0,flexShrink:0}}>
           {app.id ? "Edit Application" : "New Application"}
         </h2>
-        {[
-          ["Company",  "company", "text"],
-          ["Role",     "role",    "text"],
-        ].map(([label,key,type])=>(
-          <label key={key} style={{display:"flex",flexDirection:"column",gap:6}}>
-            <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>{label.toUpperCase()}</span>
-            <input
-              type={type}
-              value={form[key] || ''}
-              onChange={e=>set(key, e.target.value)}
-              style={{
-                background:"#111827",border:"1px solid #374151",borderRadius:8,
-                padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,
-                outline:"none",
-              }}
-              disabled={saving}
-            />
-          </label>
-        ))}
-        {/* Show dates as read-only info for existing apps */}
-        {!isNew && (
-          <div style={{display:"flex",gap:16}}>
-            <div style={{flex:1}}>
-              <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>APPLIED</span>
-              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
-                {form.appliedAt ? new Date(form.appliedAt).toLocaleString() : '—'}
-              </p>
-            </div>
-            <div style={{flex:1}}>
-              <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>LAST UPDATE</span>
-              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
-                {form.lastUpdate ? new Date(form.lastUpdate).toLocaleString() : '—'}
-              </p>
-            </div>
+
+        <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:16,paddingRight:8}}>
+          {/* Company & Role */}
+          <div style={{display:"flex",gap:12}}>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>COMPANY *</span>
+              <input type="text" value={form.company || ''} onChange={e=>set("company",e.target.value)}
+                style={inputStyle} disabled={saving} placeholder="Company name"/>
+            </label>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>ROLE *</span>
+              <input type="text" value={form.role || ''} onChange={e=>set("role",e.target.value)}
+                style={inputStyle} disabled={saving} placeholder="Position title"/>
+            </label>
           </div>
-        )}
-        <label style={{display:"flex",flexDirection:"column",gap:6}}>
-          <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>STAGE</span>
-          <select value={form.stage} onChange={e=>set("stage",e.target.value)} style={{
-            background:"#111827",border:"1px solid #374151",borderRadius:8,
-            padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,
-          }} disabled={saving}>
-            {STAGES.map(s=><option key={s}>{s}</option>)}
-          </select>
-        </label>
-        <label style={{display:"flex",flexDirection:"column",gap:6}}>
-          <span style={{color:"#6B7280",fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em"}}>NOTES</span>
-          <textarea value={form.notes} onChange={e=>set("notes",e.target.value)} rows={2} style={{
-            background:"#111827",border:"1px solid #374151",borderRadius:8,
-            padding:"8px 12px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:13,resize:"vertical",
-          }} disabled={saving}/>
-        </label>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+
+          {/* Stage */}
+          <label style={{display:"flex",flexDirection:"column",gap:6}}>
+            <span style={labelStyle}>STAGE</span>
+            <select value={form.stage} onChange={e=>set("stage",e.target.value)}
+              style={inputStyle} disabled={saving}>
+              {STAGES.map(s=><option key={s}>{s}</option>)}
+            </select>
+          </label>
+
+          {/* Salary Range */}
+          <div style={{display:"flex",gap:12}}>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>SALARY MIN</span>
+              <input type="number" value={form.salaryMin || ''} onChange={e=>set("salaryMin",e.target.value ? Number(e.target.value) : null)}
+                style={inputStyle} disabled={saving} placeholder="e.g. 100000" min="0" step="1000"/>
+            </label>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>SALARY MAX</span>
+              <input type="number" value={form.salaryMax || ''} onChange={e=>set("salaryMax",e.target.value ? Number(e.target.value) : null)}
+                style={inputStyle} disabled={saving} placeholder="e.g. 150000" min="0" step="1000"/>
+            </label>
+          </div>
+
+          {/* Job URL */}
+          <label style={{display:"flex",flexDirection:"column",gap:6}}>
+            <span style={labelStyle}>JOB URL</span>
+            <input type="url" value={form.jobUrl || ''} onChange={e=>set("jobUrl",e.target.value)}
+              style={inputStyle} disabled={saving} placeholder="https://..."/>
+          </label>
+
+          {/* Job Description */}
+          <label style={{display:"flex",flexDirection:"column",gap:6}}>
+            <span style={labelStyle}>JOB DESCRIPTION</span>
+            <textarea value={form.jobDescription || ''} onChange={e=>set("jobDescription",e.target.value)} rows={3}
+              style={{...inputStyle,resize:"vertical"}} disabled={saving} placeholder="Paste job description here..."/>
+          </label>
+
+          {/* Contact Info */}
+          <div style={{borderTop:"1px solid #1F2937",paddingTop:16}}>
+            <span style={{...labelStyle,display:"block",marginBottom:12}}>CONTACT INFORMATION</span>
+            <div style={{display:"flex",gap:12,marginBottom:12}}>
+              <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+                <span style={{...labelStyle,fontSize:10}}>NAME</span>
+                <input type="text" value={form.contactName || ''} onChange={e=>set("contactName",e.target.value)}
+                  style={inputStyle} disabled={saving} placeholder="Recruiter name"/>
+              </label>
+              <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+                <span style={{...labelStyle,fontSize:10}}>PHONE</span>
+                <input type="tel" value={form.contactPhone || ''} onChange={e=>set("contactPhone",e.target.value)}
+                  style={inputStyle} disabled={saving} placeholder="Phone number"/>
+              </label>
+            </div>
+            <label style={{display:"flex",flexDirection:"column",gap:6}}>
+              <span style={{...labelStyle,fontSize:10}}>EMAIL</span>
+              <input type="email" value={form.contactEmail || ''} onChange={e=>set("contactEmail",e.target.value)}
+                style={inputStyle} disabled={saving} placeholder="recruiter@company.com"/>
+            </label>
+          </div>
+
+          {/* Notes */}
+          <label style={{display:"flex",flexDirection:"column",gap:6}}>
+            <span style={labelStyle}>NOTES</span>
+            <textarea value={form.notes || ''} onChange={e=>set("notes",e.target.value)} rows={2}
+              style={{...inputStyle,resize:"vertical"}} disabled={saving} placeholder="Additional notes..."/>
+          </label>
+
+          {/* Show dates as read-only info for existing apps */}
+          {!isNew && (
+            <div style={{display:"flex",gap:16,borderTop:"1px solid #1F2937",paddingTop:16}}>
+              <div style={{flex:1}}>
+                <span style={labelStyle}>APPLIED</span>
+                <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
+                  {form.appliedAt ? new Date(form.appliedAt).toLocaleString() : '—'}
+                </p>
+              </div>
+              <div style={{flex:1}}>
+                <span style={labelStyle}>LAST STATUS CHANGE</span>
+                <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
+                  {form.lastUpdate ? new Date(form.lastUpdate).toLocaleString() : '—'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexShrink:0,borderTop:"1px solid #1F2937",paddingTop:16}}>
           <button onClick={onClose} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,opacity:saving?0.5:1}}>Cancel</button>
           <button onClick={()=>onSave(form)} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"none",background:saving?"#374151":"#4E9AF1",color:"#fff",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
             {saving ? "Saving..." : "Save"}
@@ -494,7 +724,7 @@ function AppTable({ apps, onEdit, onDelete }) {
             }}>{s}</button>
           ))}
         </div>
-        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:""})}
+        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,contactName:"",contactEmail:"",contactPhone:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
           + Add
         </button>
@@ -777,9 +1007,9 @@ export default function JobTracker() {
         </div>
 
         {/* Charts row 1 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
           <StageFunnel         apps={apps} />
-          {/* <TimeInStageChart    apps={apps} /> */}
+          <SalaryRangeChart    apps={apps} />
           <MaxTimePerStageChart apps={apps} />
         </div>
 

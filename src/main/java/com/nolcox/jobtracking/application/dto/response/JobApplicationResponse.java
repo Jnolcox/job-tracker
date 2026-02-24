@@ -2,7 +2,6 @@ package com.nolcox.jobtracking.application.dto.response;
 
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record JobApplicationResponse(
@@ -13,7 +12,8 @@ public record JobApplicationResponse(
         ApplicationStatus status,
         LocalDateTime appliedDate,
         LocalDateTime interviewDate,
-        BigDecimal salaryExpectation,
+        Double salaryMin,
+        Double salaryMax,
         String notes,
         String jobUrl,
         String contactName,

@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record JobApplicationUpdateRequest(
@@ -30,8 +29,11 @@ public record JobApplicationUpdateRequest(
 
         LocalDateTime interviewDate,
 
-        @PositiveOrZero(message = "Salary expectation must be zero or positive")
-        BigDecimal salaryExpectation,
+        @PositiveOrZero(message = "Salary min must be zero or positive")
+        Double salaryMin,
+
+        @PositiveOrZero(message = "Salary max must be zero or positive")
+        Double salaryMax,
 
         @Size(max = 5000, message = "Notes must not exceed 5000 characters")
         String notes,

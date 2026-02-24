@@ -1,6 +1,5 @@
 package com.nolcox.jobtracking.config;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.springframework.boot.CommandLineRunner;
@@ -65,7 +64,8 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Exciting opportunity to work with cutting-edge technologies including React, Spring Boot, and AWS")
                     .status(ApplicationStatus.APPLIED)
                     .appliedDate(LocalDateTime.now().minusDays(5))
-                    .salaryExpectation(new BigDecimal("120000"))
+                    .salaryMin(110000.0)
+                    .salaryMax(130000.0)
                     .notes("Great company culture, remote-friendly")
                     .jobUrl("https://techcorp.com/jobs/senior-engineer")
                     .contactName("Jane Smith")
@@ -81,7 +81,8 @@ public class DataInitializer implements CommandLineRunner {
                     .status(ApplicationStatus.TECH_SCREEN)
                     .appliedDate(LocalDateTime.now().minusDays(8))
                     .interviewDate(LocalDateTime.now().plusDays(2))
-                    .salaryExpectation(new BigDecimal("95000"))
+                    .salaryMin(90000.0)
+                    .salaryMax(100000.0)
                     .notes("Interview scheduled for Thursday at 2 PM")
                     .jobUrl("https://startupxyz.com/careers")
                     .contactName("Mike Johnson")
@@ -95,7 +96,8 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Work on user-facing features for millions of users")
                     .status(ApplicationStatus.REJECTED)
                     .appliedDate(LocalDateTime.now().minusDays(15))
-                    .salaryExpectation(new BigDecimal("110000"))
+                    .salaryMin(100000.0)
+                    .salaryMax(120000.0)
                     .notes("Not selected for this role, but they encouraged me to apply again in the future")
                     .jobUrl("https://bigtech.com/jobs/frontend-dev")
                     .contactName("Sarah Wilson")
@@ -110,7 +112,8 @@ public class DataInitializer implements CommandLineRunner {
                     .status(ApplicationStatus.OFFER_RECEIVED)
                     .appliedDate(LocalDateTime.now().minusDays(20))
                     .interviewDate(LocalDateTime.now().minusDays(3))
-                    .salaryExpectation(new BigDecimal("125000"))
+                    .salaryMin(120000.0)
+                    .salaryMax(140000.0)
                     .notes("Received offer! Need to respond by end of week. Great benefits package.")
                     .jobUrl("https://financeflow.com/careers/backend")
                     .contactName("David Chen")
@@ -125,7 +128,8 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Manage cloud infrastructure and CI/CD pipelines")
                     .status(ApplicationStatus.APPLIED)
                     .appliedDate(LocalDateTime.now().minusDays(2))
-                    .salaryExpectation(new BigDecimal("115000"))
+                    .salaryMin(105000.0)
+                    .salaryMax(125000.0)
                     .notes("Applied through LinkedIn, waiting for response")
                     .jobUrl("https://cloudsolutions.com/jobs/devops")
                     .contactName("Lisa Rodriguez")

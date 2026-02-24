@@ -1,6 +1,5 @@
 package com.nolcox.jobtracking.integration;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,7 +72,8 @@ class JobApplicationIntegrationTest {
     private final String TEST_COMPANY = "Tech Corp";
     private final String TEST_POSITION = "Software Engineer";
     private final String TEST_DESCRIPTION = "Exciting opportunity to work with cutting-edge technology";
-    private final BigDecimal TEST_SALARY = new BigDecimal("75000.00");
+    private final Double TEST_SALARY_MIN = 70000.0;
+    private final Double TEST_SALARY_MAX = 80000.0;
 
     @BeforeEach
     void setUp() {
@@ -116,7 +116,8 @@ class JobApplicationIntegrationTest {
                 TEST_DESCRIPTION,
                 ApplicationStatus.APPLIED,
                 "https://example.com/job",
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
@@ -136,7 +137,8 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.positionTitle").value(TEST_POSITION))
                 .andExpect(jsonPath("$.jobDescription").value(TEST_DESCRIPTION))
                 .andExpect(jsonPath("$.status").value("APPLIED"))
-                .andExpect(jsonPath("$.salaryExpectation").value(75000.00))
+                .andExpect(jsonPath("$.salaryMin").value(70000.0))
+                .andExpect(jsonPath("$.salaryMax").value(80000.0))
                 .andExpect(jsonPath("$.appliedDate").exists())
                 .andExpect(jsonPath("$.createdAt").exists())
                 .andReturn();
@@ -164,7 +166,8 @@ class JobApplicationIntegrationTest {
                 TEST_DESCRIPTION,
                 ApplicationStatus.APPLIED,
                 "https://example.com/job",
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
                 "Notes",
                 "Jane Smith",
                 "invalid-email", // Invalid email format
@@ -285,7 +288,8 @@ class JobApplicationIntegrationTest {
                 "https://example.com/updated-job",
                 ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(3),
-                new BigDecimal("80000.00"),
+                75000.0,
+                85000.0,
                 "Updated notes",
                 "John Doe",
                 "john.doe@updated.com",
@@ -301,7 +305,8 @@ class JobApplicationIntegrationTest {
                 .andExpect(jsonPath("$.companyName").value("Updated Company"))
                 .andExpect(jsonPath("$.positionTitle").value("Updated Position"))
                 .andExpect(jsonPath("$.status").value("TECH_SCREEN"))
-                .andExpect(jsonPath("$.salaryExpectation").value(80000.00));
+                .andExpect(jsonPath("$.salaryMin").value(75000.0))
+                .andExpect(jsonPath("$.salaryMax").value(85000.0));
 
         // Verify in database
         JobApplication updatedApplication = jobApplicationRepository.findById(application.getId()).orElse(null);
@@ -323,7 +328,8 @@ class JobApplicationIntegrationTest {
                 null,
                 ApplicationStatus.REJECTED,
                 null,
-                new BigDecimal("1000000.00"),
+                1000000.0,
+                2000000.0,
                 "Hacking attempt",
                 "Hacker",
                 "hacker@evil.com",
@@ -390,7 +396,7 @@ class JobApplicationIntegrationTest {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null
+                null, null, null, null, null, null, null
         );
 
         mockMvc.perform(put("/v1/job-applications/{id}", nonExistentId)
@@ -412,21 +418,22 @@ class JobApplicationIntegrationTest {
         JobApplication application = createJobApplication(testUser, TEST_COMPANY, TEST_POSITION);
         
         JobApplicationCreateRequest createRequest = new JobApplicationCreateRequest(
-                "Company", 
+                "Company",
                 "Position",
-                "Description", 
-                ApplicationStatus.APPLIED, 
-                null, 
-                null, 
-                null, 
-                null, 
-                null, 
+                "Description",
+                ApplicationStatus.APPLIED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 null
         );
 
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null
+                null, null, null, null, null, null, null
         );
 
         // When & Then - All endpoints should require authentication
@@ -482,7 +489,8 @@ class JobApplicationIntegrationTest {
                 TEST_DESCRIPTION,
                 ApplicationStatus.APPLIED,
                 "https://example.com/job",
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
@@ -515,7 +523,8 @@ class JobApplicationIntegrationTest {
                 "https://example.com/job",
                 ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(2),
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
                 "Updated after interview scheduled",
                 "Jane Smith",
                 "jane@example.com",
@@ -555,7 +564,8 @@ class JobApplicationIntegrationTest {
                 .jobDescription("Test job description")
                 .status(ApplicationStatus.APPLIED)
                 .appliedDate(LocalDateTime.now())
-                .salaryExpectation(TEST_SALARY)
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
                 .notes("Test notes")
                 .build();
         return jobApplicationRepository.save(application);

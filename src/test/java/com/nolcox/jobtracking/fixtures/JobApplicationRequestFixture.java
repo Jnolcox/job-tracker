@@ -1,6 +1,5 @@
 package com.nolcox.jobtracking.fixtures;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
@@ -14,7 +13,8 @@ public class JobApplicationRequestFixture {
     private String positionTitle = "Senior Software Engineer";
     private String jobDescription = "Exciting opportunity to work with cutting-edge technologies";
     private String jobUrl = "https://example.com/jobs/123";
-    private BigDecimal salaryExpectation = new BigDecimal("120000");
+    private Double salaryMin = 100000.0;
+    private Double salaryMax = 150000.0;
     private String notes = "Great company culture";
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
@@ -48,13 +48,13 @@ public class JobApplicationRequestFixture {
         return this;
     }
 
-    public JobApplicationRequestFixture withSalaryExpectation(BigDecimal salaryExpectation) {
-        this.salaryExpectation = salaryExpectation;
+    public JobApplicationRequestFixture withSalaryMin(Double salaryMin) {
+        this.salaryMin = salaryMin;
         return this;
     }
 
-    public JobApplicationRequestFixture withSalaryExpectation(String salaryExpectation) {
-        this.salaryExpectation = new BigDecimal(salaryExpectation);
+    public JobApplicationRequestFixture withSalaryMax(Double salaryMax) {
+        this.salaryMax = salaryMax;
         return this;
     }
 
@@ -97,7 +97,8 @@ public class JobApplicationRequestFixture {
     public JobApplicationRequestFixture withMinimalData() {
         this.jobDescription = null;
         this.jobUrl = null;
-        this.salaryExpectation = null;
+        this.salaryMin = null;
+        this.salaryMax = null;
         this.notes = null;
         this.contactName = null;
         this.contactEmail = null;
@@ -123,14 +124,16 @@ public class JobApplicationRequestFixture {
     public JobApplicationRequestFixture forFrontendPosition() {
         this.positionTitle = "Frontend Developer";
         this.jobDescription = "Build modern web applications using React and TypeScript";
-        this.salaryExpectation = new BigDecimal("100000");
+        this.salaryMin = 90000.0;
+        this.salaryMax = 120000.0;
         return this;
     }
 
     public JobApplicationRequestFixture forBackendPosition() {
         this.positionTitle = "Backend Developer";
         this.jobDescription = "Design and implement scalable microservices using Java and Spring Boot";
-        this.salaryExpectation = new BigDecimal("110000");
+        this.salaryMin = 100000.0;
+        this.salaryMax = 130000.0;
         return this;
     }
 
@@ -147,7 +150,8 @@ public class JobApplicationRequestFixture {
                 jobDescription,
                 status,
                 jobUrl,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
                 notes,
                 contactName,
                 contactEmail,
@@ -163,7 +167,8 @@ public class JobApplicationRequestFixture {
                 jobUrl,
                 status,
                 interviewDate,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
                 notes,
                 contactName,
                 contactEmail,
