@@ -1,16 +1,9 @@
 package com.nolcox.jobtracking.integration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
-import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
-import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
-import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-import com.nolcox.jobtracking.domain.entity.JobApplication;
-import com.nolcox.jobtracking.domain.entity.Role;
-import com.nolcox.jobtracking.domain.entity.User;
-import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
-import com.nolcox.jobtracking.domain.repository.UserRepository;
-import com.nolcox.jobtracking.infrastructure.security.JwtService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,15 +15,27 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.domain.repository.UserRepository;
+import com.nolcox.jobtracking.infrastructure.security.JwtService;
 
 /**
  * Integration tests for Job Application functionality.
@@ -209,7 +214,7 @@ class JobApplicationIntegrationTest {
         jobApplicationRepository.save(appliedApp);
 
         JobApplication interviewApp = createJobApplication(testUser, "Company B", "Role B");
-        interviewApp.setStatus(ApplicationStatus.INTERVIEW_SCHEDULED);
+        interviewApp.setStatus(ApplicationStatus.TECH_SCREEN);
         jobApplicationRepository.save(interviewApp);
 
         // When - Filter by APPLIED status
@@ -275,7 +280,8 @@ class JobApplicationIntegrationTest {
                 "Updated Company",
                 "Updated Position",
                 "Updated description",
-                ApplicationStatus.INTERVIEW_SCHEDULED,
+                "https://example.com/updated-job",
+                ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(3),
                 new BigDecimal("80000.00"),
                 "Updated notes",
@@ -292,14 +298,14 @@ class JobApplicationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyName").value("Updated Company"))
                 .andExpect(jsonPath("$.positionTitle").value("Updated Position"))
-                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"))
+                .andExpect(jsonPath("$.status").value("TECH_SCREEN"))
                 .andExpect(jsonPath("$.salaryExpectation").value(80000.00));
 
         // Verify in database
         JobApplication updatedApplication = jobApplicationRepository.findById(application.getId()).orElse(null);
         assertThat(updatedApplication).isNotNull();
         assertThat(updatedApplication.getCompanyName()).isEqualTo("Updated Company");
-        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.TECH_SCREEN);
     }
 
     @Test
@@ -312,6 +318,7 @@ class JobApplicationIntegrationTest {
                 "Hacked Company",
                 "Hacked Position",
                 "Should not work",
+                null,
                 ApplicationStatus.REJECTED,
                 null,
                 new BigDecimal("1000000.00"),
@@ -380,7 +387,7 @@ class JobApplicationIntegrationTest {
 
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
-                "Company", "Position", "Description", ApplicationStatus.APPLIED,
+                "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
                 null, null, null, null, null, null
         );
 
@@ -407,7 +414,7 @@ class JobApplicationIntegrationTest {
         );
 
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
-                "Company", "Position", "Description", ApplicationStatus.APPLIED,
+                "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
                 null, null, null, null, null, null
         );
 
@@ -493,7 +500,8 @@ class JobApplicationIntegrationTest {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
-                ApplicationStatus.INTERVIEW_SCHEDULED,
+                "https://example.com/job",
+                ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY,
                 "Updated after interview scheduled",
@@ -507,13 +515,13 @@ class JobApplicationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
+                .andExpect(jsonPath("$.status").value("TECH_SCREEN"));
 
         // Step 4: Verify the update
         mockMvc.perform(get("/v1/job-applications/{id}", created.id())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("INTERVIEW_SCHEDULED"));
+                .andExpect(jsonPath("$.status").value("TECH_SCREEN"));
 
         // Step 5: Delete the application
         mockMvc.perform(delete("/v1/job-applications/{id}", created.id())

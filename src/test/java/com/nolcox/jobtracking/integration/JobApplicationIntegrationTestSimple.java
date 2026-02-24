@@ -1,16 +1,10 @@
 package com.nolcox.jobtracking.integration;
 
-import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
-import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
-import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
-import com.nolcox.jobtracking.application.service.JobApplicationService;
-import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-import com.nolcox.jobtracking.domain.entity.JobApplication;
-import com.nolcox.jobtracking.domain.entity.Role;
-import com.nolcox.jobtracking.domain.entity.User;
-import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
-import com.nolcox.jobtracking.domain.repository.UserRepository;
-import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,11 +16,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.service.JobApplicationService;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.domain.repository.UserRepository;
+import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 
 /**
  * Simplified Integration tests for Job Application functionality.
@@ -154,7 +154,7 @@ class JobApplicationIntegrationTestSimple {
         jobApplicationRepository.save(appliedApp);
 
         JobApplication interviewApp = createJobApplication(testUser, "Company B", "Role B");
-        interviewApp.setStatus(ApplicationStatus.INTERVIEW_SCHEDULED);
+        interviewApp.setStatus(ApplicationStatus.TECH_SCREEN);
         jobApplicationRepository.save(interviewApp);
 
         // When - Filter by APPLIED status
@@ -219,7 +219,8 @@ class JobApplicationIntegrationTestSimple {
                 "Updated Company",
                 "Updated Position",
                 "Updated description",
-                ApplicationStatus.INTERVIEW_SCHEDULED,
+                "https://example.com/updated-job",
+                ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(3),
                 new BigDecimal("80000.00"),
                 "Updated notes",
@@ -235,14 +236,14 @@ class JobApplicationIntegrationTestSimple {
         // Then
         assertThat(response.companyName()).isEqualTo("Updated Company");
         assertThat(response.positionTitle()).isEqualTo("Updated Position");
-        assertThat(response.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(response.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
         assertThat(response.salaryExpectation()).isEqualTo(new BigDecimal("80000.00"));
 
         // Verify in database
         JobApplication updatedApplication = jobApplicationRepository.findById(application.getId()).orElse(null);
         assertThat(updatedApplication).isNotNull();
         assertThat(updatedApplication.getCompanyName()).isEqualTo("Updated Company");
-        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.TECH_SCREEN);
     }
 
     @Test
@@ -255,6 +256,7 @@ class JobApplicationIntegrationTestSimple {
                 "Hacked Company",
                 "Hacked Position",
                 "Should not work",
+                null,
                 ApplicationStatus.REJECTED,
                 null,
                 new BigDecimal("1000000.00"),
@@ -316,7 +318,7 @@ class JobApplicationIntegrationTestSimple {
 
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
-                "Company", "Position", "Description", ApplicationStatus.APPLIED,
+                "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
                 null, null, null, null, null, null
         );
 
@@ -376,7 +378,8 @@ class JobApplicationIntegrationTestSimple {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
-                ApplicationStatus.INTERVIEW_SCHEDULED,
+                "https://example.com/job",
+                ApplicationStatus.TECH_SCREEN,
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY,
                 "Updated after interview scheduled",
@@ -387,11 +390,11 @@ class JobApplicationIntegrationTestSimple {
 
         JobApplicationResponse updated = jobApplicationService.updateApplication(
                 created.id(), updateRequest, testUser.getId());
-        assertThat(updated.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(updated.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
 
         // Step 4: Verify the update
         JobApplicationResponse verified = jobApplicationService.getApplication(created.id(), testUser.getId());
-        assertThat(verified.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(verified.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
 
         // Step 5: Delete the application
         jobApplicationService.deleteApplication(created.id(), testUser.getId());

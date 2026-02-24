@@ -73,7 +73,7 @@ public class JobApplicationFixture {
     }
 
     public JobApplicationFixture withInterviewScheduled() {
-        this.status = ApplicationStatus.INTERVIEW_SCHEDULED;
+        this.status = ApplicationStatus.TECH_SCREEN;
         this.interviewDate = LocalDateTime.now().plusDays(7);
         return this;
     }
@@ -139,7 +139,7 @@ public class JobApplicationFixture {
     }
 
     public JobApplicationFixture accepted() {
-        this.status = ApplicationStatus.ACCEPTED;
+        this.status = ApplicationStatus.OFFER_ACCEPTED;
         return this;
     }
 

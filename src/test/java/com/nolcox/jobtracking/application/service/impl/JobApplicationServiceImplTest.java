@@ -1,38 +1,36 @@
 package com.nolcox.jobtracking.application.service.impl;
 
-import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
-import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-import com.nolcox.jobtracking.domain.entity.JobApplication;
-import com.nolcox.jobtracking.domain.entity.User;
-import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
-import com.nolcox.jobtracking.domain.repository.UserRepository;
-import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
-import com.nolcox.jobtracking.fixtures.UserFixture;
-import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
-import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
-import static org.mockito.ArgumentMatchers.any;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
+import com.nolcox.jobtracking.fixtures.UserFixture;
+import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JobApplicationService Tests")
@@ -104,7 +102,7 @@ class JobApplicationServiceImplTest {
         void shouldGetUserApplicationsWithStatusFilter() {
             // Given
             Long userId = 1L;
-            ApplicationStatus status = ApplicationStatus.INTERVIEW_SCHEDULED;
+            ApplicationStatus status = ApplicationStatus.TECH_SCREEN;
             Pageable pageable = PageRequest.of(0, 10);
 
             when(repository.findByUserIdWithFilters(userId, status, null, pageable))

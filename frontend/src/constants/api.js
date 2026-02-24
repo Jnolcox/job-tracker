@@ -65,7 +65,7 @@ export const HTTP_STATUS = {
 // Application status constants (matching backend)
 export const APPLICATION_STATUS = {
   APPLIED: 'APPLIED',
-  INTERVIEW_SCHEDULED: 'INTERVIEW_SCHEDULED',
+  TECH_SCREEN: 'TECH SCREEN',
   INTERVIEWED: 'INTERVIEWED',
   OFFER_RECEIVED: 'OFFER_RECEIVED',
   REJECTED: 'REJECTED',
@@ -80,8 +80,8 @@ export const STATUS_CONFIG = {
     className: 'status-applied',
     color: '#f39c12'
   },
-  [APPLICATION_STATUS.INTERVIEW_SCHEDULED]: {
-    label: 'Interview Scheduled',
+  [APPLICATION_STATUS.TECH_SCREEN]: {
+    label: 'Tech Screen',
     className: 'status-interviewed',
     color: '#9b59b6'
   },
@@ -105,8 +105,8 @@ export const STATUS_CONFIG = {
     className: 'status-rejected',
     color: '#e74c3c'
   },
-  [APPLICATION_STATUS.ACCEPTED]: {
-    label: 'Accepted',
+  [APPLICATION_STATUS.OFFER_RECEIVED]: {
+    label: 'Offer Accepted',
     className: 'status-offer',
     color: '#27ae60'
   }

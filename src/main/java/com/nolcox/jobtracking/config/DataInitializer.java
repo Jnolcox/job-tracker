@@ -78,7 +78,7 @@ public class DataInitializer implements CommandLineRunner {
                     .companyName("StartupXYZ")
                     .positionTitle("Full Stack Developer")
                     .jobDescription("Join our fast-growing startup and help build the next generation platform")
-                    .status(ApplicationStatus.INTERVIEW_SCHEDULED)
+                    .status(ApplicationStatus.TECH_SCREEN)
                     .appliedDate(LocalDateTime.now().minusDays(8))
                     .interviewDate(LocalDateTime.now().plusDays(2))
                     .salaryExpectation(new BigDecimal("95000"))
