@@ -3,6 +3,17 @@
 // UI stage constants
 export const UI_STAGES = ["Applied", "Phone Screen", "Tech Screen", "Technical", "Onsite", "Offer", "Rejected", "Withdrawn"];
 
+// RTO type constants
+export const RTO_TYPES = ["REMOTE", "HYBRID_2", "HYBRID_3", "HYBRID_4", "ONSITE"];
+
+export const RTO_LABELS = {
+  REMOTE: "Remote",
+  HYBRID_2: "Hybrid (2 days)",
+  HYBRID_3: "Hybrid (3 days)",
+  HYBRID_4: "Hybrid (4 days)",
+  ONSITE: "On-site",
+};
+
 export const STAGE_COLORS = {
   Applied: "#4E9AF1",
   "Phone Screen": "#A78BFA",
@@ -104,6 +115,8 @@ export function toUIFormat(application) {
     interviewDate: convertDate(application.interviewDate),
     salaryMin: application.salaryMin,
     salaryMax: application.salaryMax,
+    location: application.location || "",
+    rtoType: application.rtoType || null,
     jobUrl: application.jobUrl || "",
     contactName: application.contactName || "",
     contactEmail: application.contactEmail || "",
@@ -123,6 +136,8 @@ export function toBackendFormat(form) {
     jobDescription: form.jobDescription || null,
     salaryMin: form.salaryMin || null,
     salaryMax: form.salaryMax || null,
+    location: form.location || null,
+    rtoType: form.rtoType || null,
     jobUrl: form.jobUrl || null,
     contactName: form.contactName || null,
     contactEmail: form.contactEmail || null,

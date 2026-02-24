@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.application.dto.request;
 
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,6 +32,11 @@ public record JobApplicationCreateRequest(
 
         @PositiveOrZero(message = "Salary max must be zero or positive")
         Double salaryMax,
+
+        @Size(max = 255, message = "Location must not exceed 255 characters")
+        String location,
+
+        RtoType rtoType,
 
         @Size(max = 5000, message = "Notes must not exceed 5000 characters")
         String notes,

@@ -60,6 +60,14 @@ public class JobApplication {
     @Column(name = "salary_max")
     private Double salaryMax;
 
+    @Column(name = "location")
+    @Size(max = 255)
+    private String location;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rto_type")
+    private RtoType rtoType;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

@@ -27,6 +27,8 @@ CREATE TABLE job_applications (
     interview_date DATETIME,
     salary_min DOUBLE,
     salary_max DOUBLE,
+    location VARCHAR(255),
+    rto_type VARCHAR(50),
     notes TEXT,
     job_url VARCHAR(500),
     contact_name VARCHAR(255),

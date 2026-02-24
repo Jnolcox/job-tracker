@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
@@ -66,6 +67,8 @@ public class DataInitializer implements CommandLineRunner {
                     .appliedDate(LocalDateTime.now().minusDays(5))
                     .salaryMin(110000.0)
                     .salaryMax(130000.0)
+                    .location("San Francisco, CA")
+                    .rtoType(RtoType.HYBRID_2)
                     .notes("Great company culture, remote-friendly")
                     .jobUrl("https://techcorp.com/jobs/senior-engineer")
                     .contactName("Jane Smith")
@@ -83,6 +86,8 @@ public class DataInitializer implements CommandLineRunner {
                     .interviewDate(LocalDateTime.now().plusDays(2))
                     .salaryMin(90000.0)
                     .salaryMax(100000.0)
+                    .location("Austin, TX")
+                    .rtoType(RtoType.REMOTE)
                     .notes("Interview scheduled for Thursday at 2 PM")
                     .jobUrl("https://startupxyz.com/careers")
                     .contactName("Mike Johnson")
@@ -98,6 +103,8 @@ public class DataInitializer implements CommandLineRunner {
                     .appliedDate(LocalDateTime.now().minusDays(15))
                     .salaryMin(100000.0)
                     .salaryMax(120000.0)
+                    .location("Seattle, WA")
+                    .rtoType(RtoType.HYBRID_3)
                     .notes("Not selected for this role, but they encouraged me to apply again in the future")
                     .jobUrl("https://bigtech.com/jobs/frontend-dev")
                     .contactName("Sarah Wilson")
@@ -114,6 +121,8 @@ public class DataInitializer implements CommandLineRunner {
                     .interviewDate(LocalDateTime.now().minusDays(3))
                     .salaryMin(120000.0)
                     .salaryMax(140000.0)
+                    .location("New York, NY")
+                    .rtoType(RtoType.ONSITE)
                     .notes("Received offer! Need to respond by end of week. Great benefits package.")
                     .jobUrl("https://financeflow.com/careers/backend")
                     .contactName("David Chen")
@@ -130,6 +139,8 @@ public class DataInitializer implements CommandLineRunner {
                     .appliedDate(LocalDateTime.now().minusDays(2))
                     .salaryMin(105000.0)
                     .salaryMax(125000.0)
+                    .location("Denver, CO")
+                    .rtoType(RtoType.HYBRID_4)
                     .notes("Applied through LinkedIn, waiting for response")
                     .jobUrl("https://cloudsolutions.com/jobs/devops")
                     .contactName("Lisa Rodriguez")

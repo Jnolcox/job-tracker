@@ -22,6 +22,7 @@ import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
@@ -97,6 +98,8 @@ class JobApplicationIntegrationTestSimple {
                 "https://example.com/job",
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
@@ -227,6 +230,8 @@ class JobApplicationIntegrationTestSimple {
                 LocalDateTime.now().plusDays(3),
                 75000.0,
                 85000.0,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
                 "Updated notes",
                 "John Doe",
                 "john.doe@updated.com",
@@ -266,6 +271,8 @@ class JobApplicationIntegrationTestSimple {
                 null,
                 1000000.0,
                 2000000.0,
+                null,
+                null,
                 "Hacking attempt",
                 "Hacker",
                 "hacker@evil.com",
@@ -325,7 +332,7 @@ class JobApplicationIntegrationTestSimple {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null
         );
 
         assertThrows(ResourceNotFoundException.class, () -> 
@@ -368,6 +375,8 @@ class JobApplicationIntegrationTestSimple {
                 "https://example.com/job",
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
@@ -391,6 +400,8 @@ class JobApplicationIntegrationTestSimple {
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
                 "Updated after interview scheduled",
                 "Jane Smith",
                 "jane@example.com",
@@ -424,6 +435,8 @@ class JobApplicationIntegrationTestSimple {
                 .appliedDate(LocalDateTime.now())
                 .salaryMin(TEST_SALARY_MIN)
                 .salaryMax(TEST_SALARY_MAX)
+                .location("San Francisco, CA")
+                .rtoType(RtoType.HYBRID_3)
                 .notes("Test notes")
                 .build();
         return jobApplicationRepository.save(application);

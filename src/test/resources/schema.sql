@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS job_applications (
     interview_date TIMESTAMP,
     salary_min DOUBLE,
     salary_max DOUBLE,
+    location VARCHAR(255),
+    rto_type VARCHAR(50),
     contact_name VARCHAR(255),
     contact_email VARCHAR(255),
     contact_phone VARCHAR(255),

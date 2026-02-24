@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.application.dto.response;
 
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 
 import java.time.LocalDateTime;
 
@@ -14,6 +15,8 @@ public record JobApplicationResponse(
         LocalDateTime interviewDate,
         Double salaryMin,
         Double salaryMax,
+        String location,
+        RtoType rtoType,
         String notes,
         String jobUrl,
         String contactName,

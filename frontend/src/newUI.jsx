@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { jobApplicationsAPI } from "./services/api";
-import { toUIFormat, toBackendFormat, UI_STAGES, STAGE_COLORS } from "./utils/dataAdapter";
+import { toUIFormat, toBackendFormat, UI_STAGES, STAGE_COLORS, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STAGES = UI_STAGES;
@@ -592,6 +592,23 @@ function Modal({ app, onClose, onSave, saving }) {
             </label>
           </div>
 
+          {/* Location & RTO */}
+          <div style={{display:"flex",gap:12}}>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>LOCATION</span>
+              <input type="text" value={form.location || ''} onChange={e=>set("location",e.target.value)}
+                style={inputStyle} disabled={saving} placeholder="e.g. San Francisco, CA"/>
+            </label>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>RTO</span>
+              <select value={form.rtoType || ''} onChange={e=>set("rtoType",e.target.value || null)}
+                style={inputStyle} disabled={saving}>
+                <option value="">Select...</option>
+                {RTO_TYPES.map(r=><option key={r} value={r}>{RTO_LABELS[r]}</option>)}
+              </select>
+            </label>
+          </div>
+
           {/* Job URL */}
           <label style={{display:"flex",flexDirection:"column",gap:6}}>
             <span style={labelStyle}>JOB URL</span>
@@ -724,7 +741,7 @@ function AppTable({ apps, onEdit, onDelete }) {
             }}>{s}</button>
           ))}
         </div>
-        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,contactName:"",contactEmail:"",contactPhone:""})}
+        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
           + Add
         </button>
@@ -736,11 +753,13 @@ function AppTable({ apps, onEdit, onDelete }) {
               <TH onClick={()=>setSortKey("company")} sorted={sortKey==="company"}>Company</TH>
               <TH onClick={()=>setSortKey("role")}    sorted={sortKey==="role"}>Role</TH>
               <TH onClick={()=>setSortKey("stage")}   sorted={sortKey==="stage"}>Stage</TH>
+              <TH onClick={()=>setSortKey("location")} sorted={sortKey==="location"}>Location</TH>
+              <TH onClick={()=>setSortKey("rtoType")} sorted={sortKey==="rtoType"}>RTO</TH>
+              <TH onClick={()=>setSortKey("salaryMin")} sorted={sortKey==="salaryMin"}>Salary</TH>
               <TH onClick={()=>setSortKey("appliedAt")} sorted={sortKey==="appliedAt"}>Applied</TH>
-              <TH onClick={()=>setSortKey("lastUpdate")} sorted={sortKey==="lastUpdate"}>Last Update</TH>
-              <TH onClick={()=>setSortKey("days")} sorted={sortKey==="days"}>Total Days</TH>
               <TH onClick={()=>setSortKey("stageTime")} sorted={sortKey==="stageTime"}>Stage Age</TH>
-              <TH>Notes</TH>
+              <TH onClick={()=>setSortKey("days")} sorted={sortKey==="days"}>Total Days</TH>
+              <TH onClick={()=>setSortKey("lastUpdate")} sorted={sortKey==="lastUpdate"}>Last Update</TH>
               <TH>Actions</TH>
             </tr>
           </thead>
@@ -754,15 +773,15 @@ function AppTable({ apps, onEdit, onDelete }) {
               onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#080C12":"#0A0F16"}
               >
                 <td style={{padding:"10px 14px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{a.company}</td>
-                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:11,maxWidth:200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
+                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:11,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
                 <td style={{padding:"10px 14px"}}><Badge stage={a.stage}/></td>
+                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10,maxWidth:120,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.location||"—"}</td>
+                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10}}>{a.rtoType ? RTO_LABELS[a.rtoType]?.replace(" days","d")?.replace("Hybrid ","H")?.replace("Remote","Remote") : "—"}</td>
+                <td style={{padding:"10px 14px",color:"#D1D5DB",fontFamily:"'DM Mono',monospace",fontSize:10,whiteSpace:"nowrap"}}>{a.salaryMin || a.salaryMax ? `$${Math.round((a.salaryMin||0)/1000)}k-${Math.round((a.salaryMax||0)/1000)}k` : "—"}</td>
                 <td style={{padding:"10px 14px",color:"#6B7280",fontFamily:"'DM Mono',monospace",fontSize:11}}>{new Date(a.appliedAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
-                <td style={{padding:"10px 14px",color:"#6B7280",fontFamily:"'DM Mono',monospace",fontSize:11}}>{new Date(a.lastUpdate).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                <td style={{padding:"10px 14px",fontFamily:"'DM Mono',monospace",fontSize:12,textAlign:"center", color: timeInStage(a)>7?"#F87171":timeInStage(a)>3?"#F59E0B":"#34D399"}}>{timeInStage(a)}d</td>
                 <td style={{padding:"10px 14px",color:"#D1D5DB",fontFamily:"'DM Mono',monospace",fontSize:12,textAlign:"center"}}>{totalDaysActive(a)}d</td>
-                <td style={{padding:"10px 14px",fontFamily:"'DM Mono',monospace",fontSize:12,textAlign:"center",
-                  color: timeInStage(a)>7?"#F87171":timeInStage(a)>3?"#F59E0B":"#34D399"
-                }}>{timeInStage(a)}d</td>
-                <td style={{padding:"10px 14px",color:"#6B7280",fontFamily:"'DM Mono',monospace",fontSize:10,maxWidth:160,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.notes||"—"}</td>
+                <td style={{padding:"10px 14px",color:"#6B7280",fontFamily:"'DM Mono',monospace",fontSize:11}}>{new Date(a.lastUpdate).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
                 <td style={{padding:"10px 14px"}}>
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={()=>onEdit(a)} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Edit</button>

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
 
 public class JobApplicationFixture {
@@ -19,6 +20,8 @@ public class JobApplicationFixture {
     private LocalDateTime interviewDate = null;
     private Double salaryMin = 100000.0;
     private Double salaryMax = 150000.0;
+    private String location = "San Francisco, CA";
+    private RtoType rtoType = RtoType.HYBRID_3;
     private String notes = "Great company culture";
     private String jobUrl = "https://example.com/jobs/123";
     private String contactName = "Jane Smith";
@@ -86,6 +89,16 @@ public class JobApplicationFixture {
 
     public JobApplicationFixture withSalaryMax(Double salaryMax) {
         this.salaryMax = salaryMax;
+        return this;
+    }
+
+    public JobApplicationFixture withLocation(String location) {
+        this.location = location;
+        return this;
+    }
+
+    public JobApplicationFixture withRtoType(RtoType rtoType) {
+        this.rtoType = rtoType;
         return this;
     }
 
@@ -161,6 +174,8 @@ public class JobApplicationFixture {
                 .interviewDate(interviewDate)
                 .salaryMin(salaryMin)
                 .salaryMax(salaryMax)
+                .location(location)
+                .rtoType(rtoType)
                 .notes(notes)
                 .jobUrl(jobUrl)
                 .contactName(contactName)
@@ -184,6 +199,8 @@ public class JobApplicationFixture {
                 interviewDate,
                 salaryMin,
                 salaryMax,
+                location,
+                rtoType,
                 notes,
                 jobUrl,
                 contactName,

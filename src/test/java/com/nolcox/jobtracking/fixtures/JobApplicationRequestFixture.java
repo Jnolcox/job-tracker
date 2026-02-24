@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 
 public class JobApplicationRequestFixture {
 
@@ -15,6 +16,8 @@ public class JobApplicationRequestFixture {
     private String jobUrl = "https://example.com/jobs/123";
     private Double salaryMin = 100000.0;
     private Double salaryMax = 150000.0;
+    private String location = "San Francisco, CA";
+    private RtoType rtoType = RtoType.HYBRID_3;
     private String notes = "Great company culture";
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
@@ -55,6 +58,16 @@ public class JobApplicationRequestFixture {
 
     public JobApplicationRequestFixture withSalaryMax(Double salaryMax) {
         this.salaryMax = salaryMax;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withLocation(String location) {
+        this.location = location;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withRtoType(RtoType rtoType) {
+        this.rtoType = rtoType;
         return this;
     }
 
@@ -99,6 +112,8 @@ public class JobApplicationRequestFixture {
         this.jobUrl = null;
         this.salaryMin = null;
         this.salaryMax = null;
+        this.location = null;
+        this.rtoType = null;
         this.notes = null;
         this.contactName = null;
         this.contactEmail = null;
@@ -152,6 +167,8 @@ public class JobApplicationRequestFixture {
                 jobUrl,
                 salaryMin,
                 salaryMax,
+                location,
+                rtoType,
                 notes,
                 contactName,
                 contactEmail,
@@ -169,6 +186,8 @@ public class JobApplicationRequestFixture {
                 interviewDate,
                 salaryMin,
                 salaryMax,
+                location,
+                rtoType,
                 notes,
                 contactName,
                 contactEmail,
