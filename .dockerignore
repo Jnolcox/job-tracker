@@ -1,0 +1,51 @@
+# Build artifacts
+target/
+*.jar
+*.war
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend (built separately)
+frontend/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+src/test/
+
+# Maven wrapper (we copy it explicitly)
+!.mvn
+!mvnw
