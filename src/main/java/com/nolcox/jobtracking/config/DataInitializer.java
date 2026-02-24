@@ -1,20 +1,22 @@
 package com.nolcox.jobtracking.config;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -45,7 +47,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             
             userRepository.save(testUser);
-            log.info("✅ Created default test user: test@example.com / password123");
+            log.info("Created default test user: test@example.com / password123");
         }
     }
 
@@ -136,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
             jobApplicationRepository.save(app4);
             jobApplicationRepository.save(app5);
             
-            log.info("✅ Created 5 sample job applications for test user");
+            log.info("Created 5 sample job applications for test user");
         }
     }
 }
