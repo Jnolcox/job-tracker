@@ -1,7 +1,92 @@
 // Data adapter for converting between backend and UI formats
 
-// UI stage constants
-export const UI_STAGES = ["Applied", "Phone Screen", "Tech Screen", "Technical", "Onsite", "Offer", "Rejected", "Withdrawn"];
+// All backend ApplicationStatus values
+export const APPLICATION_STATUSES = [
+  "APPLIED",
+  "RECRUITER_SCREEN",
+  "TECH_SCREEN",
+  "TAKE_HOME",
+  "SYSTEM_DESIGN",
+  "TECHNICAL_I",
+  "TECHNICAL_II",
+  "REFERENCE_CHECK",
+  "OFFER_RECEIVED",
+  "NEGOTIATING",
+  "OFFER_ACCEPTED",
+  "OFFER_DECLINED",
+  "OFFER_RESCINDED",
+  "REJECTED",
+  "WITHDRAWN",
+  "ON_HOLD",
+  "GHOSTED",
+];
+
+// Human-readable labels for statuses
+export const STATUS_LABELS = {
+  APPLIED: "Applied",
+  RECRUITER_SCREEN: "Recruiter Screen",
+  TECH_SCREEN: "Tech Screen",
+  TAKE_HOME: "Take Home",
+  SYSTEM_DESIGN: "System Design",
+  TECHNICAL_I: "Technical I",
+  TECHNICAL_II: "Technical II",
+  REFERENCE_CHECK: "Reference Check",
+  OFFER_RECEIVED: "Offer Received",
+  NEGOTIATING: "Negotiating",
+  OFFER_ACCEPTED: "Offer Accepted",
+  OFFER_DECLINED: "Offer Declined",
+  OFFER_RESCINDED: "Offer Rescinded",
+  REJECTED: "Rejected",
+  WITHDRAWN: "Withdrawn",
+  ON_HOLD: "On Hold",
+  GHOSTED: "Ghosted",
+};
+
+// Colors grouped by category
+export const STATUS_COLORS = {
+  // Applied - Blue
+  APPLIED: "#4E9AF1",
+  // Recruiter - Purple
+  RECRUITER_SCREEN: "#A78BFA",
+  // Technical stages - Orange/Amber
+  TECH_SCREEN: "#F59E0B",
+  TAKE_HOME: "#F59E0B",
+  SYSTEM_DESIGN: "#F59E0B",
+  TECHNICAL_I: "#F59E0B",
+  TECHNICAL_II: "#F59E0B",
+  // Reference Check - Pink
+  REFERENCE_CHECK: "#cb37a1",
+  // Offer stages - Green
+  OFFER_RECEIVED: "#10B981",
+  NEGOTIATING: "#10B981",
+  OFFER_ACCEPTED: "#059669",
+  // Negative outcomes - Red
+  OFFER_DECLINED: "#F87171",
+  OFFER_RESCINDED: "#F87171",
+  REJECTED: "#F87171",
+  GHOSTED: "#F87171",
+  // Inactive - Gray
+  WITHDRAWN: "#6B7280",
+  ON_HOLD: "#6B7280",
+};
+
+// Status groupings for filtering/stats
+export const STATUS_GROUPS = {
+  REJECTED: ["REJECTED", "OFFER_DECLINED", "OFFER_RESCINDED", "GHOSTED"],
+  WITHDRAWN: ["WITHDRAWN", "ON_HOLD"],
+  OFFER: ["OFFER_RECEIVED", "NEGOTIATING", "OFFER_ACCEPTED"],
+  TECHNICAL: ["TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II"],
+  INTERVIEWING: ["RECRUITER_SCREEN", "TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II", "REFERENCE_CHECK"],
+};
+
+// Helper to check if status is in a group
+export const isStatusInGroup = (status, group) => STATUS_GROUPS[group]?.includes(status) || false;
+
+// Helper to check if status is terminal (not active)
+export const isTerminalStatus = (status) =>
+  STATUS_GROUPS.REJECTED.includes(status) ||
+  STATUS_GROUPS.WITHDRAWN.includes(status) ||
+  status === "OFFER_ACCEPTED";
 
 // RTO type constants
 export const RTO_TYPES = ["REMOTE", "HYBRID_2", "HYBRID_3", "HYBRID_4", "ONSITE"];
@@ -13,63 +98,6 @@ export const RTO_LABELS = {
   HYBRID_4: "Hybrid (4 days)",
   ONSITE: "On-site",
 };
-
-export const STAGE_COLORS = {
-  Applied: "#4E9AF1",
-  "Phone Screen": "#A78BFA",
-    "Tech Screen": "#1ddac4",
-  Technical: "#F59E0B",
-  Onsite: "#34D399",
-  Offer: "#10B981",
-  Rejected: "#F87171",
-  Withdrawn: "#6B7280",
-};
-
-// Map backend ApplicationStatus to UI stage
-const STATUS_TO_STAGE = {
-  APPLIED: "Applied",
-  RECRUITER_SCREEN: "Phone Screen",
-  TECH_SCREEN: "Technical Screen",
-  TAKE_HOME: "Technical",
-  SYSTEM_DESIGN: "Technical",
-  TECHNICAL_I: "Technical",
-  TECHNICAL_II: "Technical",
-  ONSITE: "Onsite",
-  OFFER_RECEIVED: "Offer",
-  NEGOTIATING: "Offer",
-  OFFER_ACCEPTED: "Offer",
-  OFFER_DECLINED: "Rejected",
-  OFFER_RESCINDED: "Rejected",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
-  ON_HOLD: "Withdrawn",
-  GHOSTED: "Rejected",
-};
-
-// Map UI stage back to backend status (default status for each stage)
-const STAGE_TO_STATUS = {
-  Applied: "APPLIED",
-  "Phone Screen": "RECRUITER_SCREEN",
-  Technical: "TECH_SCREEN",
-  Onsite: "ONSITE",
-  Offer: "OFFER_RECEIVED",
-  Rejected: "REJECTED",
-  Withdrawn: "WITHDRAWN",
-};
-
-/**
- * Map backend status to UI stage
- */
-export function mapStatusToStage(status) {
-  return STATUS_TO_STAGE[status] || "Applied";
-}
-
-/**
- * Map UI stage to backend status
- */
-export function mapStageToStatus(stage) {
-  return STAGE_TO_STATUS[stage] || "APPLIED";
-}
 
 /**
  * Convert ISO date string or LocalDateTime array to local ISO-like string
@@ -106,11 +134,10 @@ export function toUIFormat(application) {
     id: application.id,
     company: application.companyName,
     role: application.positionTitle,
-    stage: mapStatusToStage(application.status),
+    status: application.status,
     appliedAt: appliedAt,
     lastUpdate: statusChangedAt || updatedAt || appliedAt,
     notes: application.notes || "",
-    // Keep additional backend fields for full edit capability
     jobDescription: application.jobDescription || "",
     interviewDate: convertDate(application.interviewDate),
     salaryMin: application.salaryMin,
@@ -131,7 +158,7 @@ export function toBackendFormat(form) {
   return {
     companyName: form.company,
     positionTitle: form.role,
-    status: mapStageToStatus(form.stage),
+    status: form.status,
     notes: form.notes || null,
     jobDescription: form.jobDescription || null,
     salaryMin: form.salaryMin || null,

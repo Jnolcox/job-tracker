@@ -1,12 +1,32 @@
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { jobApplicationsAPI } from "./services/api";
-import { toUIFormat, toBackendFormat, UI_STAGES, STAGE_COLORS, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
+import { toUIFormat, toBackendFormat, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const STAGES = UI_STAGES;
+// Display groups for funnel chart (simplified view)
+const FUNNEL_GROUPS = [
+  { key: "APPLIED", label: "Applied", statuses: ["APPLIED"] },
+  { key: "RECRUITER", label: "Recruiter", statuses: ["RECRUITER_SCREEN"] },
+  { key: "TECHNICAL", label: "Technical", statuses: STATUS_GROUPS.TECHNICAL },
+  { key: "REFERENCE", label: "Reference", statuses: ["REFERENCE_CHECK"] },
+  { key: "OFFER", label: "Offer", statuses: STATUS_GROUPS.OFFER },
+  { key: "REJECTED", label: "Rejected", statuses: STATUS_GROUPS.REJECTED },
+  { key: "WITHDRAWN", label: "Withdrawn", statuses: STATUS_GROUPS.WITHDRAWN },
+];
 
-const STAGE_COLOR = STAGE_COLORS;
+// Colors for funnel groups
+const FUNNEL_COLORS = {
+  APPLIED: "#4E9AF1",
+  RECRUITER: "#A78BFA",
+  TECHNICAL: "#F59E0B",
+  REFERENCE: "#cb37a1",
+  OFFER: "#10B981",
+  REJECTED: "#F87171",
+  WITHDRAWN: "#6B7280",
+};
+
+// Filter options for table
+const FILTER_OPTIONS = ["All", ...FUNNEL_GROUPS.map(g => g.key)];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const daysBetween = (a, b) => {
@@ -27,7 +47,7 @@ function timeInStage(app) {
 }
 function totalDaysActive(app) {
   if (!app || !app.appliedAt) return 0;
-  if (app.stage === "Rejected" || app.stage === "Withdrawn" || app.stage === "Offer") {
+  if (isTerminalStatus(app.status)) {
     return Math.max(0, daysBetween(app.appliedAt, app.lastUpdate || app.appliedAt));
   }
   return Math.max(0, daysBetween(app.appliedAt, getToday().toISOString()));
@@ -78,27 +98,33 @@ function StatCard({ label, value, sub, accent }) {
 }
 
 function StageFunnel({ apps }) {
-  const counts = STAGES.reduce((acc,s) => { acc[s]=0; return acc; }, {});
-  (apps || []).forEach(a => { if(a && counts[a.stage]!==undefined) counts[a.stage]++; });
+  // Count apps by funnel group
+  const counts = {};
+  FUNNEL_GROUPS.forEach(g => { counts[g.key] = 0; });
+  (apps || []).forEach(a => {
+    if (!a || !a.status) return;
+    const group = FUNNEL_GROUPS.find(g => g.statuses.includes(a.status));
+    if (group) counts[group.key]++;
+  });
   const max = Math.max(...Object.values(counts), 1);
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
       <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:16}}>Pipeline Funnel</h3>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {STAGES.map(s => (
-          <div key={s} style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{width:80,color:"#9CA3AF",fontSize:11,fontFamily:"'DM Mono',monospace",textAlign:"right",flexShrink:0}}>{s}</span>
+        {FUNNEL_GROUPS.map(g => (
+          <div key={g.key} style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{width:80,color:"#9CA3AF",fontSize:11,fontFamily:"'DM Mono',monospace",textAlign:"right",flexShrink:0}}>{g.label}</span>
             <div style={{flex:1,height:20,background:"#1F2937",borderRadius:4,overflow:"hidden"}}>
               <div style={{
-                width:`${(counts[s]/max)*100}%`,
+                width:`${(counts[g.key]/max)*100}%`,
                 height:"100%",
-                background:STAGE_COLOR[s],
+                background:FUNNEL_COLORS[g.key],
                 borderRadius:4,
                 transition:"width 0.6s cubic-bezier(.4,0,.2,1)",
-                minWidth:counts[s]>0?2:0,
+                minWidth:counts[g.key]>0?2:0,
               }}/>
             </div>
-            <span style={{width:18,color:STAGE_COLOR[s],fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{counts[s]}</span>
+            <span style={{width:18,color:FUNNEL_COLORS[g.key],fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{counts[g.key]}</span>
           </div>
         ))}
       </div>
@@ -107,12 +133,13 @@ function StageFunnel({ apps }) {
 }
 
 function TimeInStageChart({ apps }) {
-  const active = (apps || []).filter(a => a && !["Rejected","Withdrawn","Offer"].includes(a.stage));
+  // Filter to active (non-terminal) applications
+  const active = (apps || []).filter(a => a && !isTerminalStatus(a.status));
   const sorted = [...active].sort((a,b) => timeInStage(b) - timeInStage(a)).slice(0,8);
   const max = Math.max(...sorted.map(a => timeInStage(a)), 1);
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
-      <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:16}}>Time in Current Stage (days)</h3>
+      <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:16}}>Time in Current Status (days)</h3>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {sorted.map(a => {
           const days = timeInStage(a);
@@ -134,24 +161,23 @@ function TimeInStageChart({ apps }) {
 }
 
 function MaxTimePerStageChart({ apps }) {
-  // For each stage, find the application that spent the MOST total days active while in that stage.
-  // For terminal stages (Rejected/Withdrawn/Offer) we use totalDaysActive; for active we use timeInStage.
-  // Strategy: for each app, attribute its total active days to its current stage.
-  const stageMax = {};
-  const stageCompany = {};
-  STAGES.forEach(s => { stageMax[s] = 0; stageCompany[s] = null; });
+  // For each funnel group, find the application that spent the MOST total days active while in that group.
+  const groupMax = {};
+  const groupCompany = {};
+  FUNNEL_GROUPS.forEach(g => { groupMax[g.key] = 0; groupCompany[g.key] = null; });
 
   (apps || []).forEach(a => {
-    if (!a) return;
+    if (!a || !a.status) return;
     const days = totalDaysActive(a);
-    if (days > (stageMax[a.stage] || 0)) {
-      stageMax[a.stage] = days;
-      stageCompany[a.stage] = a.company;
+    const group = FUNNEL_GROUPS.find(g => g.statuses.includes(a.status));
+    if (group && days > (groupMax[group.key] || 0)) {
+      groupMax[group.key] = days;
+      groupCompany[group.key] = a.company;
     }
   });
 
-  const presentStages = STAGES.filter(s => stageMax[s] > 0);
-  const maxVal = Math.max(...presentStages.map(s => stageMax[s]), 1);
+  const presentGroups = FUNNEL_GROUPS.filter(g => groupMax[g.key] > 0);
+  const maxVal = Math.max(...presentGroups.map(g => groupMax[g.key]), 1);
 
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px"}}>
@@ -162,25 +188,25 @@ function MaxTimePerStageChart({ apps }) {
         Longest total days spent per pipeline stage (top applicant shown)
       </p>
       <div style={{display:"flex",flexDirection:"column",gap:9}}>
-        {presentStages.map(s => {
-          const days = stageMax[s];
+        {presentGroups.map(g => {
+          const days = groupMax[g.key];
           const pct  = (days / maxVal) * 100;
-          const color = STAGE_COLOR[s];
+          const color = FUNNEL_COLORS[g.key];
           return (
-            <div key={s} style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{width:84,color:"#9CA3AF",fontSize:11,fontFamily:"'DM Mono',monospace",textAlign:"right",flexShrink:0}}>{s}</span>
+            <div key={g.key} style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{width:84,color:"#9CA3AF",fontSize:11,fontFamily:"'DM Mono',monospace",textAlign:"right",flexShrink:0}}>{g.label}</span>
               <div style={{flex:1,height:20,background:"#1F2937",borderRadius:4,overflow:"hidden",position:"relative"}}>
                 <div style={{
                   width:`${pct}%`,height:"100%",
                   background:`linear-gradient(90deg,${color}99,${color})`,
                   borderRadius:4,transition:"width 0.7s cubic-bezier(.4,0,.2,1)",
                 }}/>
-                {stageCompany[s] && (
+                {groupCompany[g.key] && (
                   <span style={{
                     position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",
                     color:"#ffffff88",fontSize:9,fontFamily:"'DM Mono',monospace",
                     whiteSpace:"nowrap",overflow:"hidden",maxWidth:"80%",
-                  }}>{stageCompany[s]}</span>
+                  }}>{groupCompany[g.key]}</span>
                 )}
               </div>
               <span style={{width:28,color,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,textAlign:"right"}}>{days}d</span>
@@ -193,9 +219,9 @@ function MaxTimePerStageChart({ apps }) {
 }
 
 function SalaryRangeChart({ apps }) {
-  // Filter active apps with salary data
+  // Filter active apps with salary data (exclude rejected/withdrawn statuses)
   const activeWithSalary = (apps || [])
-    .filter(a => a && !["Rejected","Withdrawn"].includes(a.stage) && (a.salaryMin || a.salaryMax))
+    .filter(a => a && !isStatusInGroup(a.status, 'REJECTED') && !isStatusInGroup(a.status, 'WITHDRAWN') && (a.salaryMin || a.salaryMax))
     .sort((a,b) => (a.salaryMin || 0) - (b.salaryMin || 0));
 
   if (activeWithSalary.length === 0) {
@@ -483,7 +509,7 @@ function HourBar({ apps }) {
           return (
             <div key={h} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <div style={{width:"100%",height:ht,background:"linear-gradient(to top,#0EA5E9,#38BDF8)",borderRadius:"2px 2px 0 0",transition:"height 0.6s"}}/>
-              <span style={{color: labeled.includes(h)?"#6B7280":"transparent",fontSize:8,fontFamily:"'DM Mono',monospace",transform:"rotate(-45deg)",transformOrigin:"top left",display:"block",width:16,marginTop:2}}>{AM_PM(h)}</span>
+              <span style={{color: labeled.includes(h)?"#6B7280":"transparent",fontSize:8,fontFamily:"'DM Mono',monospace",transform:"rotate(-45deg)",transformOrigin:"top left",display:"block",width:16,marginTop:8}}>{AM_PM(h)}</span>
             </div>
           );
         })}
@@ -492,19 +518,21 @@ function HourBar({ apps }) {
   );
 }
 
-// Stage badge
-function Badge({ stage }) {
+// Status badge
+function Badge({ status }) {
+  const color = STATUS_COLORS[status] || "#6B7280";
+  const label = STATUS_LABELS[status] || status;
   return (
     <span style={{
-      background:`${STAGE_COLOR[stage]}22`,
-      color:STAGE_COLOR[stage],
-      border:`1px solid ${STAGE_COLOR[stage]}55`,
+      background:`${color}22`,
+      color:color,
+      border:`1px solid ${color}55`,
       borderRadius:6,
       padding:"2px 8px",
-      fontSize:11,
+      fontSize:10,
       fontFamily:"'DM Mono',monospace",
       whiteSpace:"nowrap",
-    }}>{stage}</span>
+    }}>{label}</span>
   );
 }
 
@@ -569,12 +597,12 @@ function Modal({ app, onClose, onSave, saving }) {
             </label>
           </div>
 
-          {/* Stage */}
+          {/* Status */}
           <label style={{display:"flex",flexDirection:"column",gap:6}}>
-            <span style={labelStyle}>STAGE</span>
-            <select value={form.stage} onChange={e=>set("stage",e.target.value)}
+            <span style={labelStyle}>STATUS</span>
+            <select value={form.status} onChange={e=>set("status",e.target.value)}
               style={inputStyle} disabled={saving}>
-              {STAGES.map(s=><option key={s}>{s}</option>)}
+              {APPLICATION_STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
           </label>
 
@@ -702,7 +730,10 @@ function AppTable({ apps, onEdit, onDelete }) {
 
   const sorted = useMemo(()=>{
     let rows = [...apps];
-    if(filter !== "All") rows = rows.filter(a=>a.stage===filter);
+    if(filter !== "All") {
+      const group = FUNNEL_GROUPS.find(g => g.key === filter);
+      if (group) rows = rows.filter(a => group.statuses.includes(a.status));
+    }
     if(search) rows = rows.filter(a=>
       a.company.toLowerCase().includes(search.toLowerCase()) ||
       a.role.toLowerCase().includes(search.toLowerCase())
@@ -710,7 +741,7 @@ function AppTable({ apps, onEdit, onDelete }) {
     rows.sort((a,b)=>{
       if(sortKey==="appliedAt"||sortKey==="lastUpdate") return new Date(b[sortKey])-new Date(a[sortKey]);
       if(sortKey==="days") return totalDaysActive(b)-totalDaysActive(a);
-      if(sortKey==="stageTime") return timeInStage(b)-timeInStage(a);
+      if(sortKey==="statusTime") return timeInStage(b)-timeInStage(a);
       return String(a[sortKey]).localeCompare(String(b[sortKey]));
     });
     return rows;
@@ -731,17 +762,17 @@ function AppTable({ apps, onEdit, onDelete }) {
           }}
         />
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {["All",...STAGES].map(s=>(
+          {FILTER_OPTIONS.map(s=>(
             <button key={s} onClick={()=>setFilter(s)} style={{
               padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",
               fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600,
-              background: filter===s ? (STAGE_COLOR[s]||"#374151") : "#1F2937",
+              background: filter===s ? (FUNNEL_COLORS[s]||"#374151") : "#1F2937",
               color: filter===s?"#fff":"#9CA3AF",
               transition:"background 0.2s",
-            }}>{s}</button>
+            }}>{s === "All" ? s : FUNNEL_GROUPS.find(g => g.key === s)?.label || s}</button>
           ))}
         </div>
-        <button onClick={()=>onEdit({id:null,company:"",role:"",stage:"Applied",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
+        <button onClick={()=>onEdit({id:null,company:"",role:"",status:"APPLIED",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
           + Add
         </button>
@@ -752,12 +783,12 @@ function AppTable({ apps, onEdit, onDelete }) {
             <tr>
               <TH onClick={()=>setSortKey("company")} sorted={sortKey==="company"}>Company</TH>
               <TH onClick={()=>setSortKey("role")}    sorted={sortKey==="role"}>Role</TH>
-              <TH onClick={()=>setSortKey("stage")}   sorted={sortKey==="stage"}>Stage</TH>
+              <TH onClick={()=>setSortKey("status")}   sorted={sortKey==="status"}>Status</TH>
               <TH onClick={()=>setSortKey("location")} sorted={sortKey==="location"}>Location</TH>
               <TH onClick={()=>setSortKey("rtoType")} sorted={sortKey==="rtoType"}>RTO</TH>
               <TH onClick={()=>setSortKey("salaryMin")} sorted={sortKey==="salaryMin"}>Salary</TH>
               <TH onClick={()=>setSortKey("appliedAt")} sorted={sortKey==="appliedAt"}>Applied</TH>
-              <TH onClick={()=>setSortKey("stageTime")} sorted={sortKey==="stageTime"}>Stage Age</TH>
+              <TH onClick={()=>setSortKey("statusTime")} sorted={sortKey==="statusTime"}>Status Age</TH>
               <TH onClick={()=>setSortKey("days")} sorted={sortKey==="days"}>Total Days</TH>
               <TH onClick={()=>setSortKey("lastUpdate")} sorted={sortKey==="lastUpdate"}>Last Update</TH>
               <TH>Actions</TH>
@@ -774,7 +805,7 @@ function AppTable({ apps, onEdit, onDelete }) {
               >
                 <td style={{padding:"10px 14px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{a.company}</td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:11,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
-                <td style={{padding:"10px 14px"}}><Badge stage={a.stage}/></td>
+                <td style={{padding:"10px 14px"}}><Badge status={a.status}/></td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10,maxWidth:120,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.location||"—"}</td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10}}>{a.rtoType ? RTO_LABELS[a.rtoType]?.replace(" days","d")?.replace("Hybrid ","H")?.replace("Remote","Remote") : "—"}</td>
                 <td style={{padding:"10px 14px",color:"#D1D5DB",fontFamily:"'DM Mono',monospace",fontSize:10,whiteSpace:"nowrap"}}>{a.salaryMin || a.salaryMax ? `$${Math.round((a.salaryMin||0)/1000)}k-${Math.round((a.salaryMax||0)/1000)}k` : "—"}</td>
@@ -875,12 +906,12 @@ export default function JobTracker() {
   };
 
   // ── Derived metrics ──
-  const activeApps    = apps.filter(a=>!["Rejected","Withdrawn"].includes(a.stage));
-  const offers        = apps.filter(a=>a.stage==="Offer").length;
-  const rejected      = apps.filter(a=>a.stage==="Rejected").length;
-  const responseRate  = apps.length > 0 ? Math.round((apps.filter(a=>a.stage!=="Applied").length/apps.length)*100) : 0;
+  const activeApps    = apps.filter(a=>!isStatusInGroup(a.status, 'REJECTED') && !isStatusInGroup(a.status, 'WITHDRAWN'));
+  const offers        = apps.filter(a=>isStatusInGroup(a.status, 'OFFER')).length;
+  const rejected      = apps.filter(a=>isStatusInGroup(a.status, 'REJECTED')).length;
+  const responseRate  = apps.length > 0 ? Math.round((apps.filter(a=>a.status!=="APPLIED").length/apps.length)*100) : 0;
   const avgDays       = apps.length > 0 ? Math.round(apps.reduce((s,a)=>s+totalDaysActive(a),0)/apps.length) : 0;
-  const inInterview   = apps.filter(a=>a.stage==="Technical"||a.stage==="Onsite").length;
+  const inInterview   = apps.filter(a=>isStatusInGroup(a.status, 'INTERVIEWING')).length;
   const offerRate     = apps.length > 0 ? Math.round((offers / apps.length) * 100) : 0;
   const maxStageDays  = apps.length > 0 ? Math.max(...apps.map(a=>timeInStage(a))) : 0;
   const stalestApp    = apps.find(a=>timeInStage(a)===maxStageDays);
@@ -892,7 +923,7 @@ export default function JobTracker() {
     return (apps.length / weeks).toFixed(1);
   })();
   const phoneScreenRate = apps.length > 0 ? Math.round(
-    (apps.filter(a=>["Phone Screen","Technical","Onsite","Offer"].includes(a.stage)).length / apps.length) * 100
+    (apps.filter(a=>isStatusInGroup(a.status, 'INTERVIEWING') || isStatusInGroup(a.status, 'OFFER')).length / apps.length) * 100
   ) : 0;
 
   // Loading state
@@ -1016,7 +1047,7 @@ export default function JobTracker() {
           <StatCard label="Response Rate"    value={`${responseRate}%`}  sub="moved past Applied"                            accent="#A78BFA" />
           <StatCard label="Offers"           value={offers}              sub={offers ? "negotiate hard" : "keep pushing"}  accent="#10B981" />
           <StatCard label="Avg Days Active"  value={`${avgDays}d`}       sub="per application"                               accent="#F59E0B" />
-          <StatCard label="In Interviews"    value={inInterview}         sub={`${apps.filter(a=>a.stage==="Onsite").length} at onsite`} accent="#34D399" />
+          <StatCard label="In Interviews"    value={inInterview}         sub={`${apps.filter(a=>a.status==="REFERENCE_CHECK").length} at reference check`} accent="#34D399" />
           {/* Row 2 */}
           <StatCard label="Offer Rate"       value={`${offerRate}%`}     sub={`${offers} of ${apps.length} apps`}            accent="#10B981" />
           <StatCard label="Phone Screen %"   value={`${phoneScreenRate}%`} sub="recruiter conversion"                        accent="#38BDF8" />
