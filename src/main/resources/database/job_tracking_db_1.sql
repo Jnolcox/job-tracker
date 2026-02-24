@@ -1,6 +1,3 @@
-CREATE DATABASE job_tracking_db;
-USE job_tracking_db;
-
 -- Users table
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
