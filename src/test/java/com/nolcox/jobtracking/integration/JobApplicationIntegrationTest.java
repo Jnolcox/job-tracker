@@ -295,6 +295,7 @@ class JobApplicationIntegrationTest {
                 "https://example.com/updated-job",
                 ApplicationStatus.TECH_SCREEN,
                 null, // appliedDate - keep original
+                null, // statusChangedAt
                 LocalDateTime.now().plusDays(3),
                 75000.0,
                 85000.0,
@@ -338,6 +339,7 @@ class JobApplicationIntegrationTest {
                 null,
                 ApplicationStatus.REJECTED,
                 null, // appliedDate
+                null, // statusChangedAt
                 null, // interviewDate
                 1000000.0,
                 2000000.0,
@@ -409,7 +411,7 @@ class JobApplicationIntegrationTest {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null
         );
 
         mockMvc.perform(put("/v1/job-applications/{id}", nonExistentId)
@@ -449,7 +451,7 @@ class JobApplicationIntegrationTest {
 
         JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null
         );
 
         // When & Then - All endpoints should require authentication
@@ -542,6 +544,7 @@ class JobApplicationIntegrationTest {
                 "https://example.com/job",
                 ApplicationStatus.TECH_SCREEN,
                 null, // appliedDate
+                null, // statusChangedAt
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,

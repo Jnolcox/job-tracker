@@ -230,6 +230,7 @@ class JobApplicationIntegrationTestSimple {
                 "https://example.com/updated-job",
                 ApplicationStatus.TECH_SCREEN,
                 null,
+                null,
                 LocalDateTime.now().plusDays(3),
                 75000.0,
                 85000.0,
@@ -271,6 +272,7 @@ class JobApplicationIntegrationTestSimple {
                 "Should not work",
                 null,
                 ApplicationStatus.REJECTED,
+                null,
                 null,
                 null,
                 1000000.0,
@@ -336,7 +338,7 @@ class JobApplicationIntegrationTestSimple {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null
         );
 
         assertThrows(ResourceNotFoundException.class, () -> 
@@ -402,6 +404,7 @@ class JobApplicationIntegrationTestSimple {
                 TEST_DESCRIPTION,
                 "https://example.com/job",
                 ApplicationStatus.TECH_SCREEN,
+                null,
                 null,
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY_MIN,

@@ -30,6 +30,8 @@ public record JobApplicationUpdateRequest(
 
         LocalDateTime appliedDate,
 
+        LocalDateTime statusChangedAt,
+
         LocalDateTime interviewDate,
 
         @PositiveOrZero(message = "Salary min must be zero or positive")

@@ -26,6 +26,7 @@ public class JobApplicationRequestFixture {
     // Fields specific to update request
     private ApplicationStatus status = ApplicationStatus.APPLIED;
     private LocalDateTime appliedDate = null;
+    private LocalDateTime statusChangedAt = null;
     private LocalDateTime interviewDate = null;
 
     public static JobApplicationRequestFixture aJobApplicationRequest() {
@@ -104,6 +105,11 @@ public class JobApplicationRequestFixture {
 
     public JobApplicationRequestFixture withInterviewDate(LocalDateTime interviewDate) {
         this.interviewDate = interviewDate;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withStatusChangedAt(LocalDateTime statusChangedAt) {
+        this.statusChangedAt = statusChangedAt;
         return this;
     }
 
@@ -191,6 +197,7 @@ public class JobApplicationRequestFixture {
                 jobUrl,
                 status,
                 appliedDate,
+                statusChangedAt,
                 interviewDate,
                 salaryMin,
                 salaryMax,

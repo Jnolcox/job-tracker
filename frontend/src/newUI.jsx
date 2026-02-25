@@ -688,14 +688,17 @@ function Modal({ app, onClose, onSave, saving }) {
               style={{...inputStyle,resize:"vertical"}} disabled={saving} placeholder="Additional notes..."/>
           </label>
 
-          {/* Show last status change as read-only info for existing apps */}
-          {!isNew && form.lastUpdate && (
-            <div style={{borderTop:"1px solid #1F2937",paddingTop:16}}>
-              <span style={labelStyle}>LAST STATUS CHANGE</span>
-              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
-                {new Date(form.lastUpdate).toLocaleString()}
-              </p>
-            </div>
+          {/* Editable status change date for existing apps (for back-data entry) */}
+          {!isNew && (
+            <label style={{display:"flex",flexDirection:"column",gap:6,borderTop:"1px solid #1F2937",paddingTop:16}}>
+              <span style={labelStyle}>STATUS CHANGED DATE</span>
+              <input type="datetime-local" value={toLocalDateTimeInput(form.lastUpdate)}
+                onChange={e=>set("lastUpdate",e.target.value ? new Date(e.target.value).toISOString() : null)}
+                style={inputStyle} disabled={saving}/>
+              <span style={{color:"#4B5563",fontSize:10,fontFamily:"'DM Mono',monospace"}}>
+                Edit to backfill historical data
+              </span>
+            </label>
           )}
         </div>
 

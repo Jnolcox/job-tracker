@@ -87,7 +87,11 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         // Track status changes
         ApplicationStatus oldStatus = application.getStatus();
         modelMapper.map(request, application);
-        if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
+
+        // Use provided statusChangedAt if present, otherwise auto-set on status change
+        if (request.statusChangedAt() != null) {
+            application.setStatusChangedAt(request.statusChangedAt());
+        } else if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
             application.setStatusChangedAt(LocalDateTime.now());
         }
 
