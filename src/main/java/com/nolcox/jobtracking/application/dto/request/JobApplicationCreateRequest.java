@@ -51,5 +51,7 @@ public record JobApplicationCreateRequest(
         @Size(max = 50, message = "Contact phone must not exceed 50 characters")
         String contactPhone,
 
-        LocalDateTime appliedDate
+        LocalDateTime appliedDate,
+
+        LocalDateTime statusChangedAt
 ) {}

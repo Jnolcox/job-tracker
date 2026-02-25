@@ -66,7 +66,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         application.setUser(user);
         application.setAppliedDate(request.appliedDate() != null ? request.appliedDate() : LocalDateTime.now());
         application.setStatus(request.status() != null ? request.status() : ApplicationStatus.APPLIED);
-        application.setStatusChangedAt(LocalDateTime.now());
+        application.setStatusChangedAt(request.statusChangedAt() != null ? request.statusChangedAt() : LocalDateTime.now());
 
         JobApplication saved = repository.save(application);
         return mapToResponse(saved);

@@ -6,8 +6,8 @@
 BASE_URL="http://localhost:8080/api/v1"
 
 # Configuration - UPDATE THESE VALUES
-EMAIL="test@example.com"
-PASSWORD="password"
+EMAIL="you@email.com"
+PASSWORD="password123"
 
 echo "=== Job Tracking Bulk Data Loader ==="
 echo ""
@@ -51,7 +51,7 @@ create_job() {
 echo "Loading 19 job applications..."
 echo ""
 
-# 1. Lab49
+# 1. Lab49 - Applied: 2026-01-28, Last Updated: 2026-02-04
 create_job '{
   "companyName": "Lab49",
   "positionTitle": "Software Engineer",
@@ -61,10 +61,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Senior\nSource: LinkedIn\nNext Action: Prepare for interview\n50% dev, 50% test automation",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-02-04T00:00:00"
 }'
 
-# 2. NYDIG
+# 2. NYDIG - Applied: 2026-01-28, Last Updated: 2026-01-29
 create_job '{
   "companyName": "NYDIG",
   "positionTitle": "Software Engineer",
@@ -74,10 +75,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "ONSITE",
   "notes": "Level: Staff\nSource: LinkedIn\nNext Action: Prepare for interview\nGreat fit, waiting on next round",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 3. Elastic
+# 3. Elastic - Applied: 2026-01-29, Last Updated: 2026-01-29
 create_job '{
   "companyName": "Elastic",
   "positionTitle": "Software Engineer",
@@ -87,10 +89,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "ONSITE",
   "notes": "Level: Mid\nSource: Company Website\nNext Action: Wait for response",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 4. Garner Health
+# 4. Garner Health - Applied: 2026-01-29, Last Updated: 2026-01-29
 create_job '{
   "companyName": "Garner Health",
   "positionTitle": "Software Engineer",
@@ -100,10 +103,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: Wait for response",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 5. Omada Health
+# 5. Omada Health - Applied: 2026-01-29, Last Updated: 2026-01-29
 create_job '{
   "companyName": "Omada Health",
   "positionTitle": "Software Engineer",
@@ -113,10 +117,11 @@ create_job '{
   "location": "Remote",
   "rtoType": "REMOTE",
   "notes": "Level: Mid\nSource: Company Website\nNext Action: Wait for response",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 6. Walk Me
+# 6. Walk Me - Applied: 2026-01-29, Last Updated: 2026-02-02
 create_job '{
   "companyName": "Walk Me",
   "positionTitle": "Full Stack Engineer",
@@ -126,10 +131,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "ONSITE",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: Schedule call",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-02-02T00:00:00"
 }'
 
-# 7. Hello Fresh
+# 7. Hello Fresh - Applied: 2026-01-29, Last Updated: 2026-02-03
 create_job '{
   "companyName": "Hello Fresh",
   "positionTitle": "Software Engineer",
@@ -139,10 +145,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: None",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-02-03T00:00:00"
 }'
 
-# 8. CLEAR
+# 8. CLEAR - Applied: 2026-01-29, Last Updated: 2026-01-31
 create_job '{
   "companyName": "CLEAR",
   "positionTitle": "Software Engineer",
@@ -152,10 +159,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: Company Website\nNext Action: None",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-31T00:00:00"
 }'
 
-# 9. Gemini
+# 9. Gemini - Applied: 2026-01-29, Last Updated: 2026-01-31
 create_job '{
   "companyName": "Gemini",
   "positionTitle": "Software Engineer",
@@ -165,10 +173,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Staff\nSource: LinkedIn\nNext Action: None",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-31T00:00:00"
 }'
 
-# 10. Blink Health
+# 10. Blink Health - Applied: 2026-01-28, Last Updated: 2026-01-29
 create_job '{
   "companyName": "Blink Health",
   "positionTitle": "Software Engineer",
@@ -178,10 +187,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Staff\nSource: LinkedIn\nNext Action: None",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 11. ZocDoc
+# 11. ZocDoc - Applied: 2026-01-29, Last Updated: 2026-01-29
 create_job '{
   "companyName": "ZocDoc",
   "positionTitle": "Software Engineer",
@@ -191,10 +201,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: Wait for response",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 12. Charlie Health
+# 12. Charlie Health - Applied: 2026-01-29, Last Updated: 2026-01-31
 create_job '{
   "companyName": "Charlie Health",
   "positionTitle": "Software Engineer",
@@ -204,10 +215,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: None",
-  "appliedDate": "2026-01-29T00:00:00"
+  "appliedDate": "2026-01-29T00:00:00",
+  "statusChangedAt": "2026-01-31T00:00:00"
 }'
 
-# 13. MarketAxess
+# 13. MarketAxess - Applied: 2026-01-28, Last Updated: 2026-02-05
 create_job '{
   "companyName": "MarketAxess",
   "positionTitle": "Data Engineer",
@@ -217,10 +229,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Senior\nSource: LinkedIn\nNext Action: Prepare for interview\n20%-25% bonus, $275,000 TC",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-02-05T00:00:00"
 }'
 
-# 14. Paperless Post
+# 14. Paperless Post - Applied: 2026-01-28, Last Updated: 2026-01-29
 create_job '{
   "companyName": "Paperless Post",
   "positionTitle": "Software Engineer",
@@ -230,10 +243,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: Wait for response",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-01-29T00:00:00"
 }'
 
-# 15. Data Dog
+# 15. Data Dog - Applied: 2026-01-28, Last Updated: 2026-02-05
 create_job '{
   "companyName": "Data Dog",
   "positionTitle": "Software Engineer",
@@ -243,10 +257,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Staff\nSource: LinkedIn\nNext Action: None",
-  "appliedDate": "2026-01-28T00:00:00"
+  "appliedDate": "2026-01-28T00:00:00",
+  "statusChangedAt": "2026-02-05T00:00:00"
 }'
 
-# 16. Mastercard
+# 16. Mastercard - Applied: 2026-01-31, Last Updated: 2026-01-31
 create_job '{
   "companyName": "Mastercard",
   "positionTitle": "Software Engineer",
@@ -256,10 +271,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Senior\nSource: Company Website\nNext Action: Wait for response\nR-265624",
-  "appliedDate": "2026-01-31T00:00:00"
+  "appliedDate": "2026-01-31T00:00:00",
+  "statusChangedAt": "2026-01-31T00:00:00"
 }'
 
-# 17. Payments Startup
+# 17. Payments Startup - Applied: 2026-02-02, Last Updated: 2026-02-04
 create_job '{
   "companyName": "Payments Startup",
   "positionTitle": "Software Engineer",
@@ -269,10 +285,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Senior\nSource: LinkedIn\nNext Action: Prepare for interview\nRecruiter: Lec Sang",
-  "appliedDate": "2026-02-02T00:00:00"
+  "appliedDate": "2026-02-02T00:00:00",
+  "statusChangedAt": "2026-02-04T00:00:00"
 }'
 
-# 18. TEK Systems
+# 18. TEK Systems - Applied: 2026-02-02, Last Updated: 2026-02-02
 create_job '{
   "companyName": "TEK Systems",
   "positionTitle": "Software Engineer",
@@ -280,10 +297,11 @@ create_job '{
   "location": "New York, NY",
   "rtoType": "HYBRID_3",
   "notes": "Level: Mid\nSource: LinkedIn\nNext Action: Wait for response\nRecruiter: Katy Bartlett",
-  "appliedDate": "2026-02-02T00:00:00"
+  "appliedDate": "2026-02-02T00:00:00",
+  "statusChangedAt": "2026-02-02T00:00:00"
 }'
 
-# 19. Wex
+# 19. Wex - Applied: 2026-02-03, Last Updated: 2026-02-03
 create_job '{
   "companyName": "Wex",
   "positionTitle": "Software Engineer",
@@ -293,7 +311,8 @@ create_job '{
   "location": "Remote",
   "rtoType": "REMOTE",
   "notes": "Level: Senior\nSource: LinkedIn\nNext Action: Prepare for interview",
-  "appliedDate": "2026-02-03T00:00:00"
+  "appliedDate": "2026-02-03T00:00:00",
+  "statusChangedAt": "2026-02-03T00:00:00"
 }'
 
 echo ""
