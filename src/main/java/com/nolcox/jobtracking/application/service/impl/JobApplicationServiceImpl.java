@@ -65,7 +65,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         JobApplication application = modelMapper.map(request, JobApplication.class);
         application.setUser(user);
         application.setAppliedDate(request.appliedDate() != null ? request.appliedDate() : LocalDateTime.now());
-        application.setStatus(ApplicationStatus.APPLIED);
+        application.setStatus(request.status() != null ? request.status() : ApplicationStatus.APPLIED);
         application.setStatusChangedAt(LocalDateTime.now());
 
         JobApplication saved = repository.save(application);
