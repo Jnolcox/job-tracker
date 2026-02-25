@@ -10,7 +10,8 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
     appliedDate: new Date().toISOString().split('T')[0],
     status: 'APPLIED',
     interviewDate: '',
-    salaryExpectation: '',
+    salaryMin: '',
+    salaryMax: '',
     contactName: '',
     contactEmail: '',
     contactPhone: '',
@@ -51,7 +52,8 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
         ...application,
         appliedDate: formatDateForInput(application.appliedDate),
         interviewDate: formatDateForInput(application.interviewDate),
-        salaryExpectation: application.salaryExpectation || ''
+        salaryMin: application.salaryMin || '',
+        salaryMax: application.salaryMax || ''
       });
     } else {
       // Reset form when modal opens for new application
@@ -63,7 +65,8 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
         appliedDate: new Date().toISOString().split('T')[0],
         status: 'APPLIED',
         interviewDate: '',
-        salaryExpectation: '',
+        salaryMin: '',
+        salaryMax: '',
         contactName: '',
         contactEmail: '',
         contactPhone: '',
@@ -98,8 +101,10 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
           jobDescription: formData.jobDescription,
           jobUrl: formData.jobUrl,
           status: formData.status,
+          appliedDate: formData.appliedDate ? new Date(formData.appliedDate).toISOString() : null,
           interviewDate: formData.interviewDate ? new Date(formData.interviewDate).toISOString() : null,
-          salaryExpectation: formData.salaryExpectation ? parseFloat(formData.salaryExpectation) : null,
+          salaryMin: formData.salaryMin ? parseFloat(formData.salaryMin) : null,
+          salaryMax: formData.salaryMax ? parseFloat(formData.salaryMax) : null,
           notes: formData.notes,
           contactName: formData.contactName,
           contactEmail: formData.contactEmail,
@@ -113,7 +118,10 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
           positionTitle: formData.positionTitle,
           jobDescription: formData.jobDescription,
           jobUrl: formData.jobUrl,
-          salaryExpectation: formData.salaryExpectation ? parseFloat(formData.salaryExpectation) : null,
+          status: formData.status,
+          appliedDate: formData.appliedDate ? new Date(formData.appliedDate).toISOString() : null,
+          salaryMin: formData.salaryMin ? parseFloat(formData.salaryMin) : null,
+          salaryMax: formData.salaryMax ? parseFloat(formData.salaryMax) : null,
           notes: formData.notes,
           contactName: formData.contactName,
           contactEmail: formData.contactEmail,
@@ -414,20 +422,20 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
               <div className="tab-content">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       color: '#495057',
                       fontWeight: '500'
                     }}>
-                      Expected Salary
+                      Salary Min
                     </label>
                     <input
                       type="number"
-                      name="salaryExpectation"
-                      value={formData.salaryExpectation}
+                      name="salaryMin"
+                      value={formData.salaryMin}
                       onChange={handleChange}
-                      placeholder="75000"
+                      placeholder="70000"
                       style={{
                         width: '100%',
                         padding: '0.75rem',
@@ -443,19 +451,20 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
                   </div>
 
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       color: '#495057',
                       fontWeight: '500'
                     }}>
-                      Interview Date
+                      Salary Max
                     </label>
                     <input
-                      type="date"
-                      name="interviewDate"
-                      value={formData.interviewDate}
+                      type="number"
+                      name="salaryMax"
+                      value={formData.salaryMax}
                       onChange={handleChange}
+                      placeholder="90000"
                       style={{
                         width: '100%',
                         padding: '0.75rem',
@@ -469,6 +478,34 @@ const ApplicationModal = ({ isOpen, onClose, onSuccess, application }) => {
                       onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
                     />
                   </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    color: '#495057',
+                    fontWeight: '500'
+                  }}>
+                    Interview Date
+                  </label>
+                  <input
+                    type="date"
+                    name="interviewDate"
+                    value={formData.interviewDate}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid #e9ecef',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      transition: 'border-color 0.2s',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3498db'}
+                    onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
+                  />
                 </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>

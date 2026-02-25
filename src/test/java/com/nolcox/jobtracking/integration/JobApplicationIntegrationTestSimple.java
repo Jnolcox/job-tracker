@@ -27,6 +27,7 @@ import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
 /**
  * Simplified Integration tests for Job Application functionality.
@@ -103,7 +104,8 @@ class JobApplicationIntegrationTestSimple {
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null
         );
 
         // When
@@ -211,7 +213,7 @@ class JobApplicationIntegrationTestSimple {
         JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
 
         // When & Then - Try to access with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.getApplication(otherApplication.getId(), testUser.getId()));
     }
 
@@ -227,6 +229,7 @@ class JobApplicationIntegrationTestSimple {
                 "Updated description",
                 "https://example.com/updated-job",
                 ApplicationStatus.TECH_SCREEN,
+                null,
                 LocalDateTime.now().plusDays(3),
                 75000.0,
                 85000.0,
@@ -269,6 +272,7 @@ class JobApplicationIntegrationTestSimple {
                 null,
                 ApplicationStatus.REJECTED,
                 null,
+                null,
                 1000000.0,
                 2000000.0,
                 null,
@@ -280,7 +284,7 @@ class JobApplicationIntegrationTestSimple {
         );
 
         // When & Then - Try to update with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.updateApplication(otherApplication.getId(), updateRequest, testUser.getId()));
 
         // Verify original data is unchanged
@@ -312,7 +316,7 @@ class JobApplicationIntegrationTestSimple {
         Long applicationId = otherApplication.getId();
 
         // When & Then - Try to delete with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.deleteApplication(applicationId, testUser.getId()));
 
         // Then - Verify application still exists
@@ -332,7 +336,7 @@ class JobApplicationIntegrationTestSimple {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null
         );
 
         assertThrows(ResourceNotFoundException.class, () -> 
@@ -380,7 +384,8 @@ class JobApplicationIntegrationTestSimple {
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null
         );
 
         JobApplicationResponse created = jobApplicationService.createApplication(createRequest, testUser.getId());
@@ -391,12 +396,13 @@ class JobApplicationIntegrationTestSimple {
         assertThat(read.companyName()).isEqualTo(TEST_COMPANY);
 
         // Step 3: Update the application
-        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+        JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
                 "https://example.com/job",
                 ApplicationStatus.TECH_SCREEN,
+                null,
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,
@@ -409,7 +415,7 @@ class JobApplicationIntegrationTestSimple {
         );
 
         JobApplicationResponse updated = jobApplicationService.updateApplication(
-                created.id(), updateRequest, testUser.getId());
+                created.id(), updateRequest2, testUser.getId());
         assertThat(updated.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
 
         // Step 4: Verify the update

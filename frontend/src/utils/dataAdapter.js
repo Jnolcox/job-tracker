@@ -159,6 +159,7 @@ export function toBackendFormat(form) {
     companyName: form.company,
     positionTitle: form.role,
     status: form.status,
+    appliedDate: form.appliedAt ? new Date(form.appliedAt).toISOString() : null,
     notes: form.notes || null,
     jobDescription: form.jobDescription || null,
     salaryMin: form.salaryMin || null,

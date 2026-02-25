@@ -597,14 +597,22 @@ function Modal({ app, onClose, onSave, saving }) {
             </label>
           </div>
 
-          {/* Status */}
-          <label style={{display:"flex",flexDirection:"column",gap:6}}>
-            <span style={labelStyle}>STATUS</span>
-            <select value={form.status} onChange={e=>set("status",e.target.value)}
-              style={inputStyle} disabled={saving}>
-              {APPLICATION_STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-            </select>
-          </label>
+          {/* Status & Applied Date */}
+          <div style={{display:"flex",gap:12}}>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>STATUS</span>
+              <select value={form.status} onChange={e=>set("status",e.target.value)}
+                style={inputStyle} disabled={saving}>
+                {APPLICATION_STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              </select>
+            </label>
+            <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>DATE APPLIED *</span>
+              <input type="datetime-local" value={toLocalDateTimeInput(form.appliedAt)}
+                onChange={e=>set("appliedAt",e.target.value ? new Date(e.target.value).toISOString() : null)}
+                style={inputStyle} disabled={saving} required/>
+            </label>
+          </div>
 
           {/* Salary Range */}
           <div style={{display:"flex",gap:12}}>
@@ -680,21 +688,13 @@ function Modal({ app, onClose, onSave, saving }) {
               style={{...inputStyle,resize:"vertical"}} disabled={saving} placeholder="Additional notes..."/>
           </label>
 
-          {/* Show dates as read-only info for existing apps */}
-          {!isNew && (
-            <div style={{display:"flex",gap:16,borderTop:"1px solid #1F2937",paddingTop:16}}>
-              <div style={{flex:1}}>
-                <span style={labelStyle}>APPLIED</span>
-                <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
-                  {form.appliedAt ? new Date(form.appliedAt).toLocaleString() : '—'}
-                </p>
-              </div>
-              <div style={{flex:1}}>
-                <span style={labelStyle}>LAST STATUS CHANGE</span>
-                <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
-                  {form.lastUpdate ? new Date(form.lastUpdate).toLocaleString() : '—'}
-                </p>
-              </div>
+          {/* Show last status change as read-only info for existing apps */}
+          {!isNew && form.lastUpdate && (
+            <div style={{borderTop:"1px solid #1F2937",paddingTop:16}}>
+              <span style={labelStyle}>LAST STATUS CHANGE</span>
+              <p style={{color:"#9CA3AF",fontSize:12,fontFamily:"'DM Mono',monospace",marginTop:4}}>
+                {new Date(form.lastUpdate).toLocaleString()}
+              </p>
             </div>
           )}
         </div>
@@ -772,7 +772,7 @@ function AppTable({ apps, onEdit, onDelete }) {
             }}>{s === "All" ? s : FUNNEL_GROUPS.find(g => g.key === s)?.label || s}</button>
           ))}
         </div>
-        <button onClick={()=>onEdit({id:null,company:"",role:"",status:"APPLIED",notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
+        <button onClick={()=>onEdit({id:null,company:"",role:"",status:"APPLIED",appliedAt:new Date().toISOString(),notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
           + Add
         </button>

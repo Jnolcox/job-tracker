@@ -64,7 +64,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
 
         JobApplication application = modelMapper.map(request, JobApplication.class);
         application.setUser(user);
-        application.setAppliedDate(LocalDateTime.now());
+        application.setAppliedDate(request.appliedDate() != null ? request.appliedDate() : LocalDateTime.now());
         application.setStatus(ApplicationStatus.APPLIED);
         application.setStatusChangedAt(LocalDateTime.now());
 

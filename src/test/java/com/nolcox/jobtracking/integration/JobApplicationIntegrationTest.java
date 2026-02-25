@@ -124,7 +124,8 @@ class JobApplicationIntegrationTest {
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null // appliedDate - let service use default
         );
 
         // When
@@ -176,7 +177,8 @@ class JobApplicationIntegrationTest {
                 "Notes",
                 "Jane Smith",
                 "invalid-email", // Invalid email format
-                "+1-555-0123"
+                "+1-555-0123",
+                null
         );
 
         // When & Then
@@ -292,6 +294,7 @@ class JobApplicationIntegrationTest {
                 "Updated description",
                 "https://example.com/updated-job",
                 ApplicationStatus.TECH_SCREEN,
+                null, // appliedDate - keep original
                 LocalDateTime.now().plusDays(3),
                 75000.0,
                 85000.0,
@@ -334,7 +337,8 @@ class JobApplicationIntegrationTest {
                 "Should not work",
                 null,
                 ApplicationStatus.REJECTED,
-                null,
+                null, // appliedDate
+                null, // interviewDate
                 1000000.0,
                 2000000.0,
                 "San Francisco, CA",
@@ -405,7 +409,7 @@ class JobApplicationIntegrationTest {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null
         );
 
         mockMvc.perform(put("/v1/job-applications/{id}", nonExistentId)
@@ -439,12 +443,13 @@ class JobApplicationIntegrationTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
-        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+        JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null
         );
 
         // When & Then - All endpoints should require authentication
@@ -461,7 +466,7 @@ class JobApplicationIntegrationTest {
 
         mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateRequest)))
+                        .content(objectMapper.writeValueAsString(updateRequest2)))
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(delete("/v1/job-applications/{id}", application.getId()))
@@ -507,7 +512,8 @@ class JobApplicationIntegrationTest {
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null
         );
 
         MvcResult createResult = mockMvc.perform(post("/v1/job-applications")
@@ -535,6 +541,7 @@ class JobApplicationIntegrationTest {
                 TEST_DESCRIPTION,
                 "https://example.com/job",
                 ApplicationStatus.TECH_SCREEN,
+                null, // appliedDate
                 LocalDateTime.now().plusDays(2),
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,

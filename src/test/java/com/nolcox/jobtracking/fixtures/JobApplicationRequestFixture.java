@@ -25,6 +25,7 @@ public class JobApplicationRequestFixture {
     
     // Fields specific to update request
     private ApplicationStatus status = ApplicationStatus.APPLIED;
+    private LocalDateTime appliedDate = null;
     private LocalDateTime interviewDate = null;
 
     public static JobApplicationRequestFixture aJobApplicationRequest() {
@@ -93,6 +94,11 @@ public class JobApplicationRequestFixture {
 
     public JobApplicationRequestFixture withStatus(ApplicationStatus status) {
         this.status = status;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withAppliedDate(LocalDateTime appliedDate) {
+        this.appliedDate = appliedDate;
         return this;
     }
 
@@ -172,7 +178,8 @@ public class JobApplicationRequestFixture {
                 notes,
                 contactName,
                 contactEmail,
-                contactPhone
+                contactPhone,
+                appliedDate
         );
     }
 
@@ -183,6 +190,7 @@ public class JobApplicationRequestFixture {
                 jobDescription,
                 jobUrl,
                 status,
+                appliedDate,
                 interviewDate,
                 salaryMin,
                 salaryMax,
