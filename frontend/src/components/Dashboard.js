@@ -4,6 +4,31 @@ import { jobApplicationsAPI } from '../services/api';
 import { APPLICATION_STATUS, STATUS_CONFIG, ERROR_MESSAGES } from '../constants';
 import ApplicationModal from './ApplicationModal';
 
+/**
+ * Statuses that are considered "inactive" - applications no longer being actively pursued.
+ * Used for the 'active' filter which excludes these statuses.
+ */
+const INACTIVE_STATUSES = [
+  APPLICATION_STATUS.REJECTED,
+  APPLICATION_STATUS.WITHDRAWN,
+  APPLICATION_STATUS.GHOSTED
+];
+
+/**
+ * @component Dashboard
+ * @description Main dashboard component for displaying and managing job applications.
+ * Features include:
+ * - Statistics cards showing application counts by status
+ * - Filtering capabilities (all, active, applied, interviewed, offers, rejected)
+ * - Default sort by lastUpdated date (newest first)
+ * - Default filter is 'active' (excludes rejected/withdrawn/ghosted applications)
+ * - CRUD operations for job applications via modal
+ *
+ * @example
+ * <Dashboard />
+ *
+ * @returns {JSX.Element} The Dashboard component
+ */
 const Dashboard = () => {
   const [applications, setApplications] = useState([]);
   const [filteredApplications, setFilteredApplications] = useState([]);
@@ -11,9 +36,10 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('active');
   const [stats, setStats] = useState({
     total: 0,
+    active: 0,
     applied: 0,
     interviewed: 0,
     offers: 0,
@@ -30,42 +56,54 @@ const Dashboard = () => {
       const response = await jobApplicationsAPI.getAll();
       const applicationsData = response.data.content || response.data;
       
-      // Debug: Log the first application to see date format
-      if (applicationsData.length > 0) {
-        console.log('Sample application data:', applicationsData[0]);
-        console.log('Applied date format:', applicationsData[0].appliedDate);
-        console.log('Interview date format:', applicationsData[0].interviewDate);
-      }
-      
-      // Sort applications by applied date (newest first)
+      /**
+       * Converts a date value to a JavaScript Date object.
+       * Handles both array format [year, month, day, ...] from Java LocalDateTime
+       * and ISO string format.
+       * @param {Array|string|null} dateValue - The date to convert
+       * @returns {Date} A Date object, or Date(0) if null/undefined
+       */
+      const toDate = (dateValue) => {
+        if (!dateValue) return new Date(0);
+        if (Array.isArray(dateValue)) {
+          // Array format: [year, month, day, hour?, minute?, second?]
+          const [year, month, day, hour = 0, minute = 0, second = 0] = dateValue;
+          return new Date(year, month - 1, day, hour, minute, second);
+        }
+        return new Date(dateValue);
+      };
+
+      // Sort applications by lastUpdated date (newest first), with fallback to appliedDate
       const sortedApplications = [...applicationsData].sort((a, b) => {
-        // Convert dates to comparable values
-        const dateA = Array.isArray(a.appliedDate) 
-          ? new Date(a.appliedDate[0], a.appliedDate[1] - 1, a.appliedDate[2])
-          : new Date(a.appliedDate);
-        const dateB = Array.isArray(b.appliedDate)
-          ? new Date(b.appliedDate[0], b.appliedDate[1] - 1, b.appliedDate[2])
-          : new Date(b.appliedDate);
-        
+        // Use lastUpdated if available, otherwise fall back to appliedDate
+        const dateA = toDate(a.lastUpdated || a.appliedDate);
+        const dateB = toDate(b.lastUpdated || b.appliedDate);
+
         // Sort in descending order (newest first)
         return dateB - dateA;
       });
       
       setApplications(sortedApplications);
-      setFilteredApplications(sortedApplications);
-      
+
+      // Apply 'active' filter by default - exclude rejected/withdrawn/ghosted
+      const activeApplications = sortedApplications.filter(
+        app => !INACTIVE_STATUSES.includes(app.status)
+      );
+      setFilteredApplications(activeApplications);
+
       // Calculate statistics
       const total = sortedApplications.length;
+      const active = activeApplications.length;
       const applied = applicationsData.filter(app => app.status === APPLICATION_STATUS.APPLIED).length;
-      const interviewed = applicationsData.filter(app => 
+      const interviewed = applicationsData.filter(app =>
         app.status === APPLICATION_STATUS.INTERVIEWED || app.status === APPLICATION_STATUS.INTERVIEW_SCHEDULED
       ).length;
       const offers = applicationsData.filter(app => app.status === APPLICATION_STATUS.OFFER_RECEIVED).length;
-      const rejected = applicationsData.filter(app => 
+      const rejected = applicationsData.filter(app =>
         app.status === APPLICATION_STATUS.REJECTED || app.status === APPLICATION_STATUS.WITHDRAWN
       ).length;
-      
-      setStats({ total, applied, interviewed, offers, rejected });
+
+      setStats({ total, active, applied, interviewed, offers, rejected });
       setError('');
     } catch (err) {
       setError(ERROR_MESSAGES.SERVER_ERROR);
@@ -80,20 +118,22 @@ const Dashboard = () => {
       try {
         await jobApplicationsAPI.delete(id);
         setApplications(applications.filter(app => app.id !== id));
-        
+        setFilteredApplications(filteredApplications.filter(app => app.id !== id));
+
         // Update statistics after deletion
         const updatedApplications = applications.filter(app => app.id !== id);
         const total = updatedApplications.length;
+        const active = updatedApplications.filter(app => !INACTIVE_STATUSES.includes(app.status)).length;
         const applied = updatedApplications.filter(app => app.status === APPLICATION_STATUS.APPLIED).length;
-        const interviewed = updatedApplications.filter(app => 
+        const interviewed = updatedApplications.filter(app =>
           app.status === APPLICATION_STATUS.INTERVIEWED || app.status === APPLICATION_STATUS.INTERVIEW_SCHEDULED
         ).length;
         const offers = updatedApplications.filter(app => app.status === APPLICATION_STATUS.OFFER_RECEIVED).length;
-        const rejected = updatedApplications.filter(app => 
+        const rejected = updatedApplications.filter(app =>
           app.status === APPLICATION_STATUS.REJECTED || app.status === APPLICATION_STATUS.WITHDRAWN
         ).length;
-        
-        setStats({ total, applied, interviewed, offers, rejected });
+
+        setStats({ total, active, applied, interviewed, offers, rejected });
       } catch (err) {
         setError(ERROR_MESSAGES.SERVER_ERROR);
       }
@@ -119,20 +159,29 @@ const Dashboard = () => {
     fetchApplications();
   };
 
+  /**
+   * Handles filter selection from stat cards.
+   * Updates the active filter and filters the applications list accordingly.
+   * @param {string} filterType - The type of filter to apply ('all' | 'active' | 'applied' | 'interviewed' | 'offers' | 'rejected')
+   */
   const handleFilterClick = (filterType) => {
     setActiveFilter(filterType);
-    
+
     let filtered = [...applications];
-    
+
     switch (filterType) {
       case 'all':
         filtered = [...applications];
+        break;
+      case 'active':
+        // Show all applications EXCEPT rejected, withdrawn, and ghosted
+        filtered = applications.filter(app => !INACTIVE_STATUSES.includes(app.status));
         break;
       case 'applied':
         filtered = applications.filter(app => app.status === APPLICATION_STATUS.APPLIED);
         break;
       case 'interviewed':
-        filtered = applications.filter(app => 
+        filtered = applications.filter(app =>
           app.status === APPLICATION_STATUS.INTERVIEWED || app.status === APPLICATION_STATUS.INTERVIEW_SCHEDULED
         );
         break;
@@ -140,14 +189,14 @@ const Dashboard = () => {
         filtered = applications.filter(app => app.status === APPLICATION_STATUS.OFFER_RECEIVED);
         break;
       case 'rejected':
-        filtered = applications.filter(app => 
+        filtered = applications.filter(app =>
           app.status === APPLICATION_STATUS.REJECTED || app.status === APPLICATION_STATUS.WITHDRAWN
         );
         break;
       default:
         filtered = [...applications];
     }
-    
+
     setFilteredApplications(filtered);
   };
 
@@ -218,10 +267,10 @@ const Dashboard = () => {
         gap: '1rem', 
         marginBottom: '2rem' 
       }}>
-        <div 
+        <div
           className={`stat-card ${activeFilter === 'all' ? 'stat-card-active' : ''}`}
           onClick={() => handleFilterClick('all')}
-          style={{ 
+          style={{
             cursor: 'pointer',
             border: activeFilter === 'all' ? '2px solid #3498db' : '1px solid transparent',
             transition: 'all 0.3s ease'
@@ -230,10 +279,22 @@ const Dashboard = () => {
           <h3 style={{ margin: 0, color: '#3498db', fontSize: '2rem' }}>{stats.total}</h3>
           <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d' }}>Total Applications</p>
         </div>
-        <div 
+        <div
+          className={`stat-card ${activeFilter === 'active' ? 'stat-card-active' : ''}`}
+          onClick={() => handleFilterClick('active')}
+          style={{
+            cursor: 'pointer',
+            border: activeFilter === 'active' ? '2px solid #2ecc71' : '1px solid transparent',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '2rem' }}>{stats.active}</h3>
+          <p style={{ margin: '0.5rem 0 0 0', color: '#7f8c8d' }}>Active</p>
+        </div>
+        <div
           className={`stat-card ${activeFilter === 'applied' ? 'stat-card-active' : ''}`}
           onClick={() => handleFilterClick('applied')}
-          style={{ 
+          style={{
             cursor: 'pointer',
             border: activeFilter === 'applied' ? '2px solid #f39c12' : '1px solid transparent',
             transition: 'all 0.3s ease'
@@ -290,7 +351,9 @@ const Dashboard = () => {
         gap: '1rem'
       }}>
         <h2 style={{ margin: 0, color: '#2c3e50' }}>
-          {activeFilter === 'all' ? 'Recent Applications' : `Filtered: ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)}`}
+          {activeFilter === 'all' || activeFilter === 'active'
+            ? 'Recent Applications'
+            : `Filtered: ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)}`}
         </h2>
         <button 
           className="btn"
@@ -310,22 +373,28 @@ const Dashboard = () => {
           border: '2px dashed #dee2e6'
         }}>
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
-            {activeFilter === 'all' ? '📋' : '🔍'}
+            {activeFilter === 'all' || activeFilter === 'active' ? '📋' : '🔍'}
           </div>
           <h3 style={{ color: '#6c757d', marginBottom: '1rem' }}>
-            {activeFilter === 'all' ? 'No job applications yet' : `No ${activeFilter} applications`}
+            {activeFilter === 'all'
+              ? 'No job applications yet'
+              : activeFilter === 'active'
+                ? 'No active applications'
+                : `No ${activeFilter} applications`}
           </h3>
           <p style={{ color: '#6c757d', marginBottom: '2rem', fontSize: '1.1rem' }}>
-            {activeFilter === 'all' 
+            {activeFilter === 'all'
               ? 'Start tracking your job applications and take control of your job search journey!'
-              : `You don't have any applications in the "${activeFilter}" category.`}
+              : activeFilter === 'active'
+                ? 'All your applications are either rejected, withdrawn, or ghosted. Add a new application to get started!'
+                : `You don't have any applications in the "${activeFilter}" category.`}
           </p>
-          <button 
-            className="btn" 
-            onClick={activeFilter === 'all' ? handleAdd : () => handleFilterClick('all')}
+          <button
+            className="btn"
+            onClick={activeFilter === 'all' || activeFilter === 'active' ? handleAdd : () => handleFilterClick('all')}
             style={{ fontSize: '1.1rem', padding: '1rem 2rem' }}
           >
-            {activeFilter === 'all' ? '🚀 Add Your First Application' : '🔙 View All Applications'}
+            {activeFilter === 'all' || activeFilter === 'active' ? '🚀 Add Your First Application' : '🔙 View All Applications'}
           </button>
         </div>
       ) : (
@@ -398,14 +467,14 @@ const Dashboard = () => {
             </div>
           ))}
           
-          {activeFilter !== 'all' && filteredApplications.length > 0 && (
+          {activeFilter !== 'all' && activeFilter !== 'active' && filteredApplications.length > 0 && (
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
               <p style={{ color: '#7f8c8d', marginBottom: '1rem' }}>
                 Showing {filteredApplications.length} of {applications.length} total applications
               </p>
-              <button 
+              <button
                 className="btn btn-secondary"
-                onClick={() => handleFilterClick('all')}
+                onClick={() => handleFilterClick('active')}
               >
                 Clear Filter
               </button>

@@ -28,7 +28,8 @@ const FUNNEL_COLORS = {
 };
 
 // Filter options for table
-const FILTER_OPTIONS = ["All", ...FUNNEL_GROUPS.map(g => g.key)];
+// "Active" shows all applications EXCEPT those in REJECTED status group
+const FILTER_OPTIONS = ["All", "Active", ...FUNNEL_GROUPS.map(g => g.key)];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const daysBetween = (a, b) => {
@@ -771,15 +772,23 @@ const TH = ({children, onClick, sorted}) => (
  * @returns {JSX.Element} Table component
  */
 function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, onSelectionChange, getSortedItems }) {
-  const [sortKey, setSortKey] = useState("appliedAt");
-  const [filter,  setFilter]  = useState("All");
+  // Default sort by lastUpdate (descending - newest first)
+  const [sortKey, setSortKey] = useState("lastUpdate");
+  // Default filter to "Active" to show non-rejected applications
+  const [filter,  setFilter]  = useState("Active");
   const [search,  setSearch]  = useState("");
 
   const sorted = useMemo(()=>{
     let rows = [...apps];
     if(filter !== "All") {
-      const group = FUNNEL_GROUPS.find(g => g.key === filter);
-      if (group) rows = rows.filter(a => group.statuses.includes(a.status));
+      if (filter === "Active") {
+        // Active filter: exclude all statuses in the REJECTED group
+        // This includes: REJECTED, OFFER_DECLINED, OFFER_RESCINDED, GHOSTED
+        rows = rows.filter(a => !isStatusInGroup(a.status, 'REJECTED'));
+      } else {
+        const group = FUNNEL_GROUPS.find(g => g.key === filter);
+        if (group) rows = rows.filter(a => group.statuses.includes(a.status));
+      }
     }
     if(search) rows = rows.filter(a=>
       a.company.toLowerCase().includes(search.toLowerCase()) ||
@@ -824,15 +833,27 @@ function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, 
           }}
         />
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {FILTER_OPTIONS.map(s=>(
-            <button key={s} onClick={()=>setFilter(s)} style={{
-              padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",
-              fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600,
-              background: filter===s ? (FUNNEL_COLORS[s]||"#374151") : "#1F2937",
-              color: filter===s?"#fff":"#9CA3AF",
-              transition:"background 0.2s",
-            }}>{s === "All" ? s : FUNNEL_GROUPS.find(g => g.key === s)?.label || s}</button>
-          ))}
+          {FILTER_OPTIONS.map(s=>{
+            // Determine the background color for active filter state
+            const getActiveColor = () => {
+              if (s === "Active") return "#10B981"; // Green for active filter
+              return FUNNEL_COLORS[s] || "#374151";
+            };
+            // Determine the display label
+            const getLabel = () => {
+              if (s === "All" || s === "Active") return s;
+              return FUNNEL_GROUPS.find(g => g.key === s)?.label || s;
+            };
+            return (
+              <button key={s} onClick={()=>setFilter(s)} style={{
+                padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",
+                fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600,
+                background: filter===s ? getActiveColor() : "#1F2937",
+                color: filter===s?"#fff":"#9CA3AF",
+                transition:"background 0.2s",
+              }}>{getLabel()}</button>
+            );
+          })}
         </div>
         <button onClick={()=>onEdit({id:null,company:"",role:"",status:"APPLIED",appliedAt:new Date().toISOString(),notes:"",jobDescription:"",jobUrl:"",salaryMin:null,salaryMax:null,location:"",rtoType:null,contactName:"",contactEmail:"",contactPhone:""})}
           style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,border:"none",background:"#4E9AF1",color:"#fff",cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
