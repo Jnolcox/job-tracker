@@ -12,7 +12,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "job_applications")
@@ -49,10 +49,10 @@ public class JobApplication {
     private ApplicationStatus status;
 
     @Column(name = "applied_date", nullable = false)
-    private LocalDateTime appliedDate;
+    private Instant appliedDate;
 
     @Column(name = "interview_date")
-    private LocalDateTime interviewDate;
+    private Instant interviewDate;
 
     @Column(name = "salary_min")
     private Double salaryMin;
@@ -86,14 +86,14 @@ public class JobApplication {
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @Column(name = "status_changed_at")
-    private LocalDateTime statusChangedAt;
+    private Instant statusChangedAt;
 
     @Version
     private Long version;

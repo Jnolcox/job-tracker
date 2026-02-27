@@ -18,7 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -64,9 +64,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
 
         JobApplication application = modelMapper.map(request, JobApplication.class);
         application.setUser(user);
-        application.setAppliedDate(request.appliedDate() != null ? request.appliedDate() : LocalDateTime.now());
+        application.setAppliedDate(request.appliedDate() != null ? request.appliedDate() : Instant.now());
         application.setStatus(request.status() != null ? request.status() : ApplicationStatus.APPLIED);
-        application.setStatusChangedAt(request.statusChangedAt() != null ? request.statusChangedAt() : LocalDateTime.now());
+        application.setStatusChangedAt(request.statusChangedAt() != null ? request.statusChangedAt() : Instant.now());
 
         JobApplication saved = repository.save(application);
         return mapToResponse(saved);
@@ -90,7 +90,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
 
         // Auto-update statusChangedAt when status changes, otherwise use provided value
         if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
-            application.setStatusChangedAt(LocalDateTime.now());
+            application.setStatusChangedAt(Instant.now());
         } else if (request.statusChangedAt() != null) {
             application.setStatusChangedAt(request.statusChangedAt());
         }
@@ -150,7 +150,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         }
 
         application.setStatus(status);
-        application.setStatusChangedAt(LocalDateTime.now());
+        application.setStatusChangedAt(Instant.now());
         JobApplication updated = repository.save(application);
 
         return mapToResponse(updated);

@@ -3,7 +3,7 @@ package com.nolcox.jobtracking.application.dto.response;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record JobApplicationResponse(
         Long id,
@@ -11,8 +11,8 @@ public record JobApplicationResponse(
         String positionTitle,
         String jobDescription,
         ApplicationStatus status,
-        LocalDateTime appliedDate,
-        LocalDateTime interviewDate,
+        Instant appliedDate,
+        Instant interviewDate,
         Double salaryMin,
         Double salaryMax,
         String location,
@@ -22,7 +22,7 @@ public record JobApplicationResponse(
         String contactName,
         String contactEmail,
         String contactPhone,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt,
-        LocalDateTime statusChangedAt
+        Instant createdAt,
+        Instant updatedAt,
+        Instant statusChangedAt
 ) {}

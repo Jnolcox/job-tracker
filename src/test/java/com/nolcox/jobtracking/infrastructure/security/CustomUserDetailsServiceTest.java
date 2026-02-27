@@ -14,7 +14,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -45,8 +45,8 @@ class CustomUserDetailsServiceTest {
                 .lastName("User")
                 .role(Role.USER)
                 .enabled(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
     }
 
@@ -137,8 +137,8 @@ class CustomUserDetailsServiceTest {
                 .lastName("User")
                 .role(Role.ADMIN)
                 .enabled(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(adminUser));
@@ -164,8 +164,8 @@ class CustomUserDetailsServiceTest {
                 .lastName("User")
                 .role(Role.USER)
                 .enabled(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         when(userRepository.findByEmail("disabled@example.com")).thenReturn(Optional.of(disabledUser));

@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.integration;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -232,7 +233,7 @@ class JobApplicationIntegrationTestSimple {
                 ApplicationStatus.TECH_SCREEN,
                 null,
                 null,
-                LocalDateTime.now().plusDays(3),
+                Instant.now().plus(Duration.ofDays(3)),
                 75000.0,
                 85000.0,
                 "San Francisco, CA",
@@ -408,7 +409,7 @@ class JobApplicationIntegrationTestSimple {
                 ApplicationStatus.TECH_SCREEN,
                 null,
                 null,
-                LocalDateTime.now().plusDays(2),
+                Instant.now().plus(Duration.ofDays(2)),
                 TEST_SALARY_MIN,
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
@@ -443,7 +444,7 @@ class JobApplicationIntegrationTestSimple {
                 .positionTitle(positionTitle)
                 .jobDescription("Test job description")
                 .status(ApplicationStatus.APPLIED)
-                .appliedDate(LocalDateTime.now())
+                .appliedDate(Instant.now())
                 .salaryMin(TEST_SALARY_MIN)
                 .salaryMax(TEST_SALARY_MAX)
                 .location("San Francisco, CA")

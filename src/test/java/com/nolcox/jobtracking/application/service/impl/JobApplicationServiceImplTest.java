@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.application.service.impl;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -262,7 +263,7 @@ class JobApplicationServiceImplTest {
             // Given
             Long applicationId = 1L;
             Long userId = 1L;
-            LocalDateTime oldStatusChangedAt = LocalDateTime.now().minusDays(5);
+            Instant oldStatusChangedAt = Instant.now().minus(Duration.ofDays(5));
 
             JobApplication existingApplication = JobApplicationFixture.aJobApplication()
                 .withId(applicationId)
@@ -290,7 +291,7 @@ class JobApplicationServiceImplTest {
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            LocalDateTime beforeUpdate = LocalDateTime.now();
+            Instant beforeUpdate = Instant.now();
 
             // When
             jobApplicationService.updateApplication(applicationId, request, userId);
@@ -310,13 +311,13 @@ class JobApplicationServiceImplTest {
             // Given
             Long applicationId = 1L;
             Long userId = 1L;
-            LocalDateTime providedStatusChangedAt = LocalDateTime.now().minusDays(3);
+            Instant providedStatusChangedAt = Instant.now().minus(Duration.ofDays(3));
 
             JobApplication existingApplication = JobApplicationFixture.aJobApplication()
                 .withId(applicationId)
                 .withUser(testUser)
                 .withStatus(ApplicationStatus.APPLIED)
-                .withStatusChangedAt(LocalDateTime.now().minusDays(10))
+                .withStatusChangedAt(Instant.now().minus(Duration.ofDays(10)))
                 .build();
 
             // Request keeps same status but provides a different statusChangedAt
@@ -355,7 +356,7 @@ class JobApplicationServiceImplTest {
             // Given
             Long applicationId = 1L;
             Long userId = 1L;
-            LocalDateTime existingStatusChangedAt = LocalDateTime.now().minusDays(10);
+            Instant existingStatusChangedAt = Instant.now().minus(Duration.ofDays(10));
 
             JobApplication existingApplication = JobApplicationFixture.aJobApplication()
                 .withId(applicationId)

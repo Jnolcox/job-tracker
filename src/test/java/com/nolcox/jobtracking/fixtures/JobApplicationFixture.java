@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.fixtures;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
@@ -16,8 +17,8 @@ public class JobApplicationFixture {
     private String positionTitle = "Software Engineer";
     private String jobDescription = "Exciting opportunity to work with cutting-edge technologies";
     private ApplicationStatus status = ApplicationStatus.APPLIED;
-    private LocalDateTime appliedDate = LocalDateTime.now();
-    private LocalDateTime interviewDate = null;
+    private Instant appliedDate = Instant.now();
+    private Instant interviewDate = null;
     private Double salaryMin = 100000.0;
     private Double salaryMax = 150000.0;
     private String location = "San Francisco, CA";
@@ -27,9 +28,9 @@ public class JobApplicationFixture {
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
     private String contactPhone = "+1-555-0123";
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
-    private LocalDateTime statusChangedAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
+    private Instant updatedAt = Instant.now();
+    private Instant statusChangedAt = Instant.now();
     private Long version = 0L;
 
     public static JobApplicationFixture aJobApplication() {
@@ -66,19 +67,19 @@ public class JobApplicationFixture {
         return this;
     }
 
-    public JobApplicationFixture withAppliedDate(LocalDateTime appliedDate) {
+    public JobApplicationFixture withAppliedDate(Instant appliedDate) {
         this.appliedDate = appliedDate;
         return this;
     }
 
-    public JobApplicationFixture withInterviewDate(LocalDateTime interviewDate) {
+    public JobApplicationFixture withInterviewDate(Instant interviewDate) {
         this.interviewDate = interviewDate;
         return this;
     }
 
     public JobApplicationFixture withInterviewScheduled() {
         this.status = ApplicationStatus.TECH_SCREEN;
-        this.interviewDate = LocalDateTime.now().plusDays(7);
+        this.interviewDate = Instant.now().plus(Duration.ofDays(7));
         return this;
     }
 
@@ -127,17 +128,17 @@ public class JobApplicationFixture {
         return this;
     }
 
-    public JobApplicationFixture withCreatedAt(LocalDateTime createdAt) {
+    public JobApplicationFixture withCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
         return this;
     }
 
-    public JobApplicationFixture withUpdatedAt(LocalDateTime updatedAt) {
+    public JobApplicationFixture withUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
         return this;
     }
 
-    public JobApplicationFixture withStatusChangedAt(LocalDateTime statusChangedAt) {
+    public JobApplicationFixture withStatusChangedAt(Instant statusChangedAt) {
         this.statusChangedAt = statusChangedAt;
         return this;
     }

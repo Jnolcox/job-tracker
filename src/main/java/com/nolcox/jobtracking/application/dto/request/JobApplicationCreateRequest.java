@@ -4,7 +4,7 @@ import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 
 import jakarta.validation.constraints.Email;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -51,7 +51,7 @@ public record JobApplicationCreateRequest(
         @Size(max = 50, message = "Contact phone must not exceed 50 characters")
         String contactPhone,
 
-        LocalDateTime appliedDate,
+        Instant appliedDate,
 
-        LocalDateTime statusChangedAt
+        Instant statusChangedAt
 ) {}

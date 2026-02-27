@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record JobApplicationUpdateRequest(
         @NotBlank(message = "Company name is required")
@@ -28,11 +28,11 @@ public record JobApplicationUpdateRequest(
         @NotNull(message = "Status is required")
         ApplicationStatus status,
 
-        LocalDateTime appliedDate,
+        Instant appliedDate,
 
-        LocalDateTime statusChangedAt,
+        Instant statusChangedAt,
 
-        LocalDateTime interviewDate,
+        Instant interviewDate,
 
         @PositiveOrZero(message = "Salary min must be zero or positive")
         Double salaryMin,

@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.config;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -64,7 +65,7 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Senior Software Engineer")
                     .jobDescription("Exciting opportunity to work with cutting-edge technologies including React, Spring Boot, and AWS")
                     .status(ApplicationStatus.APPLIED)
-                    .appliedDate(LocalDateTime.now().minusDays(5))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(5)))
                     .salaryMin(110000.0)
                     .salaryMax(130000.0)
                     .location("San Francisco, CA")
@@ -82,8 +83,8 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Full Stack Developer")
                     .jobDescription("Join our fast-growing startup and help build the next generation platform")
                     .status(ApplicationStatus.TECH_SCREEN)
-                    .appliedDate(LocalDateTime.now().minusDays(8))
-                    .interviewDate(LocalDateTime.now().plusDays(2))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(8)))
+                    .interviewDate(Instant.now().plus(Duration.ofDays(2)))
                     .salaryMin(90000.0)
                     .salaryMax(100000.0)
                     .location("Austin, TX")
@@ -100,7 +101,7 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Frontend Developer")
                     .jobDescription("Work on user-facing features for millions of users")
                     .status(ApplicationStatus.REJECTED)
-                    .appliedDate(LocalDateTime.now().minusDays(15))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(15)))
                     .salaryMin(100000.0)
                     .salaryMax(120000.0)
                     .location("Seattle, WA")
@@ -117,8 +118,8 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Backend Engineer")
                     .jobDescription("Build scalable financial systems and APIs")
                     .status(ApplicationStatus.OFFER_RECEIVED)
-                    .appliedDate(LocalDateTime.now().minusDays(20))
-                    .interviewDate(LocalDateTime.now().minusDays(3))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(20)))
+                    .interviewDate(Instant.now().minus(Duration.ofDays(3)))
                     .salaryMin(120000.0)
                     .salaryMax(140000.0)
                     .location("New York, NY")
@@ -136,7 +137,7 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("DevOps Engineer")
                     .jobDescription("Manage cloud infrastructure and CI/CD pipelines")
                     .status(ApplicationStatus.APPLIED)
-                    .appliedDate(LocalDateTime.now().minusDays(2))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(2)))
                     .salaryMin(105000.0)
                     .salaryMax(125000.0)
                     .location("Denver, CO")

@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.fixtures;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
@@ -25,9 +26,9 @@ public class JobApplicationRequestFixture {
     
     // Fields specific to update request
     private ApplicationStatus status = ApplicationStatus.APPLIED;
-    private LocalDateTime appliedDate = null;
-    private LocalDateTime statusChangedAt = null;
-    private LocalDateTime interviewDate = null;
+    private Instant appliedDate = null;
+    private Instant statusChangedAt = null;
+    private Instant interviewDate = null;
 
     public static JobApplicationRequestFixture aJobApplicationRequest() {
         return new JobApplicationRequestFixture();
@@ -98,24 +99,24 @@ public class JobApplicationRequestFixture {
         return this;
     }
 
-    public JobApplicationRequestFixture withAppliedDate(LocalDateTime appliedDate) {
+    public JobApplicationRequestFixture withAppliedDate(Instant appliedDate) {
         this.appliedDate = appliedDate;
         return this;
     }
 
-    public JobApplicationRequestFixture withInterviewDate(LocalDateTime interviewDate) {
+    public JobApplicationRequestFixture withInterviewDate(Instant interviewDate) {
         this.interviewDate = interviewDate;
         return this;
     }
 
-    public JobApplicationRequestFixture withStatusChangedAt(LocalDateTime statusChangedAt) {
+    public JobApplicationRequestFixture withStatusChangedAt(Instant statusChangedAt) {
         this.statusChangedAt = statusChangedAt;
         return this;
     }
 
     public JobApplicationRequestFixture withInterviewScheduled() {
         this.status = ApplicationStatus.TECH_SCREEN;
-        this.interviewDate = LocalDateTime.now().plusDays(7);
+        this.interviewDate = Instant.now().plus(Duration.ofDays(7));
         return this;
     }
 
