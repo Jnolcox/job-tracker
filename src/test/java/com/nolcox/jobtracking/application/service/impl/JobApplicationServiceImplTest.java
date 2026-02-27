@@ -1,5 +1,6 @@
 package com.nolcox.jobtracking.application.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,8 +12,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,15 +27,18 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
+import com.nolcox.jobtracking.fixtures.JobApplicationRequestFixture;
 import com.nolcox.jobtracking.fixtures.UserFixture;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
+import org.modelmapper.ModelMapper;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JobApplicationService Tests")
@@ -39,9 +47,14 @@ class JobApplicationServiceImplTest {
     @Mock
     private JobApplicationRepository repository;
 
+    @Mock
+    private ModelMapper modelMapper;
 
     @InjectMocks
     private JobApplicationServiceImpl jobApplicationService;
+
+    @Captor
+    private ArgumentCaptor<JobApplication> applicationCaptor;
 
     private User testUser;
     private JobApplication testApplication;
@@ -236,6 +249,191 @@ class JobApplicationServiceImplTest {
 
             verify(repository).findById(applicationId);
             verify(repository, never()).delete(any(JobApplication.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("Update Application Tests")
+    class UpdateApplicationTests {
+
+        @Test
+        @DisplayName("Should auto-update statusChangedAt when status changes even if request contains old value")
+        void shouldAutoUpdateStatusChangedAtWhenStatusChanges() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            LocalDateTime oldStatusChangedAt = LocalDateTime.now().minusDays(5);
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(oldStatusChangedAt)
+                .build();
+
+            // Request changes status from APPLIED to TECH_SCREEN but includes old statusChangedAt
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.TECH_SCREEN)
+                .withStatusChangedAt(oldStatusChangedAt)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Mock modelMapper to update the application's status
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.TECH_SCREEN);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            LocalDateTime beforeUpdate = LocalDateTime.now();
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // statusChangedAt should be auto-updated to current time, not the old value from request
+            assertThat(savedApplication.getStatusChangedAt()).isAfterOrEqualTo(beforeUpdate);
+            assertThat(savedApplication.getStatusChangedAt()).isNotEqualTo(oldStatusChangedAt);
+        }
+
+        @Test
+        @DisplayName("Should use provided statusChangedAt when status does not change")
+        void shouldUseProvidedStatusChangedAtWhenStatusDoesNotChange() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            LocalDateTime providedStatusChangedAt = LocalDateTime.now().minusDays(3);
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(LocalDateTime.now().minusDays(10))
+                .build();
+
+            // Request keeps same status but provides a different statusChangedAt
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(providedStatusChangedAt)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Mock modelMapper - status stays the same
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.APPLIED);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // statusChangedAt should use the provided value since status didn't change
+            assertThat(savedApplication.getStatusChangedAt()).isEqualTo(providedStatusChangedAt);
+        }
+
+        @Test
+        @DisplayName("Should preserve existing statusChangedAt when status does not change and no value provided")
+        void shouldPreserveExistingStatusChangedAtWhenStatusDoesNotChangeAndNoValueProvided() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            LocalDateTime existingStatusChangedAt = LocalDateTime.now().minusDays(10);
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(existingStatusChangedAt)
+                .build();
+
+            // Request keeps same status and doesn't provide statusChangedAt
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(null)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Mock modelMapper - status stays the same
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.APPLIED);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // statusChangedAt should remain unchanged
+            assertThat(savedApplication.getStatusChangedAt()).isEqualTo(existingStatusChangedAt);
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when application not found")
+        void shouldThrowResourceNotFoundExceptionWhenApplicationNotFound() {
+            // Given
+            Long applicationId = 999L;
+            Long userId = 1L;
+
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.empty());
+
+            // When & Then
+            assertThatThrownBy(() -> jobApplicationService.updateApplication(applicationId, request, userId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Application not found");
+
+            verify(repository).findById(applicationId);
+            verify(repository, never()).save(any(JobApplication.class));
+        }
+
+        @Test
+        @DisplayName("Should throw UnauthorizedException when user not authorized")
+        void shouldThrowUnauthorizedExceptionWhenUserNotAuthorized() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 2L; // Different user
+
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(testApplication));
+
+            // When & Then
+            assertThatThrownBy(() -> jobApplicationService.updateApplication(applicationId, request, userId))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage("Access denied");
+
+            verify(repository).findById(applicationId);
+            verify(repository, never()).save(any(JobApplication.class));
         }
     }
 }

@@ -125,7 +125,8 @@ class JobApplicationIntegrationTest {
                 "Jane Smith",
                 "jane.smith@techcorp.com",
                 "+1-555-0123",
-                null // appliedDate - let service use default
+                null, // appliedDate - let service use default
+                null  // statusChangedAt
         );
 
         // When
@@ -178,7 +179,8 @@ class JobApplicationIntegrationTest {
                 "Jane Smith",
                 "invalid-email", // Invalid email format
                 "+1-555-0123",
-                null
+                null, // appliedDate
+                null  // statusChangedAt
         );
 
         // When & Then
@@ -446,7 +448,8 @@ class JobApplicationIntegrationTest {
                 null,
                 null,
                 null,
-                null
+                null, // appliedDate
+                null  // statusChangedAt
         );
 
         JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
@@ -515,7 +518,8 @@ class JobApplicationIntegrationTest {
                 "Jane Smith",
                 "jane@example.com",
                 "+1-555-0123",
-                null
+                null, // appliedDate
+                null  // statusChangedAt
         );
 
         MvcResult createResult = mockMvc.perform(post("/v1/job-applications")

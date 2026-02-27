@@ -185,7 +185,8 @@ public class JobApplicationRequestFixture {
                 contactName,
                 contactEmail,
                 contactPhone,
-                appliedDate
+                appliedDate,
+                statusChangedAt
         );
     }
 

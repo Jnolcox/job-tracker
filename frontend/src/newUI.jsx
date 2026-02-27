@@ -1,5 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./context/AuthContext";
+import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
+import { useKeyboardShortcuts } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
 import { toUIFormat, toBackendFormat, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
 
@@ -555,8 +557,34 @@ function getCurrentLocalDateTime() {
   return toLocalDateTimeInput(new Date().toISOString());
 }
 
+/**
+ * @component Modal
+ * @description Modal dialog for creating/editing job applications.
+ * Supports keyboard shortcuts: Cmd/Ctrl+Enter or Cmd/Ctrl+S to save, Escape to close.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.app - Application data to edit (or empty object for new)
+ * @param {Function} props.onClose - Callback when modal should close
+ * @param {Function} props.onSave - Callback when form is submitted with form data
+ * @param {boolean} props.saving - Whether save operation is in progress
+ *
+ * @returns {JSX.Element|null} Modal component or null if no app
+ */
 function Modal({ app, onClose, onSave, saving }) {
   const [form, setForm] = useState({...app});
+
+  // Handle keyboard shortcuts for modal
+  const handleSave = useCallback(() => {
+    if (!saving) {
+      onSave(form);
+    }
+  }, [form, onSave, saving]);
+
+  useKeyboardShortcuts([
+    { key: 'Enter', handler: handleSave, cmdOrCtrl: true, preventDefault: true },
+    { key: 's', handler: handleSave, cmdOrCtrl: true, preventDefault: true },
+  ], { enabled: !!app });
+
   if (!app) return null;
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const isNew = !app.id;
@@ -726,7 +754,23 @@ const TH = ({children, onClick, sorted}) => (
   </th>
 );
 
-function AppTable({ apps, onEdit, onDelete }) {
+/**
+ * @component AppTable
+ * @description Table displaying job applications with sorting, filtering, and search.
+ * Supports keyboard navigation with visual row selection.
+ *
+ * @param {Object} props - Component props
+ * @param {Array} props.apps - Array of application objects
+ * @param {Function} props.onEdit - Callback when edit is triggered
+ * @param {Function} props.onDelete - Callback when delete is triggered
+ * @param {React.RefObject} props.searchInputRef - Ref for the search input (for focus shortcut)
+ * @param {number} props.selectedIndex - Currently selected row index
+ * @param {Function} props.onSelectionChange - Callback when selection changes
+ * @param {Function} props.getSortedItems - Callback to get sorted items for parent
+ *
+ * @returns {JSX.Element} Table component
+ */
+function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, onSelectionChange, getSortedItems }) {
   const [sortKey, setSortKey] = useState("appliedAt");
   const [filter,  setFilter]  = useState("All");
   const [search,  setSearch]  = useState("");
@@ -750,11 +794,26 @@ function AppTable({ apps, onEdit, onDelete }) {
     return rows;
   },[apps,sortKey,filter,search]);
 
+  // Expose sorted items to parent for keyboard navigation
+  useEffect(() => {
+    if (getSortedItems) {
+      getSortedItems(sorted);
+    }
+  }, [sorted, getSortedItems]);
+
+  // Handle row click to update selection
+  const handleRowClick = (index) => {
+    if (onSelectionChange) {
+      onSelectionChange(index);
+    }
+  };
+
   return (
     <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,overflow:"hidden"}}>
       {/* toolbar */}
       <div style={{padding:"16px 20px",display:"flex",gap:12,alignItems:"center",borderBottom:"1px solid #1F2937",flexWrap:"wrap"}}>
         <input
+          ref={searchInputRef}
           placeholder="Search company / role…"
           value={search}
           onChange={e=>setSearch(e.target.value)}
@@ -798,13 +857,25 @@ function AppTable({ apps, onEdit, onDelete }) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((a,i)=>(
-              <tr key={a.id} style={{
-                background: i%2===0?"#080C12":"#0A0F16",
-                transition:"background 0.15s",
-              }}
-              onMouseEnter={e=>e.currentTarget.style.background="#111827"}
-              onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#080C12":"#0A0F16"}
+            {sorted.map((a,i)=>{
+              const isSelected = selectedIndex === i;
+              const baseBackground = i%2===0?"#080C12":"#0A0F16";
+              const selectedBackground = "#1E3A5F"; // Blue tint for selection
+              const hoverBackground = isSelected ? "#254B77" : "#111827";
+
+              return (
+              <tr
+                key={a.id}
+                onClick={() => handleRowClick(i)}
+                style={{
+                  background: isSelected ? selectedBackground : baseBackground,
+                  transition:"background 0.15s",
+                  cursor: "pointer",
+                  outline: isSelected ? "1px solid #4E9AF1" : "none",
+                  outlineOffset: "-1px",
+                }}
+                onMouseEnter={e=>e.currentTarget.style.background=hoverBackground}
+                onMouseLeave={e=>e.currentTarget.style.background=isSelected ? selectedBackground : baseBackground}
               >
                 <td style={{padding:"10px 14px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{a.company}</td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:11,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
@@ -818,12 +889,13 @@ function AppTable({ apps, onEdit, onDelete }) {
                 <td style={{padding:"10px 14px",color:"#6B7280",fontFamily:"'DM Mono',monospace",fontSize:11}}>{new Date(a.lastUpdate).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
                 <td style={{padding:"10px 14px"}}>
                   <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>onEdit(a)} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Edit</button>
-                    <button onClick={()=>onDelete(a.id)} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #991B1B",background:"transparent",color:"#F87171",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Del</button>
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(a); }} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(a.id); }} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #991B1B",background:"transparent",color:"#F87171",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Del</button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {sorted.length===0 && (
               <tr><td colSpan={9} style={{padding:40,textAlign:"center",color:"#374151",fontFamily:"'DM Mono',monospace",fontSize:13}}>No applications match.</td></tr>
             )}
@@ -838,13 +910,138 @@ function AppTable({ apps, onEdit, onDelete }) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+/**
+ * @component JobTracker
+ * @description Main dashboard component for job application tracking.
+ * Provides keyboard shortcuts for efficient navigation and actions.
+ *
+ * Keyboard shortcuts:
+ * - n: Open new application modal
+ * - /: Focus search input
+ * - ?: Show keyboard shortcuts help
+ * - Escape: Close modal / clear selection
+ * - j/ArrowDown: Select next row
+ * - k/ArrowUp: Select previous row
+ * - Enter: Edit selected application
+ * - Delete/Backspace: Delete selected (with confirm)
+ *
+ * @returns {JSX.Element} JobTracker dashboard
+ */
 export default function JobTracker() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { toggleHelp } = useKeyboardShortcutContext();
   const [apps, setApps] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Refs for keyboard shortcut targets
+  const searchInputRef = useRef(null);
+
+  // State for table row selection and sorted items
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [sortedItems, setSortedItems] = useState([]);
+
+  // Callback to receive sorted items from AppTable
+  const handleGetSortedItems = useCallback((items) => {
+    setSortedItems(items);
+  }, []);
+
+  // Sync selectedIndex when items change (clamp to valid range)
+  useEffect(() => {
+    if (sortedItems.length === 0) {
+      setSelectedIndex(-1);
+    } else if (selectedIndex >= sortedItems.length) {
+      setSelectedIndex(sortedItems.length - 1);
+    }
+  }, [sortedItems.length, selectedIndex]);
+
+  // Create new application template
+  const createNewApplication = useCallback(() => {
+    setEditing({
+      id: null,
+      company: "",
+      role: "",
+      status: "APPLIED",
+      appliedAt: new Date().toISOString(),
+      notes: "",
+      jobDescription: "",
+      jobUrl: "",
+      salaryMin: null,
+      salaryMax: null,
+      location: "",
+      rtoType: null,
+      contactName: "",
+      contactEmail: "",
+      contactPhone: "",
+    });
+  }, []);
+
+  // Focus search input
+  const focusSearch = useCallback(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+
+  // Handle escape key
+  const handleEscape = useCallback(() => {
+    if (editing) {
+      setEditing(null);
+    } else if (selectedIndex !== -1) {
+      setSelectedIndex(-1);
+    }
+  }, [editing, selectedIndex]);
+
+  // Handle navigation down (j or ArrowDown)
+  const handleNavigateDown = useCallback(() => {
+    if (sortedItems.length === 0) return;
+    setSelectedIndex(prev => {
+      if (prev === -1) return 0;
+      if (prev >= sortedItems.length - 1) return 0; // Wrap around
+      return prev + 1;
+    });
+  }, [sortedItems.length]);
+
+  // Handle navigation up (k or ArrowUp)
+  const handleNavigateUp = useCallback(() => {
+    if (sortedItems.length === 0) return;
+    setSelectedIndex(prev => {
+      if (prev === -1) return sortedItems.length - 1;
+      if (prev <= 0) return sortedItems.length - 1; // Wrap around
+      return prev - 1;
+    });
+  }, [sortedItems.length]);
+
+  // Handle Enter to edit selected
+  const handleEditSelected = useCallback(() => {
+    if (selectedIndex >= 0 && selectedIndex < sortedItems.length) {
+      setEditing(sortedItems[selectedIndex]);
+    }
+  }, [selectedIndex, sortedItems]);
+
+  // Handle Delete to delete selected
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIndex >= 0 && selectedIndex < sortedItems.length) {
+      handleDelete(sortedItems[selectedIndex].id);
+    }
+  }, [selectedIndex, sortedItems]);
+
+  // Global keyboard shortcuts (only active when modal is closed)
+  useKeyboardShortcuts([
+    { key: 'n', handler: createNewApplication },
+    { key: '/', handler: focusSearch, preventDefault: true },
+    { key: '?', handler: toggleHelp },
+    { key: 'Escape', handler: handleEscape },
+    { key: 'j', handler: handleNavigateDown },
+    { key: 'ArrowDown', handler: handleNavigateDown },
+    { key: 'k', handler: handleNavigateUp },
+    { key: 'ArrowUp', handler: handleNavigateUp },
+    { key: 'Enter', handler: handleEditSelected },
+    { key: 'Delete', handler: handleDeleteSelected },
+    { key: 'Backspace', handler: handleDeleteSelected },
+  ], { enabled: !editing && !loading });
 
   // Fetch applications on mount
   useEffect(() => {
@@ -1087,7 +1284,26 @@ export default function JobTracker() {
         </div>
 
         {/* Table */}
-        <AppTable apps={apps} onEdit={setEditing} onDelete={handleDelete} />
+        <AppTable
+          apps={apps}
+          onEdit={setEditing}
+          onDelete={handleDelete}
+          searchInputRef={searchInputRef}
+          selectedIndex={selectedIndex}
+          onSelectionChange={setSelectedIndex}
+          getSortedItems={handleGetSortedItems}
+        />
+
+        {/* Keyboard shortcut hint */}
+        <div style={{
+          marginTop: 12,
+          textAlign: "center",
+          color: "#4B5563",
+          fontSize: 10,
+          fontFamily: "'DM Mono', monospace",
+        }}>
+          Press <span style={{ color: "#6B7280", background: "#1F2937", padding: "2px 6px", borderRadius: 3 }}>?</span> for keyboard shortcuts
+        </div>
       </div>
 
       {editing && <Modal app={editing} onClose={()=>setEditing(null)} onSave={handleSave} saving={saving} />}

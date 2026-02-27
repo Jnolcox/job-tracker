@@ -105,7 +105,8 @@ class JobApplicationIntegrationTestSimple {
                 "Jane Smith",
                 "jane.smith@techcorp.com",
                 "+1-555-0123",
-                null
+                null, // appliedDate
+                null  // statusChangedAt
         );
 
         // When
@@ -387,7 +388,8 @@ class JobApplicationIntegrationTestSimple {
                 "Jane Smith",
                 "jane@example.com",
                 "+1-555-0123",
-                null
+                null, // appliedDate
+                null  // statusChangedAt
         );
 
         JobApplicationResponse created = jobApplicationService.createApplication(createRequest, testUser.getId());
