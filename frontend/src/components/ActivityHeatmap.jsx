@@ -4,7 +4,7 @@
  *
  * Displays a grid where:
  * - Rows represent days of the week (Sun-Sat)
- * - Columns represent weeks from January 1st of the current year through today
+ * - Columns represent weeks from January 1st through December 31st of the current year
  * - Cell color intensity indicates the number of applications submitted on that date
  * - Uses fixed-size cells (like GitHub's contribution graph) for consistent appearance
  * - Container scrolls horizontally if needed (though 52 weeks fits in ~700px)
@@ -125,7 +125,7 @@ export function getMonthLabels(weeks) {
  * Build the heatmap data structure from applications.
  *
  * Date range starts from January 1st of the current year (or earlier if there
- * are applications before that date) and ends at today.
+ * are applications before that date) and ends at December 31st of the current year.
  *
  * @param {Array} apps - Array of application objects with appliedAt property
  * @param {Date} [today=new Date()] - Reference date for calculating the range
@@ -142,7 +142,9 @@ export function buildGitHubHeatmapData(apps, today = new Date()) {
   // Get the Sunday of the week containing January 1st
   let startDate = getWeekStart(jan1);
 
-  let endDate = new Date(today);
+  // Set endDate to December 31st of the current year to show the full calendar year
+  const currentYear = today.getFullYear();
+  let endDate = new Date(currentYear, 11, 31); // December 31st
   endDate.setHours(23, 59, 59, 999);
 
   // Process applications and potentially extend range
@@ -338,10 +340,11 @@ export default function ActivityHeatmap({ apps }) {
                   const cellDate = new Date(weekStart);
                   cellDate.setDate(cellDate.getDate() + dayIndex);
 
-                  // Don't render future dates
+                  // Style future dates differently (muted appearance)
                   const today = new Date();
                   today.setHours(23, 59, 59, 999);
-                  if (cellDate > today) {
+                  const isFutureDate = cellDate > today;
+                  if (isFutureDate) {
                     return (
                       <div
                         key={`${weekIndex}-${dayIndex}`}
@@ -350,7 +353,8 @@ export default function ActivityHeatmap({ apps }) {
                           width: cellSize,
                           height: cellSize,
                           borderRadius: 2,
-                          background: 'transparent',
+                          background: '#111827',
+                          opacity: 0.3,
                         }}
                       />
                     );

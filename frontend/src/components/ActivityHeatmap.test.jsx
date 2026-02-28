@@ -79,23 +79,23 @@ describe('ActivityHeatmap', () => {
 
       expect(result.startDate.getTime()).toBe(expectedWeekStart.getTime());
 
-      // Should have weeks from late December 2024 through mid-June 2025
-      // That's about 24-25 weeks
-      expect(result.weeks.length).toBeGreaterThanOrEqual(23);
-      expect(result.weeks.length).toBeLessThanOrEqual(26);
+      // Should have weeks from late December 2024 through December 2025
+      // That's about 53 weeks (full calendar year)
+      expect(result.weeks.length).toBeGreaterThanOrEqual(52);
+      expect(result.weeks.length).toBeLessThanOrEqual(54);
     });
 
-    it('should end at today (not end of year) when viewing current year', () => {
+    it('should end at December 31st of the current year (full calendar year)', () => {
       const apps = [];
       // Create date in local timezone to avoid timezone issues
       const today = new Date(2025, 2, 15, 12, 0, 0, 0); // March 15, 2025
 
       const result = buildGitHubHeatmapData(apps, today);
 
-      // End date should be today (same year, month, day)
+      // End date should be December 31st of the current year
       expect(result.endDate.getFullYear()).toBe(today.getFullYear());
-      expect(result.endDate.getMonth()).toBe(today.getMonth());
-      expect(result.endDate.getDate()).toBe(today.getDate());
+      expect(result.endDate.getMonth()).toBe(11); // December
+      expect(result.endDate.getDate()).toBe(31);
     });
 
     it('should extend range to include applications older than January 1st', () => {
