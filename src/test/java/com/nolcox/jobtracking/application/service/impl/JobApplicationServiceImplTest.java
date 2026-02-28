@@ -436,5 +436,147 @@ class JobApplicationServiceImplTest {
             verify(repository).findById(applicationId);
             verify(repository, never()).save(any(JobApplication.class));
         }
+
+        @Test
+        @DisplayName("Should preserve original appliedDate when request does not include it")
+        void shouldPreserveOriginalAppliedDateWhenRequestDoesNotIncludeIt() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            Instant originalAppliedDate = Instant.now().minus(Duration.ofDays(30));
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withAppliedDate(originalAppliedDate)
+                .build();
+
+            // Request does NOT include appliedDate (null)
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.APPLIED)
+                .withAppliedDate(null)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Mock modelMapper - simulates ModelMapper potentially clearing appliedDate
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.APPLIED);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                // Simulate ModelMapper overwriting appliedDate with null from request
+                app.setAppliedDate(null);
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // appliedDate should be preserved from the original entity
+            assertThat(savedApplication.getAppliedDate()).isEqualTo(originalAppliedDate);
+        }
+
+        @Test
+        @DisplayName("Should update appliedDate when request explicitly includes it")
+        void shouldUpdateAppliedDateWhenRequestExplicitlyIncludesIt() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            Instant originalAppliedDate = Instant.now().minus(Duration.ofDays(30));
+            Instant newAppliedDate = Instant.now().minus(Duration.ofDays(15));
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withAppliedDate(originalAppliedDate)
+                .build();
+
+            // Request explicitly includes a new appliedDate
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.APPLIED)
+                .withAppliedDate(newAppliedDate)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Mock modelMapper - updates appliedDate from request
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.APPLIED);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                app.setAppliedDate(newAppliedDate);
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // appliedDate should be updated to the new value from the request
+            assertThat(savedApplication.getAppliedDate()).isEqualTo(newAppliedDate);
+        }
+
+        @Test
+        @DisplayName("Should ignore request statusChangedAt when status changes and always use current time")
+        void shouldIgnoreRequestStatusChangedAtWhenStatusChanges() {
+            // Given
+            Long applicationId = 1L;
+            Long userId = 1L;
+            Instant requestStatusChangedAt = Instant.now().minus(Duration.ofDays(10));
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withStatusChangedAt(Instant.now().minus(Duration.ofDays(20)))
+                .build();
+
+            // Request changes status AND provides a statusChangedAt value
+            // The statusChangedAt should be IGNORED because status changed
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.RECRUITER_SCREEN)
+                .withStatusChangedAt(requestStatusChangedAt)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                app.setStatus(ApplicationStatus.RECRUITER_SCREEN);
+                app.setCompanyName(request.companyName());
+                app.setPositionTitle(request.positionTitle());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            Instant beforeUpdate = Instant.now();
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // statusChangedAt should be auto-set to now, NOT the value from request
+            assertThat(savedApplication.getStatusChangedAt()).isAfterOrEqualTo(beforeUpdate);
+            assertThat(savedApplication.getStatusChangedAt()).isNotEqualTo(requestStatusChangedAt);
+        }
     }
 }

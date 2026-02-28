@@ -152,15 +152,72 @@ export function toUIFormat(application) {
 }
 
 /**
- * Convert UI format back to backend format for API calls
+ * Helper to compare two date values for equality.
+ * Handles different ISO string formats and null/undefined values.
+ *
+ * @param {string|null} date1 - First date value
+ * @param {string|null} date2 - Second date value
+ * @returns {boolean} True if the dates represent the same moment in time
+ */
+function areDatesEqual(date1, date2) {
+  // Both null/undefined are equal
+  if (!date1 && !date2) return true;
+  // One is null/undefined, other is not
+  if (!date1 || !date2) return false;
+
+  // Compare as timestamps to handle different ISO string formats
+  const time1 = new Date(date1).getTime();
+  const time2 = new Date(date2).getTime();
+
+  // Handle invalid dates
+  if (isNaN(time1) || isNaN(time2)) return false;
+
+  return time1 === time2;
+}
+
+/**
+ * Convert UI format back to backend format for CREATE operations.
+ * Does NOT send statusChangedAt - backend will default it to now().
+ *
+ * @component toBackendFormat
+ * @description Converts UI form data to backend format for creating new applications.
+ * Only sends appliedDate, NOT statusChangedAt, to let backend handle the default.
+ *
+ * @param {Object} form - UI form data
+ * @param {string} form.company - Company name
+ * @param {string} form.role - Position title
+ * @param {string} form.status - Application status
+ * @param {string} [form.appliedAt] - Date when user applied
+ * @param {string} [form.notes] - Additional notes
+ * @param {string} [form.jobDescription] - Job description
+ * @param {number} [form.salaryMin] - Minimum salary
+ * @param {number} [form.salaryMax] - Maximum salary
+ * @param {string} [form.location] - Job location
+ * @param {string} [form.rtoType] - Remote/hybrid/onsite type
+ * @param {string} [form.jobUrl] - URL to job posting
+ * @param {string} [form.contactName] - Recruiter/contact name
+ * @param {string} [form.contactEmail] - Recruiter/contact email
+ * @param {string} [form.contactPhone] - Recruiter/contact phone
+ *
+ * @returns {Object} Backend-formatted application data for create operation
+ *
+ * @example
+ * const backendData = toBackendFormat({
+ *   company: 'Acme Corp',
+ *   role: 'Software Engineer',
+ *   status: 'APPLIED',
+ *   appliedAt: '2025-01-15T10:00:00.000Z',
+ * });
  */
 export function toBackendFormat(form) {
+  // For create operations, we send appliedDate but NOT statusChangedAt
+  // Backend will default statusChangedAt to the current time
   return {
     companyName: form.company,
     positionTitle: form.role,
     status: form.status,
     appliedDate: form.appliedAt ? new Date(form.appliedAt).toISOString() : null,
-    statusChangedAt: form.lastUpdate ? new Date(form.lastUpdate).toISOString() : null,
+    // statusChangedAt is intentionally NOT included - let backend default it
     notes: form.notes || null,
     jobDescription: form.jobDescription || null,
     salaryMin: form.salaryMin || null,
@@ -172,6 +229,81 @@ export function toBackendFormat(form) {
     contactEmail: form.contactEmail || null,
     contactPhone: form.contactPhone || null,
   };
+}
+
+/**
+ * Convert UI format to backend format for UPDATE operations.
+ * Intelligently handles date fields to prevent unintended overwrites.
+ *
+ * @component toBackendFormatForUpdate
+ * @description Converts UI form data to backend format for updating existing applications.
+ * Only sends date fields when they have actually changed, preventing unintended overwrites.
+ *
+ * Key behaviors:
+ * - appliedDate: Only sent if user explicitly changed it from original
+ * - statusChangedAt: Only sent if user manually edited it AND status did NOT change
+ * - If status changed, statusChangedAt is NOT sent (backend auto-updates it)
+ *
+ * @param {Object} form - Current form data in UI format
+ * @param {Object} originalData - Original application data before editing (in UI format)
+ * @param {boolean} statusChanged - Whether the status field was changed by user
+ *
+ * @returns {Object} Backend-formatted data with only appropriate date fields
+ *
+ * @example
+ * // User only changed notes, status stayed same
+ * const backendData = toBackendFormatForUpdate(
+ *   { ...originalApp, notes: 'Updated notes' },
+ *   originalApp,
+ *   false // status did not change
+ * );
+ * // Result: statusChangedAt and appliedDate are NOT included
+ *
+ * @example
+ * // User changed status
+ * const backendData = toBackendFormatForUpdate(
+ *   { ...originalApp, status: 'RECRUITER_SCREEN' },
+ *   originalApp,
+ *   true // status changed
+ * );
+ * // Result: statusChangedAt NOT included (backend will set it)
+ */
+export function toBackendFormatForUpdate(form, originalData, statusChanged) {
+  const result = {
+    companyName: form.company,
+    positionTitle: form.role,
+    status: form.status,
+    notes: form.notes || null,
+    jobDescription: form.jobDescription || null,
+    salaryMin: form.salaryMin || null,
+    salaryMax: form.salaryMax || null,
+    location: form.location || null,
+    rtoType: form.rtoType || null,
+    jobUrl: form.jobUrl || null,
+    contactName: form.contactName || null,
+    contactEmail: form.contactEmail || null,
+    contactPhone: form.contactPhone || null,
+  };
+
+  // Only include appliedDate if it was actually changed by user
+  const appliedDateChanged = !areDatesEqual(form.appliedAt, originalData.appliedAt);
+  if (appliedDateChanged) {
+    result.appliedDate = form.appliedAt ? new Date(form.appliedAt).toISOString() : null;
+  }
+
+  // statusChangedAt handling:
+  // - If status changed: DON'T send it, let backend auto-update
+  // - If status didn't change but user manually edited the date: send it
+  // - If status didn't change and user didn't edit the date: DON'T send it
+  if (!statusChanged) {
+    const statusDateChanged = !areDatesEqual(form.lastUpdate, originalData.lastUpdate);
+    if (statusDateChanged) {
+      result.statusChangedAt = form.lastUpdate ? new Date(form.lastUpdate).toISOString() : null;
+    }
+  }
+  // When statusChanged is true, we intentionally omit statusChangedAt
+
+  return result;
 }
 
 /**

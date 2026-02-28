@@ -3,7 +3,7 @@ import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
-import { toUIFormat, toBackendFormat, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
+import { toUIFormat, toBackendFormat, toBackendFormatForUpdate, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
 
 // Display groups for funnel chart (simplified view)
 const FUNNEL_GROUPS = [
@@ -563,23 +563,39 @@ function getCurrentLocalDateTime() {
  * @description Modal dialog for creating/editing job applications.
  * Supports keyboard shortcuts: Cmd/Ctrl+Enter or Cmd/Ctrl+S to save, Escape to close.
  *
+ * The modal tracks the original application state to detect changes for proper
+ * date handling. When saving, it passes both the form data and change context
+ * to the parent to determine which date fields should be sent to the backend.
+ *
  * @param {Object} props - Component props
  * @param {Object} props.app - Application data to edit (or empty object for new)
  * @param {Function} props.onClose - Callback when modal should close
- * @param {Function} props.onSave - Callback when form is submitted with form data
+ * @param {Function} props.onSave - Callback when form is submitted.
+ *   Called with (formData, originalData, statusChanged) for updates,
+ *   or just (formData) for creates.
  * @param {boolean} props.saving - Whether save operation is in progress
  *
  * @returns {JSX.Element|null} Modal component or null if no app
  */
 function Modal({ app, onClose, onSave, saving }) {
   const [form, setForm] = useState({...app});
+  // Store original app data for comparison (to detect user changes)
+  const originalData = useRef(app);
 
   // Handle keyboard shortcuts for modal
   const handleSave = useCallback(() => {
     if (!saving) {
-      onSave(form);
+      const isNew = !app.id;
+      if (isNew) {
+        // For new applications, just pass the form data
+        onSave(form);
+      } else {
+        // For updates, pass form, original data, and whether status changed
+        const statusChanged = form.status !== originalData.current.status;
+        onSave(form, originalData.current, statusChanged);
+      }
     }
-  }, [form, onSave, saving]);
+  }, [form, onSave, saving, app.id]);
 
   useKeyboardShortcuts([
     { key: 'Enter', handler: handleSave, cmdOrCtrl: true, preventDefault: true },
@@ -733,7 +749,7 @@ function Modal({ app, onClose, onSave, saving }) {
 
         <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexShrink:0,borderTop:"1px solid #1F2937",paddingTop:16}}>
           <button onClick={onClose} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"1px solid #374151",background:"transparent",color:"#9CA3AF",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,opacity:saving?0.5:1}}>Cancel</button>
-          <button onClick={()=>onSave(form)} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"none",background:saving?"#374151":"#4E9AF1",color:"#fff",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
+          <button onClick={handleSave} disabled={saving} style={{padding:"8px 20px",borderRadius:8,border:"none",background:saving?"#374151":"#4E9AF1",color:"#fff",cursor:saving?"not-allowed":"pointer",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
@@ -1086,19 +1102,31 @@ export default function JobTracker() {
     }
   };
 
-  const handleSave = async (form) => {
+  /**
+   * Handle saving an application (create or update).
+   *
+   * For creates: Only form is provided, uses toBackendFormat which omits statusChangedAt.
+   * For updates: Original data and status change flag are provided, uses
+   *              toBackendFormatForUpdate to intelligently handle date fields.
+   *
+   * @param {Object} form - Current form data
+   * @param {Object} [originalData] - Original application data (for updates only)
+   * @param {boolean} [statusChanged] - Whether status was changed (for updates only)
+   */
+  const handleSave = async (form, originalData, statusChanged) => {
     try {
       setSaving(true);
       setError(null);
-      const backendData = toBackendFormat(form);
 
       if (form.id) {
-        // Update existing
+        // Update existing - use toBackendFormatForUpdate for intelligent date handling
+        const backendData = toBackendFormatForUpdate(form, originalData, statusChanged);
         const response = await jobApplicationsAPI.update(form.id, backendData);
         const updated = toUIFormat(response.data);
         setApps(prev => prev.map(a => a.id === form.id ? updated : a));
       } else {
-        // Create new
+        // Create new - use toBackendFormat which omits statusChangedAt (backend defaults it)
+        const backendData = toBackendFormat(form);
         const response = await jobApplicationsAPI.create(backendData);
         const created = toUIFormat(response.data);
         setApps(prev => [...prev, created]);

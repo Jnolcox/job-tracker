@@ -72,6 +72,25 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         return mapToResponse(saved);
     }
 
+    /**
+     * Updates an existing job application with the provided request data.
+     *
+     * <p>This method handles date fields with special care to prevent accidental overwrites:
+     * <ul>
+     *   <li><b>appliedDate</b>: Preserved from the original entity unless explicitly provided
+     *       in the request. This prevents ModelMapper from overwriting it with null.</li>
+     *   <li><b>statusChangedAt</b>: Auto-set to current time when status changes (ignoring
+     *       any value in the request). When status is unchanged, uses the request value
+     *       if provided (for manual backdating), otherwise preserves the original.</li>
+     * </ul>
+     *
+     * @param id the ID of the job application to update
+     * @param request the update request containing new field values
+     * @param userId the ID of the authenticated user (for authorization check)
+     * @return the updated job application as a response DTO
+     * @throws ResourceNotFoundException if no application exists with the given ID
+     * @throws UnauthorizedException if the application belongs to a different user
+     */
     @Override
     @Transactional
     public JobApplicationResponse updateApplication(
@@ -84,15 +103,32 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             throw new UnauthorizedException("Access denied");
         }
 
-        // Track status changes
+        // Preserve original values that should be protected from accidental overwrites
+        // These are captured BEFORE ModelMapper modifies the entity
         ApplicationStatus oldStatus = application.getStatus();
+        Instant originalAppliedDate = application.getAppliedDate();
+        Instant originalStatusChangedAt = application.getStatusChangedAt();
+
+        // Map request fields to entity (ModelMapper with skipNullEnabled may still overwrite)
         modelMapper.map(request, application);
 
-        // Auto-update statusChangedAt when status changes, otherwise use provided value
+        // BUSINESS RULE: Restore appliedDate if not explicitly changed in request
+        // This prevents ModelMapper from clearing the date when request.appliedDate() is null
+        if (request.appliedDate() == null) {
+            application.setAppliedDate(originalAppliedDate);
+        }
+
+        // BUSINESS RULE: Handle statusChangedAt based on whether status actually changed
         if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
+            // Status changed: always auto-set to now
+            // This ensures accurate tracking regardless of what the request contains
             application.setStatusChangedAt(Instant.now());
         } else if (request.statusChangedAt() != null) {
+            // Status unchanged but user explicitly provided a value (for manual backdating)
             application.setStatusChangedAt(request.statusChangedAt());
+        } else {
+            // Status unchanged and no explicit value: keep original
+            application.setStatusChangedAt(originalStatusChangedAt);
         }
 
         JobApplication updated = repository.save(application);
