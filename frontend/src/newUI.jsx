@@ -4,6 +4,7 @@ import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
 import { toUIFormat, toBackendFormat, toBackendFormatForUpdate, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
+import ActivityHeatmap from "./components/ActivityHeatmap";
 
 // Display groups for funnel chart (simplified view)
 const FUNNEL_GROUPS = [
@@ -56,24 +57,9 @@ function totalDaysActive(app) {
   return Math.max(0, daysBetween(app.appliedAt, getToday().toISOString()));
 }
 
-// ─── Heatmap helpers ──────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
 const HOURS = Array.from({length:24},(_,i)=>i);
 const DAYS  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-function buildHeatmap(apps) {
-  const grid = {};
-  DAYS.forEach(d => { grid[d] = {}; HOURS.forEach(h => { grid[d][h] = 0; }); });
-  if (!apps || !Array.isArray(apps)) return grid;
-  apps.forEach(a => {
-    if (!a || !a.appliedAt) return;
-    const dt = new Date(a.appliedAt);
-    if (isNaN(dt.getTime())) return; // Skip invalid dates
-    const d  = DAYS[dt.getDay()];
-    const h  = dt.getHours();
-    grid[d][h]++;
-  });
-  return grid;
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
@@ -393,72 +379,6 @@ function SalaryRangeChart({ apps }) {
   );
 }
 
-function ActivityHeatmap({ apps }) {
-  const grid = buildHeatmap(apps);
-  const allVals = DAYS.flatMap(d => HOURS.map(h => grid[d][h]));
-  const maxVal = Math.max(...allVals, 1);
-
-  const cellColor = (v) => {
-    if (v === 0) return "#111827";
-    const t = v / maxVal;
-    // deep blue → cyan
-    const r = Math.round(17  + (80-17)*t);
-    const g = Math.round(24  + (240-24)*t);
-    const b = Math.round(39  + (255-39)*t);
-    return `rgb(${r},${g},${b})`;
-  };
-
-  const displayHours = [6,9,12,15,18,21];
-
-  return (
-    <div style={{background:"#0E1117",border:"1px solid #1F2937",borderRadius:12,padding:"20px 24px",overflowX:"auto"}}>
-      <h3 style={{color:"#9CA3AF",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:16}}>Application Heatmap — Hour of Day × Day of Week</h3>
-      <div style={{display:"flex",gap:0}}>
-        {/* Y labels */}
-        <div style={{display:"flex",flexDirection:"column",justifyContent:"space-around",paddingTop:24,paddingBottom:4,marginRight:6}}>
-          {DAYS.map(d=>(
-            <span key={d} style={{color:"#6B7280",fontSize:10,fontFamily:"'DM Mono',monospace",width:26,textAlign:"right"}}>{d}</span>
-          ))}
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          {/* X labels */}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(24,1fr)`,marginBottom:4,paddingLeft:1}}>
-            {HOURS.map(h=>(
-              <span key={h} style={{
-                color: displayHours.includes(h)?"#6B7280":"transparent",
-                fontSize:9,fontFamily:"'DM Mono',monospace",textAlign:"center",
-              }}>{h}</span>
-            ))}
-          </div>
-          {/* Grid */}
-          {DAYS.map(d=>(
-            <div key={d} style={{display:"grid",gridTemplateColumns:`repeat(24,1fr)`,gap:2,marginBottom:2}}>
-              {HOURS.map(h=>{
-                const v = grid[d][h];
-                return (
-                  <div key={h} title={`${d} ${h}:00 — ${v} app${v!==1?"s":""}`} style={{
-                    aspectRatio:"1",
-                    background:cellColor(v),
-                    borderRadius:2,
-                    cursor:"default",
-                  }}/>
-                );
-              })}
-            </div>
-          ))}
-          {/* Legend */}
-          <div style={{display:"flex",alignItems:"center",gap:4,marginTop:10,justifyContent:"flex-end"}}>
-            <span style={{color:"#6B7280",fontSize:10,fontFamily:"'DM Mono',monospace"}}>0</span>
-            {[0,0.25,0.5,0.75,1].map(t=>(
-              <div key={t} style={{width:14,height:14,borderRadius:2,background:cellColor(t)}}/>
-            ))}
-            <span style={{color:"#6B7280",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{maxVal}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function DayOfWeekBar({ apps }) {
   const counts = DAYS.reduce((a,d)=>{a[d]=0;return a;},{});
