@@ -5,10 +5,11 @@
  * Tests cover:
  * - Building GitHub-style weekly grid from applications
  * - Month label generation
- * - Date range calculations (January 1st of current year through today)
+ * - Date range calculations (January 1st of current year through December 31st)
  * - Cell color calculations based on activity count
  * - Proper day of week alignment (rows: Sun-Sat, columns: weeks)
- * - Responsive width behavior (fills container width)
+ * - Responsive width behavior (fills container width using CSS Grid)
+ * - Dynamic cell sizing with square aspect ratio
  */
 
 import React from 'react';
@@ -283,54 +284,67 @@ describe('ActivityHeatmap', () => {
     });
   });
 
-  describe('Fixed cell sizing (GitHub-style)', () => {
-    it('should use fixed-size cells (10-12px squares)', () => {
+  describe('Responsive cell sizing', () => {
+    it('should use CSS Grid layout for week rows', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      // The day rows should use CSS Grid with 1fr columns
+      const dayRows = container.querySelectorAll('[data-testid="heatmap-day-row"]');
+      expect(dayRows.length).toBe(7);
+
+      const firstRow = dayRows[0];
+      expect(firstRow.style.display).toBe('grid');
+    });
+
+    it('should have grid container that fills available width', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      // The grid container should have flex: 1 to fill available space
+      const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
+      expect(gridContainer).toBeInTheDocument();
+      expect(gridContainer.style.flex).toBe('1');
+    });
+
+    it('should use aspect-ratio to maintain square cells', () => {
       const { container } = render(<ActivityHeatmap apps={[]} />);
 
       // Find cells with data-testid
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
       expect(cells.length).toBeGreaterThan(0);
 
-      // Cells should have fixed width and height, not flex: 1
+      // Cells should have aspect-ratio: 1 to stay square
       const firstCell = cells[0];
-      expect(firstCell.style.width).toMatch(/^\d+px$/);
-      expect(firstCell.style.height).toMatch(/^\d+px$/);
-      expect(firstCell.style.flex).toBeFalsy();
+      expect(firstCell.style.aspectRatio).toBe('1');
     });
 
-    it('should NOT stretch cells to fill container width', () => {
+    it('should NOT use fixed pixel width on cells', () => {
       const { container } = render(<ActivityHeatmap apps={[]} />);
 
-      // The day rows should NOT use justify-content: space-between
-      const dayRows = container.querySelectorAll('[data-testid="heatmap-day-row"]');
-      expect(dayRows.length).toBe(7);
+      // Find cells
+      const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
+      expect(cells.length).toBeGreaterThan(0);
 
-      const firstRow = dayRows[0];
-      expect(firstRow.style.justifyContent).not.toBe('space-between');
+      // Cells should NOT have fixed width (should be empty or use grid sizing)
+      const firstCell = cells[0];
+      expect(firstCell.style.width).toBeFalsy();
     });
 
-    it('should display all weeks from Jan 1 to today (52+ weeks for full year)', () => {
+    it('should display all weeks from Jan 1 through Dec 31 (52-53 weeks)', () => {
       const { container } = render(<ActivityHeatmap apps={[]} />);
 
       // Count the number of cells in a single row
       const firstDayRow = container.querySelector('[data-testid="heatmap-day-row"]');
       const cellsInRow = firstDayRow.querySelectorAll('[data-testid^="heatmap-cell-"]');
 
-      // For late February, we should have ~9 weeks from Jan 1
-      // The key test is that ALL weeks are shown (not truncated due to width)
-      // We verify by checking weeks array in buildGitHubHeatmapData
-      const today = new Date();
-      const jan1 = new Date(today.getFullYear(), 0, 1);
-      const expectedWeeks = Math.ceil((today - jan1) / (7 * 24 * 60 * 60 * 1000)) + 1;
-
-      // Should have roughly the expected number of weeks (within 1-2 for week boundaries)
-      expect(cellsInRow.length).toBeGreaterThanOrEqual(expectedWeeks - 2);
+      // Should have 52-54 weeks for a full calendar year
+      expect(cellsInRow.length).toBeGreaterThanOrEqual(52);
+      expect(cellsInRow.length).toBeLessThanOrEqual(54);
     });
 
-    it('should use CSS Grid layout for the week columns', () => {
+    it('should use CSS Grid layout for the grid container structure', () => {
       const { container } = render(<ActivityHeatmap apps={[]} />);
 
-      // The grid container should use CSS Grid for proper column layout
+      // The grid container should be present for proper column layout
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
       expect(gridContainer).toBeInTheDocument();
     });

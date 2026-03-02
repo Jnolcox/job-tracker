@@ -6,8 +6,8 @@
  * - Rows represent days of the week (Sun-Sat)
  * - Columns represent weeks from January 1st through December 31st of the current year
  * - Cell color intensity indicates the number of applications submitted on that date
- * - Uses fixed-size cells (like GitHub's contribution graph) for consistent appearance
- * - Container scrolls horizontally if needed (though 52 weeks fits in ~700px)
+ * - Uses responsive CSS Grid layout to fill container width
+ * - Cells maintain square aspect ratio using aspect-ratio: 1
  *
  * Based on the appliedAt date of each application.
  */
@@ -230,8 +230,7 @@ export default function ActivityHeatmap({ apps }) {
   // Generate month labels
   const monthLabels = useMemo(() => getMonthLabels(weeks), [weeks]);
 
-  // Calculate cell size based on number of weeks
-  const cellSize = 12;
+  // Gap between cells (in pixels)
   const cellGap = 2;
 
   return (
@@ -260,10 +259,10 @@ export default function ActivityHeatmap({ apps }) {
       <div style={{ display: 'flex', gap: 0 }}>
         {/* Day labels (Y-axis) */}
         <div
+          data-testid="heatmap-day-labels"
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
+            display: 'grid',
+            gridTemplateRows: 'repeat(7, 1fr)',
             paddingTop: 20, // Space for month labels
             marginRight: 6,
             gap: cellGap,
@@ -279,8 +278,9 @@ export default function ActivityHeatmap({ apps }) {
                 fontFamily: "'DM Mono',monospace",
                 width: 26,
                 textAlign: 'right',
-                height: cellSize,
-                lineHeight: `${cellSize}px`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
                 // Only show Mon, Wed, Fri for cleaner look (like GitHub)
                 visibility: index % 2 === 1 ? 'visible' : 'hidden',
               }}
@@ -293,7 +293,7 @@ export default function ActivityHeatmap({ apps }) {
         {/* Main grid area */}
         <div
           data-testid="heatmap-grid-container"
-          style={{ minWidth: 0 }}
+          style={{ flex: 1, minWidth: 0 }}
         >
           {/* Month labels (X-axis) */}
           <div
@@ -304,14 +304,14 @@ export default function ActivityHeatmap({ apps }) {
             }}
           >
             {monthLabels.map(({ index, label }) => {
-              // Calculate pixel position based on week index and cell size
-              const pixelLeft = index * (cellSize + cellGap);
+              // Calculate percentage position based on week index
+              const percentLeft = (index / weeks.length) * 100;
               return (
                 <span
                   key={`${label}-${index}`}
                   style={{
                     position: 'absolute',
-                    left: pixelLeft,
+                    left: `${percentLeft}%`,
                     color: '#6B7280',
                     fontSize: 9,
                     fontFamily: "'DM Mono',monospace",
@@ -331,7 +331,8 @@ export default function ActivityHeatmap({ apps }) {
                 key={day}
                 data-testid="heatmap-day-row"
                 style={{
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${weeks.length}, 1fr)`,
                   gap: cellGap,
                 }}
               >
@@ -350,8 +351,7 @@ export default function ActivityHeatmap({ apps }) {
                         key={`${weekIndex}-${dayIndex}`}
                         data-testid={`heatmap-cell-${weekIndex}-${dayIndex}`}
                         style={{
-                          width: cellSize,
-                          height: cellSize,
+                          aspectRatio: '1',
                           borderRadius: 2,
                           background: '#111827',
                           opacity: 0.3,
@@ -372,8 +372,7 @@ export default function ActivityHeatmap({ apps }) {
                       data-testid={`heatmap-cell-${weekIndex}-${dayIndex}`}
                       title={tooltipText}
                       style={{
-                        width: cellSize,
-                        height: cellSize,
+                        aspectRatio: '1',
                         borderRadius: 2,
                         background: color,
                         cursor: 'default',
