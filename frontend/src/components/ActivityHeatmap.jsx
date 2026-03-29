@@ -12,7 +12,7 @@
  * Based on the appliedAt date of each application.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 /**
  * Days of the week, starting with Sunday (matches JavaScript Date.getDay())
@@ -230,6 +230,9 @@ export default function ActivityHeatmap({ apps }) {
   // Generate month labels
   const monthLabels = useMemo(() => getMonthLabels(weeks), [weeks]);
 
+  // Tooltip state
+  const [tooltip, setTooltip] = useState(null);
+
   // Gap between cells (in pixels)
   const cellGap = 2;
 
@@ -364,13 +367,20 @@ export default function ActivityHeatmap({ apps }) {
                   const count = grid[dateKey] || 0;
                   const color = getCellColor(count, maxCount);
 
-                  const tooltipText = `${formatDateDisplay(cellDate)}: ${count} application${count !== 1 ? 's' : ''}`;
-
                   return (
                     <div
                       key={`${weekIndex}-${dayIndex}`}
                       data-testid={`heatmap-cell-${weekIndex}-${dayIndex}`}
-                      title={tooltipText}
+                      onMouseEnter={(e) => {
+                        const rect = e.target.getBoundingClientRect();
+                        setTooltip({
+                          x: rect.left + rect.width / 2,
+                          y: rect.top,
+                          date: formatDateDisplay(cellDate),
+                          count,
+                        });
+                      }}
+                      onMouseLeave={() => setTooltip(null)}
                       style={{
                         aspectRatio: '1',
                         borderRadius: 2,
@@ -426,6 +436,32 @@ export default function ActivityHeatmap({ apps }) {
           </div>
         </div>
       </div>
+
+      {/* Custom Tooltip */}
+      {tooltip && (
+        <div
+          style={{
+            position: 'fixed',
+            left: tooltip.x,
+            top: tooltip.y - 8,
+            transform: 'translate(-50%, -100%)',
+            background: '#1F2937',
+            border: '1px solid #374151',
+            borderRadius: 6,
+            padding: '6px 10px',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <div style={{ color: '#E5E7EB', fontSize: 12, fontFamily: "'DM Mono',monospace" }}>
+            {tooltip.date}
+          </div>
+          <div style={{ color: '#60A5FA', fontSize: 14, fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>
+            {tooltip.count} application{tooltip.count !== 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
