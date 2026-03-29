@@ -18,6 +18,7 @@ export const APPLICATION_STATUSES = [
   "REJECTED",
   "WITHDRAWN",
   "ON_HOLD",
+  "WAITING_FOR_RESPONSE",
   "GHOSTED",
 ];
 
@@ -39,6 +40,7 @@ export const STATUS_LABELS = {
   REJECTED: "Rejected",
   WITHDRAWN: "Withdrawn",
   ON_HOLD: "On Hold",
+  WAITING_FOR_RESPONSE: "Waiting for Response",
   GHOSTED: "Ghosted",
 };
 
@@ -67,13 +69,16 @@ export const STATUS_COLORS = {
   GHOSTED: "#F87171",
   // Inactive - Gray
   WITHDRAWN: "#6B7280",
-  ON_HOLD: "#6B7280",
+  // Waiting - Yellow/Amber
+  ON_HOLD: "#EAB308",
+  WAITING_FOR_RESPONSE: "#EAB308",
 };
 
 // Status groupings for filtering/stats
 export const STATUS_GROUPS = {
   REJECTED: ["REJECTED", "OFFER_DECLINED", "OFFER_RESCINDED", "GHOSTED"],
-  WITHDRAWN: ["WITHDRAWN", "ON_HOLD"],
+  WITHDRAWN: ["WITHDRAWN"],
+  WAITING: ["ON_HOLD", "WAITING_FOR_RESPONSE"],
   OFFER: ["OFFER_RECEIVED", "NEGOTIATING", "OFFER_ACCEPTED"],
   TECHNICAL: ["TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II"],
   INTERVIEWING: ["RECRUITER_SCREEN", "TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II", "REFERENCE_CHECK"],
@@ -86,6 +91,7 @@ export const isStatusInGroup = (status, group) => STATUS_GROUPS[group]?.includes
 export const isTerminalStatus = (status) =>
   STATUS_GROUPS.REJECTED.includes(status) ||
   STATUS_GROUPS.WITHDRAWN.includes(status) ||
+  STATUS_GROUPS.WAITING.includes(status) ||
   status === "OFFER_ACCEPTED";
 
 // RTO type constants
