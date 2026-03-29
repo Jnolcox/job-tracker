@@ -53,5 +53,7 @@ public record JobApplicationCreateRequest(
 
         Instant appliedDate,
 
-        Instant statusChangedAt
+        Instant statusChangedAt,
+
+        Instant interviewDate
 ) {}

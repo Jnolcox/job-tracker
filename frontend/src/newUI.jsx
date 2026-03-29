@@ -581,6 +581,16 @@ function Modal({ app, onClose, onSave, saving }) {
             </label>
           </div>
 
+          {/* Interview Date - only show for interviewing statuses */}
+          {isStatusInGroup(form.status, 'INTERVIEWING') && (
+            <label style={{display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>INTERVIEW DATE</span>
+              <input type="datetime-local" value={toLocalDateTimeInput(form.interviewDate)}
+                onChange={e=>set("interviewDate",e.target.value ? new Date(e.target.value).toISOString() : null)}
+                style={inputStyle} disabled={saving}/>
+            </label>
+          )}
+
           {/* Salary Range */}
           <div style={{display:"flex",gap:12}}>
             <label style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
