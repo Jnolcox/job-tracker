@@ -68,6 +68,10 @@ public class JobApplication {
     @Column(name = "rto_type")
     private RtoType rtoType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "level")
+    private Level level;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

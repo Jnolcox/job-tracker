@@ -105,6 +105,21 @@ export const RTO_LABELS = {
   ONSITE: "On-site",
 };
 
+// Level constants
+export const LEVEL_TYPES = ["JUNIOR", "MID", "SENIOR", "STAFF", "PRINCIPAL", "LEAD", "MANAGER", "DIRECTOR", "VP"];
+
+export const LEVEL_LABELS = {
+  JUNIOR: "Junior",
+  MID: "Mid",
+  SENIOR: "Senior",
+  STAFF: "Staff",
+  PRINCIPAL: "Principal",
+  LEAD: "Lead",
+  MANAGER: "Manager",
+  DIRECTOR: "Director",
+  VP: "VP",
+};
+
 /**
  * Convert date values from backend to ISO string format.
  * Backend may return dates as:
@@ -159,6 +174,7 @@ export function toUIFormat(application) {
     salaryMax: application.salaryMax,
     location: application.location || "",
     rtoType: application.rtoType || null,
+    level: application.level || null,
     jobUrl: application.jobUrl || "",
     contactName: application.contactName || "",
     contactEmail: application.contactEmail || "",
@@ -241,6 +257,7 @@ export function toBackendFormat(form) {
     salaryMax: form.salaryMax || null,
     location: form.location || null,
     rtoType: form.rtoType || null,
+    level: form.level || null,
     jobUrl: form.jobUrl || null,
     contactName: form.contactName || null,
     contactEmail: form.contactEmail || null,
@@ -297,6 +314,7 @@ export function toBackendFormatForUpdate(form, originalData, statusChanged) {
     salaryMax: form.salaryMax || null,
     location: form.location || null,
     rtoType: form.rtoType || null,
+    level: form.level || null,
     jobUrl: form.jobUrl || null,
     contactName: form.contactName || null,
     contactEmail: form.contactEmail || null,

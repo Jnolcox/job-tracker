@@ -3,7 +3,7 @@ import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
-import { toUIFormat, toBackendFormat, toBackendFormatForUpdate, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS } from "./utils/dataAdapter";
+import { toUIFormat, toBackendFormat, toBackendFormatForUpdate, APPLICATION_STATUSES, STATUS_LABELS, STATUS_COLORS, STATUS_GROUPS, isTerminalStatus, isStatusInGroup, RTO_TYPES, RTO_LABELS, LEVEL_TYPES, LEVEL_LABELS } from "./utils/dataAdapter";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 
 // Display groups for funnel chart (simplified view)
@@ -562,6 +562,14 @@ function Modal({ app, onClose, onSave, saving }) {
               <input type="text" value={form.role || ''} onChange={e=>set("role",e.target.value)}
                 style={inputStyle} disabled={saving} placeholder="Position title"/>
             </label>
+            <label style={{flex:0.6,display:"flex",flexDirection:"column",gap:6}}>
+              <span style={labelStyle}>LEVEL</span>
+              <select value={form.level || ''} onChange={e=>set("level",e.target.value || null)}
+                style={inputStyle} disabled={saving}>
+                <option value="">Select...</option>
+                {LEVEL_TYPES.map(l=><option key={l} value={l}>{LEVEL_LABELS[l]}</option>)}
+              </select>
+            </label>
           </div>
 
           {/* Status & Applied Date */}
@@ -814,6 +822,7 @@ function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, 
             <tr>
               <TH onClick={()=>setSortKey("company")} sorted={sortKey==="company"}>Company</TH>
               <TH onClick={()=>setSortKey("role")}    sorted={sortKey==="role"}>Role</TH>
+              <TH onClick={()=>setSortKey("level")}   sorted={sortKey==="level"}>Level</TH>
               <TH onClick={()=>setSortKey("status")}   sorted={sortKey==="status"}>Status</TH>
               <TH onClick={()=>setSortKey("location")} sorted={sortKey==="location"}>Location</TH>
               <TH onClick={()=>setSortKey("rtoType")} sorted={sortKey==="rtoType"}>RTO</TH>
@@ -847,7 +856,8 @@ function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, 
                 onMouseLeave={e=>e.currentTarget.style.background=isSelected ? selectedBackground : baseBackground}
               >
                 <td style={{padding:"10px 14px",color:"#F9FAFB",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{a.company}</td>
-                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:11,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
+                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.role}</td>
+                <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10}}>{a.level ? LEVEL_LABELS[a.level] : "—"}</td>
                 <td style={{padding:"10px 14px"}}><Badge status={a.status}/></td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10,maxWidth:120,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.location||"—"}</td>
                 <td style={{padding:"10px 14px",color:"#9CA3AF",fontFamily:"'DM Mono',monospace",fontSize:10}}>{a.rtoType ? RTO_LABELS[a.rtoType]?.replace(" days","d")?.replace("Hybrid ","H")?.replace("Remote","Remote") : "—"}</td>
@@ -866,7 +876,7 @@ function AppTable({ apps, onEdit, onDelete, searchInputRef, selectedIndex = -1, 
               );
             })}
             {sorted.length===0 && (
-              <tr><td colSpan={9} style={{padding:40,textAlign:"center",color:"#374151",fontFamily:"'DM Mono',monospace",fontSize:13}}>No applications match.</td></tr>
+              <tr><td colSpan={12} style={{padding:40,textAlign:"center",color:"#374151",fontFamily:"'DM Mono',monospace",fontSize:13}}>No applications match.</td></tr>
             )}
           </tbody>
         </table>

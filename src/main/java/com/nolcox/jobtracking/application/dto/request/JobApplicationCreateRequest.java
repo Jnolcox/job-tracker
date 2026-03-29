@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.application.dto.request;
 
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 
 import jakarta.validation.constraints.Email;
@@ -38,6 +39,8 @@ public record JobApplicationCreateRequest(
         String location,
 
         RtoType rtoType,
+
+        Level level,
 
         @Size(max = 5000, message = "Notes must not exceed 5000 characters")
         String notes,

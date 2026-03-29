@@ -224,6 +224,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
                 application.getSalaryMax(),
                 application.getLocation(),
                 application.getRtoType(),
+                application.getLevel(),
                 application.getNotes(),
                 application.getJobUrl(),
                 application.getContactName(),

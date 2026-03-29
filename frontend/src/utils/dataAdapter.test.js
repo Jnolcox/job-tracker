@@ -53,6 +53,7 @@ describe('dataAdapter', () => {
         salaryMax: 150000,
         location: 'San Francisco',
         rtoType: 'HYBRID_2',
+        level: null,
         jobUrl: 'https://example.com/job',
         contactName: 'John Doe',
         contactEmail: 'john@example.com',
