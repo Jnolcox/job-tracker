@@ -17,5 +17,6 @@ public enum ApplicationStatus {
     REJECTED,
     WITHDRAWN,
     ON_HOLD,
+    WAITING_FOR_RESPONSE,
     GHOSTED
 }

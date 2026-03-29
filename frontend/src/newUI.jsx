@@ -14,6 +14,7 @@ const FUNNEL_GROUPS = [
   { key: "REFERENCE", label: "Reference", statuses: ["REFERENCE_CHECK"] },
   { key: "OFFER", label: "Offer", statuses: STATUS_GROUPS.OFFER },
   { key: "REJECTED", label: "Rejected", statuses: STATUS_GROUPS.REJECTED },
+  { key: "WAITING", label: "Waiting", statuses: STATUS_GROUPS.WAITING },
   { key: "WITHDRAWN", label: "Withdrawn", statuses: STATUS_GROUPS.WITHDRAWN },
 ];
 
@@ -25,6 +26,7 @@ const FUNNEL_COLORS = {
   REFERENCE: "#cb37a1",
   OFFER: "#10B981",
   REJECTED: "#F87171",
+  WAITING: "#EAB308",
   WITHDRAWN: "#6B7280",
 };
 
