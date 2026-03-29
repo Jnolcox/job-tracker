@@ -585,6 +585,336 @@ class JobApplicationIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("Should update appliedDate when explicitly provided in request")
+    void shouldUpdateAppliedDateWhenExplicitlyProvided() throws Exception {
+        // Given - Create application with original applied date
+        Instant originalAppliedDate = Instant.now().minus(Duration.ofDays(30));
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .jobDescription("Test description")
+                .status(ApplicationStatus.APPLIED)
+                .appliedDate(originalAppliedDate)
+                .statusChangedAt(originalAppliedDate)
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("Test location")
+                .rtoType(RtoType.HYBRID_3)
+                .notes("Test notes")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        // New date to update to - 15 days ago instead of 30
+        Instant newAppliedDate = Instant.now().minus(Duration.ofDays(15));
+
+        // Update request with explicit new appliedDate
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                TEST_COMPANY,
+                TEST_POSITION,
+                "Updated description",
+                "https://example.com/job",
+                ApplicationStatus.APPLIED, // Same status
+                newAppliedDate, // EXPLICIT new date
+                null, // statusChangedAt - should preserve original since status unchanged
+                null, // interviewDate
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
+                "Test location",
+                RtoType.HYBRID_3,
+                "Updated notes",
+                "John Doe",
+                "john@example.com",
+                "+1-555-1234"
+        );
+
+        // When - Update the application
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - Verify the appliedDate was updated in the response
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // The appliedDate should be the NEW date, not the original
+        assertThat(response.appliedDate()).isEqualTo(newAppliedDate);
+
+        // Also verify in database
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getAppliedDate()).isEqualTo(newAppliedDate);
+    }
+
+    @Test
+    @DisplayName("Should preserve interviewDate when field is omitted from update request")
+    void shouldPreserveInterviewDateWhenFieldOmitted() throws Exception {
+        // Given - Create application with an interview date set
+        Instant originalInterviewDate = Instant.parse("2026-02-15T14:00:00Z");
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .jobDescription("Test description")
+                .status(ApplicationStatus.TECH_SCREEN)
+                .appliedDate(Instant.now().minus(Duration.ofDays(10)))
+                .statusChangedAt(Instant.now().minus(Duration.ofDays(5)))
+                .interviewDate(originalInterviewDate) // Has an interview scheduled
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("Test location")
+                .rtoType(RtoType.HYBRID_3)
+                .notes("Test notes")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        // Update request does NOT include interviewDate field at all
+        // This simulates frontend not sending the field
+        String rawJson = String.format("""
+            {
+                "companyName": "%s",
+                "positionTitle": "%s",
+                "jobDescription": "Updated description",
+                "jobUrl": "https://example.com/job",
+                "status": "TECH_SCREEN",
+                "salaryMin": %s,
+                "salaryMax": %s,
+                "location": "Updated location",
+                "rtoType": "HYBRID_3",
+                "notes": "Updated notes",
+                "contactName": "John Doe",
+                "contactEmail": "john@example.com",
+                "contactPhone": "+1-555-1234"
+            }
+            """, TEST_COMPANY, TEST_POSITION, TEST_SALARY_MIN, TEST_SALARY_MAX);
+
+        // When - Update the application WITHOUT interviewDate field
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rawJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - The original interviewDate should be PRESERVED, not wiped out
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // interviewDate should still be the original, not null
+        assertThat(response.interviewDate()).isEqualTo(originalInterviewDate);
+
+        // Also verify in database
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getInterviewDate()).isEqualTo(originalInterviewDate);
+    }
+
+    @Test
+    @DisplayName("Should preserve appliedDate when field is omitted from update request")
+    void shouldPreserveAppliedDateWhenFieldOmitted() throws Exception {
+        // Given - Create application with original applied date
+        Instant originalAppliedDate = Instant.parse("2026-01-01T10:00:00Z");
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .jobDescription("Test description")
+                .status(ApplicationStatus.APPLIED)
+                .appliedDate(originalAppliedDate)
+                .statusChangedAt(originalAppliedDate)
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("Test location")
+                .rtoType(RtoType.HYBRID_3)
+                .notes("Test notes")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        // Simulate frontend not sending appliedDate at all (field omitted from JSON)
+        String rawJson = String.format("""
+            {
+                "companyName": "%s",
+                "positionTitle": "%s",
+                "jobDescription": "Updated description",
+                "jobUrl": "https://example.com/job",
+                "status": "APPLIED",
+                "salaryMin": %s,
+                "salaryMax": %s,
+                "location": "Updated location",
+                "rtoType": "HYBRID_3",
+                "notes": "Updated notes",
+                "contactName": "John Doe",
+                "contactEmail": "john@example.com",
+                "contactPhone": "+1-555-1234"
+            }
+            """, TEST_COMPANY, TEST_POSITION, TEST_SALARY_MIN, TEST_SALARY_MAX);
+
+        // When - Update the application WITHOUT appliedDate field
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rawJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - The original appliedDate should be PRESERVED
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // appliedDate should still be the original, not null or changed
+        assertThat(response.appliedDate()).isEqualTo(originalAppliedDate);
+
+        // Also verify in database
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getAppliedDate()).isEqualTo(originalAppliedDate);
+    }
+
+    @Test
+    @DisplayName("Should update appliedDate when sent as ISO-8601 string from frontend")
+    void shouldUpdateAppliedDateWhenSentAsIsoString() throws Exception {
+        // Given - Create application with original applied date
+        Instant originalAppliedDate = Instant.parse("2026-01-01T10:00:00Z");
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .jobDescription("Test description")
+                .status(ApplicationStatus.APPLIED)
+                .appliedDate(originalAppliedDate)
+                .statusChangedAt(originalAppliedDate)
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("Test location")
+                .rtoType(RtoType.HYBRID_3)
+                .notes("Test notes")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        // Simulate raw JSON from frontend with ISO-8601 date string
+        String newAppliedDateStr = "2026-02-15T12:30:00Z";
+        String rawJson = String.format("""
+            {
+                "companyName": "%s",
+                "positionTitle": "%s",
+                "jobDescription": "Updated description",
+                "jobUrl": "https://example.com/job",
+                "status": "APPLIED",
+                "appliedDate": "%s",
+                "statusChangedAt": null,
+                "interviewDate": null,
+                "salaryMin": %s,
+                "salaryMax": %s,
+                "location": "Test location",
+                "rtoType": "HYBRID_3",
+                "notes": "Updated notes",
+                "contactName": "John Doe",
+                "contactEmail": "john@example.com",
+                "contactPhone": "+1-555-1234"
+            }
+            """, TEST_COMPANY, TEST_POSITION, newAppliedDateStr, TEST_SALARY_MIN, TEST_SALARY_MAX);
+
+        // When - Update the application with raw JSON
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rawJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - Verify the appliedDate was updated
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // Parse the expected date
+        Instant expectedDate = Instant.parse(newAppliedDateStr);
+        assertThat(response.appliedDate()).isEqualTo(expectedDate);
+
+        // Also verify in database
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getAppliedDate()).isEqualTo(expectedDate);
+    }
+
+    @Test
+    @DisplayName("Should update statusChangedAt when explicitly provided and status unchanged")
+    void shouldUpdateStatusChangedAtWhenExplicitlyProvidedAndStatusUnchanged() throws Exception {
+        // Given - Create application with original dates
+        Instant originalStatusChangedAt = Instant.now().minus(Duration.ofDays(30));
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .jobDescription("Test description")
+                .status(ApplicationStatus.TECH_SCREEN)
+                .appliedDate(Instant.now().minus(Duration.ofDays(35)))
+                .statusChangedAt(originalStatusChangedAt)
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("Test location")
+                .rtoType(RtoType.HYBRID_3)
+                .notes("Test notes")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        // New statusChangedAt to backdate
+        Instant newStatusChangedAt = Instant.now().minus(Duration.ofDays(20));
+
+        // Update request keeps same status but provides explicit statusChangedAt
+        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+                TEST_COMPANY,
+                TEST_POSITION,
+                "Updated description",
+                "https://example.com/job",
+                ApplicationStatus.TECH_SCREEN, // Same status - no auto-update
+                null, // appliedDate - preserve original
+                newStatusChangedAt, // EXPLICIT new statusChangedAt for backdating
+                null, // interviewDate
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
+                "Test location",
+                RtoType.HYBRID_3,
+                "Updated notes",
+                "John Doe",
+                "john@example.com",
+                "+1-555-1234"
+        );
+
+        // When - Update the application
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - Verify statusChangedAt was updated
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+
+        // statusChangedAt should be the explicitly provided value
+        assertThat(response.statusChangedAt()).isEqualTo(newStatusChangedAt);
+
+        // Also verify in database
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getStatusChangedAt()).isEqualTo(newStatusChangedAt);
+    }
+
     // Helper method to create job applications
     private JobApplication createJobApplication(User user, String companyName, String positionTitle) {
         JobApplication application = JobApplication.builder()

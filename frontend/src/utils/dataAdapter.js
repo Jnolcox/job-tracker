@@ -100,15 +100,24 @@ export const RTO_LABELS = {
 };
 
 /**
- * Convert ISO date string or LocalDateTime array to local ISO-like string
- * Backend may return dates as arrays [year, month, day, hour, minute, second]
+ * Convert date values from backend to ISO string format.
+ * Backend may return dates as:
+ * - Epoch seconds (e.g., 1769644800.0) - most common with java.time.Instant
+ * - ISO strings (e.g., "2025-01-15T10:00:00Z")
+ * - Arrays [year, month, day, hour, minute, second] - LocalDateTime serialization
  */
 function convertDate(dateValue, fallback = null) {
-  if (!dateValue) return fallback;
+  if (!dateValue && dateValue !== 0) return fallback;
 
   // If it's already a string, return it
   if (typeof dateValue === 'string') {
     return dateValue;
+  }
+
+  // If it's a number (epoch seconds from Instant serialization)
+  // Convert to milliseconds and create ISO string
+  if (typeof dateValue === 'number') {
+    return new Date(dateValue * 1000).toISOString();
   }
 
   // If it's an array (LocalDateTime serialization)
@@ -188,6 +197,7 @@ function areDatesEqual(date1, date2) {
  * @param {string} form.role - Position title
  * @param {string} form.status - Application status
  * @param {string} [form.appliedAt] - Date when user applied
+ * @param {string} [form.interviewDate] - Scheduled interview date
  * @param {string} [form.notes] - Additional notes
  * @param {string} [form.jobDescription] - Job description
  * @param {number} [form.salaryMin] - Minimum salary
@@ -218,6 +228,7 @@ export function toBackendFormat(form) {
     status: form.status,
     appliedDate: form.appliedAt ? new Date(form.appliedAt).toISOString() : null,
     // statusChangedAt is intentionally NOT included - let backend default it
+    interviewDate: form.interviewDate ? new Date(form.interviewDate).toISOString() : null,
     notes: form.notes || null,
     jobDescription: form.jobDescription || null,
     salaryMin: form.salaryMin || null,
@@ -242,6 +253,7 @@ export function toBackendFormat(form) {
  * Key behaviors:
  * - appliedDate: Only sent if user explicitly changed it from original
  * - statusChangedAt: Only sent if user manually edited it AND status did NOT change
+ * - interviewDate: Only sent if user explicitly changed it from original
  * - If status changed, statusChangedAt is NOT sent (backend auto-updates it)
  *
  * @param {Object} form - Current form data in UI format
@@ -257,7 +269,7 @@ export function toBackendFormat(form) {
  *   originalApp,
  *   false // status did not change
  * );
- * // Result: statusChangedAt and appliedDate are NOT included
+ * // Result: statusChangedAt, appliedDate, and interviewDate are NOT included
  *
  * @example
  * // User changed status
@@ -302,6 +314,12 @@ export function toBackendFormatForUpdate(form, originalData, statusChanged) {
     }
   }
   // When statusChanged is true, we intentionally omit statusChangedAt
+
+  // interviewDate handling: only send if changed
+  const interviewDateChanged = !areDatesEqual(form.interviewDate, originalData.interviewDate);
+  if (interviewDateChanged) {
+    result.interviewDate = form.interviewDate ? new Date(form.interviewDate).toISOString() : null;
+  }
 
   return result;
 }

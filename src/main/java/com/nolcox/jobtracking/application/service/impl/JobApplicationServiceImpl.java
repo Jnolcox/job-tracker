@@ -79,9 +79,14 @@ public class JobApplicationServiceImpl implements JobApplicationService {
      * <ul>
      *   <li><b>appliedDate</b>: Preserved from the original entity unless explicitly provided
      *       in the request. This prevents ModelMapper from overwriting it with null.</li>
-     *   <li><b>statusChangedAt</b>: Auto-set to current time when status changes (ignoring
-     *       any value in the request). When status is unchanged, uses the request value
-     *       if provided (for manual backdating), otherwise preserves the original.</li>
+     *   <li><b>statusChangedAt</b>: Follows a priority system:
+     *       <ol>
+     *         <li>If request provides a value, use it (enables backdating scenarios where
+     *             users record historical status changes)</li>
+     *         <li>If status changed but no date provided, auto-set to current time</li>
+     *         <li>If status unchanged and no date provided, preserve the original value</li>
+     *       </ol>
+     *   </li>
      * </ul>
      *
      * @param id the ID of the job application to update
@@ -118,16 +123,21 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             application.setAppliedDate(originalAppliedDate);
         }
 
-        // BUSINESS RULE: Handle statusChangedAt based on whether status actually changed
-        if (application.getStatus() != null && !application.getStatus().equals(oldStatus)) {
-            // Status changed: always auto-set to now
-            // This ensures accurate tracking regardless of what the request contains
-            application.setStatusChangedAt(Instant.now());
-        } else if (request.statusChangedAt() != null) {
-            // Status unchanged but user explicitly provided a value (for manual backdating)
+        // BUSINESS RULE: Handle statusChangedAt based on whether status changed and user intent
+        // Priority: User-provided value > Auto-update on status change > Preserve original
+        boolean statusChanged = application.getStatus() != null && !application.getStatus().equals(oldStatus);
+
+        if (request.statusChangedAt() != null) {
+            // User explicitly provided a value - honor it (enables backdating scenarios)
+            // This allows users to record when a status change actually occurred,
+            // even if they're updating the application later
             application.setStatusChangedAt(request.statusChangedAt());
+        } else if (statusChanged) {
+            // Status changed but no explicit date provided: auto-set to now
+            // This is the default behavior when user doesn't specify a date
+            application.setStatusChangedAt(Instant.now());
         } else {
-            // Status unchanged and no explicit value: keep original
+            // Status unchanged and no explicit value: preserve original
             application.setStatusChangedAt(originalStatusChangedAt);
         }
 

@@ -258,24 +258,25 @@ class JobApplicationServiceImplTest {
     class UpdateApplicationTests {
 
         @Test
-        @DisplayName("Should auto-update statusChangedAt when status changes even if request contains old value")
-        void shouldAutoUpdateStatusChangedAtWhenStatusChanges() {
+        @DisplayName("Should auto-update statusChangedAt to now when status changes and no explicit date provided")
+        void shouldAutoUpdateStatusChangedAtWhenStatusChangesAndNoDateProvided() {
             // Given
             Long applicationId = 1L;
             Long userId = 1L;
-            Instant oldStatusChangedAt = Instant.now().minus(Duration.ofDays(5));
+            Instant originalStatusChangedAt = Instant.now().minus(Duration.ofDays(5));
 
             JobApplication existingApplication = JobApplicationFixture.aJobApplication()
                 .withId(applicationId)
                 .withUser(testUser)
                 .withStatus(ApplicationStatus.APPLIED)
-                .withStatusChangedAt(oldStatusChangedAt)
+                .withStatusChangedAt(originalStatusChangedAt)
                 .build();
 
-            // Request changes status from APPLIED to TECH_SCREEN but includes old statusChangedAt
+            // Request changes status from APPLIED to TECH_SCREEN but does NOT provide statusChangedAt
+            // This is the typical case where user updates status and expects auto-timestamping
             JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
                 .withStatus(ApplicationStatus.TECH_SCREEN)
-                .withStatusChangedAt(oldStatusChangedAt)
+                .withStatusChangedAt(null)  // No explicit date provided
                 .buildUpdateRequest();
 
             when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
@@ -286,6 +287,8 @@ class JobApplicationServiceImplTest {
                 app.setStatus(ApplicationStatus.TECH_SCREEN);
                 app.setCompanyName(request.companyName());
                 app.setPositionTitle(request.positionTitle());
+                // ModelMapper would set statusChangedAt to null since request has null
+                app.setStatusChangedAt(null);
                 return null;
             }).when(modelMapper).map(eq(request), any(JobApplication.class));
 
@@ -300,9 +303,10 @@ class JobApplicationServiceImplTest {
             verify(repository).save(applicationCaptor.capture());
             JobApplication savedApplication = applicationCaptor.getValue();
 
-            // statusChangedAt should be auto-updated to current time, not the old value from request
+            // statusChangedAt should be auto-updated to current time since status changed
+            // and no explicit date was provided
             assertThat(savedApplication.getStatusChangedAt()).isAfterOrEqualTo(beforeUpdate);
-            assertThat(savedApplication.getStatusChangedAt()).isNotEqualTo(oldStatusChangedAt);
+            assertThat(savedApplication.getStatusChangedAt()).isNotEqualTo(originalStatusChangedAt);
         }
 
         @Test
@@ -532,12 +536,13 @@ class JobApplicationServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should ignore request statusChangedAt when status changes and always use current time")
-        void shouldIgnoreRequestStatusChangedAtWhenStatusChanges() {
-            // Given
+        @DisplayName("Should honor user-provided statusChangedAt when status changes (backdating support)")
+        void shouldHonorUserProvidedStatusChangedAtWhenStatusChanges() {
+            // Given: User wants to backdate a status change (e.g., recording a call
+            // they received 10 days ago but forgot to log until now)
             Long applicationId = 1L;
             Long userId = 1L;
-            Instant requestStatusChangedAt = Instant.now().minus(Duration.ofDays(10));
+            Instant backdatedStatusChange = Instant.now().minus(Duration.ofDays(10));
 
             JobApplication existingApplication = JobApplicationFixture.aJobApplication()
                 .withId(applicationId)
@@ -546,26 +551,26 @@ class JobApplicationServiceImplTest {
                 .withStatusChangedAt(Instant.now().minus(Duration.ofDays(20)))
                 .build();
 
-            // Request changes status AND provides a statusChangedAt value
-            // The statusChangedAt should be IGNORED because status changed
+            // Request changes status AND provides an explicit statusChangedAt value
+            // The statusChangedAt should be HONORED to support backdating scenarios
             JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
                 .withStatus(ApplicationStatus.RECRUITER_SCREEN)
-                .withStatusChangedAt(requestStatusChangedAt)
+                .withStatusChangedAt(backdatedStatusChange)
                 .buildUpdateRequest();
 
             when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
 
             doAnswer(invocation -> {
                 JobApplication app = invocation.getArgument(1);
+                JobApplicationUpdateRequest req = invocation.getArgument(0);
                 app.setStatus(ApplicationStatus.RECRUITER_SCREEN);
-                app.setCompanyName(request.companyName());
-                app.setPositionTitle(request.positionTitle());
+                app.setCompanyName(req.companyName());
+                app.setPositionTitle(req.positionTitle());
+                app.setStatusChangedAt(req.statusChangedAt());
                 return null;
             }).when(modelMapper).map(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            Instant beforeUpdate = Instant.now();
 
             // When
             jobApplicationService.updateApplication(applicationId, request, userId);
@@ -574,9 +579,147 @@ class JobApplicationServiceImplTest {
             verify(repository).save(applicationCaptor.capture());
             JobApplication savedApplication = applicationCaptor.getValue();
 
-            // statusChangedAt should be auto-set to now, NOT the value from request
-            assertThat(savedApplication.getStatusChangedAt()).isAfterOrEqualTo(beforeUpdate);
-            assertThat(savedApplication.getStatusChangedAt()).isNotEqualTo(requestStatusChangedAt);
+            // statusChangedAt should use the user-provided value to support backdating
+            assertThat(savedApplication.getStatusChangedAt()).isEqualTo(backdatedStatusChange);
+        }
+
+        /**
+         * BUG REPRODUCTION TEST: This test demonstrates the reported issue where
+         * explicitly provided appliedDate and statusChangedAt values are not persisted
+         * when updating a job application.
+         *
+         * <p>Scenario: User sends a PUT request with:
+         * - appliedDate = "2024-01-15T10:00:00Z"
+         * - statusChangedAt = "2024-02-01T10:00:00Z"
+         * - status = TECH_SCREEN (same as existing)
+         *
+         * <p>Expected: Both dates should be saved exactly as provided.
+         * Actual: The dates may not persist due to logic issues in updateApplication().
+         */
+        @Test
+        @DisplayName("BUG: Should persist explicit appliedDate and statusChangedAt from PUT request")
+        void shouldPersistExplicitDatesFromPutRequest_BugReproduction() {
+            // Given: A specific scenario matching the reported bug
+            Long applicationId = 1L;
+            Long userId = 1L;
+
+            // These are the exact dates the user wants to set via PUT request
+            Instant requestedAppliedDate = Instant.parse("2024-01-15T10:00:00Z");
+            Instant requestedStatusChangedAt = Instant.parse("2024-02-01T10:00:00Z");
+
+            // Existing application has different dates
+            Instant originalAppliedDate = Instant.parse("2024-03-01T10:00:00Z");
+            Instant originalStatusChangedAt = Instant.parse("2024-03-15T10:00:00Z");
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.TECH_SCREEN)  // Same status as request
+                .withAppliedDate(originalAppliedDate)
+                .withStatusChangedAt(originalStatusChangedAt)
+                .build();
+
+            // User sends PUT request with explicit dates - status stays the same
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.TECH_SCREEN)  // Same status - no auto-update
+                .withAppliedDate(requestedAppliedDate)
+                .withStatusChangedAt(requestedStatusChangedAt)
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            // Simulate ModelMapper behavior - it SHOULD map the dates from request
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                JobApplicationUpdateRequest req = invocation.getArgument(0);
+                app.setStatus(req.status());
+                app.setCompanyName(req.companyName());
+                app.setPositionTitle(req.positionTitle());
+                // ModelMapper would map these if properly configured
+                app.setAppliedDate(req.appliedDate());
+                app.setStatusChangedAt(req.statusChangedAt());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then: The EXACT dates from the request should be persisted
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // These assertions verify the bug is fixed - dates should match request exactly
+            assertThat(savedApplication.getAppliedDate())
+                .as("appliedDate should be set to the exact value from PUT request")
+                .isEqualTo(requestedAppliedDate);
+
+            assertThat(savedApplication.getStatusChangedAt())
+                .as("statusChangedAt should be set to the exact value from PUT request (status unchanged)")
+                .isEqualTo(requestedStatusChangedAt);
+        }
+
+        /**
+         * Tests that when status DOES change, the user should still be able to
+         * provide a custom statusChangedAt date (e.g., for backdating when they
+         * forgot to update the application earlier).
+         *
+         * CURRENT BEHAVIOR: statusChangedAt is ALWAYS set to Instant.now() when status changes.
+         * EXPECTED BEHAVIOR (per user report): User-provided statusChangedAt should be honored.
+         */
+        @Test
+        @DisplayName("BUG: Should honor user-provided statusChangedAt even when status changes")
+        void shouldHonorUserProvidedStatusChangedAtWhenStatusChanges_BugReproduction() {
+            // Given: User wants to backdate a status change
+            Long applicationId = 1L;
+            Long userId = 1L;
+
+            // User wants to record that they got the interview call 2 weeks ago
+            Instant backdatedStatusChange = Instant.parse("2024-02-01T10:00:00Z");
+
+            JobApplication existingApplication = JobApplicationFixture.aJobApplication()
+                .withId(applicationId)
+                .withUser(testUser)
+                .withStatus(ApplicationStatus.APPLIED)
+                .withAppliedDate(Instant.parse("2024-01-15T10:00:00Z"))
+                .withStatusChangedAt(Instant.parse("2024-01-15T10:00:00Z"))
+                .build();
+
+            // User changes status from APPLIED to TECH_SCREEN with a backdated statusChangedAt
+            JobApplicationUpdateRequest request = JobApplicationRequestFixture.aJobApplicationRequest()
+                .withStatus(ApplicationStatus.TECH_SCREEN)  // Status IS changing
+                .withAppliedDate(Instant.parse("2024-01-15T10:00:00Z"))
+                .withStatusChangedAt(backdatedStatusChange)  // User wants this specific date
+                .buildUpdateRequest();
+
+            when(repository.findById(applicationId)).thenReturn(Optional.of(existingApplication));
+
+            doAnswer(invocation -> {
+                JobApplication app = invocation.getArgument(1);
+                JobApplicationUpdateRequest req = invocation.getArgument(0);
+                app.setStatus(req.status());
+                app.setCompanyName(req.companyName());
+                app.setPositionTitle(req.positionTitle());
+                app.setAppliedDate(req.appliedDate());
+                app.setStatusChangedAt(req.statusChangedAt());
+                return null;
+            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+
+            when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            jobApplicationService.updateApplication(applicationId, request, userId);
+
+            // Then
+            verify(repository).save(applicationCaptor.capture());
+            JobApplication savedApplication = applicationCaptor.getValue();
+
+            // BUG: Currently this FAILS because the service always sets Instant.now()
+            // when status changes, ignoring the user-provided value
+            assertThat(savedApplication.getStatusChangedAt())
+                .as("User-provided statusChangedAt should be honored even when status changes")
+                .isEqualTo(backdatedStatusChange);
         }
     }
 }

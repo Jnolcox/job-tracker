@@ -123,6 +123,35 @@ describe('dataAdapter', () => {
       expect(result.appliedDate).toBeNull();
     });
 
+    it('should include interviewDate for new application when provided', () => {
+      const form = {
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'TECH_SCREEN',
+        appliedAt: '2025-01-15T10:00:00.000Z',
+        interviewDate: '2025-02-20T14:00:00.000Z',
+      };
+
+      const result = toBackendFormat(form);
+
+      expect(result.interviewDate).toBeDefined();
+      expect(result.interviewDate).toBe('2025-02-20T14:00:00.000Z');
+    });
+
+    it('should handle null interviewDate for new application', () => {
+      const form = {
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'APPLIED',
+        appliedAt: '2025-01-15T10:00:00.000Z',
+        interviewDate: null,
+      };
+
+      const result = toBackendFormat(form);
+
+      expect(result.interviewDate).toBeNull();
+    });
+
     it('should include all standard fields', () => {
       const form = {
         company: 'Test Company',
@@ -380,6 +409,70 @@ describe('dataAdapter', () => {
         expect(result.notes).toBeNull();
         expect(result.jobDescription).toBeNull();
       });
+
+      it('should NOT include interviewDate if it has not changed', () => {
+        const originalData = {
+          ...createOriginalData(),
+          interviewDate: '2025-02-20T14:00:00.000Z',
+        };
+        const form = { ...originalData }; // No changes
+        const statusChanged = false;
+
+        const result = toBackendFormatForUpdate(form, originalData, statusChanged);
+
+        expect(result.interviewDate).toBeUndefined();
+      });
+
+      it('should include interviewDate if user changed it', () => {
+        const originalData = {
+          ...createOriginalData(),
+          interviewDate: '2025-02-20T14:00:00.000Z',
+        };
+        const form = {
+          ...originalData,
+          interviewDate: '2025-02-25T10:00:00.000Z', // User changed the date
+        };
+        const statusChanged = false;
+
+        const result = toBackendFormatForUpdate(form, originalData, statusChanged);
+
+        expect(result.interviewDate).toBeDefined();
+        expect(result.interviewDate).toBe('2025-02-25T10:00:00.000Z');
+      });
+
+      it('should include interviewDate if user sets it from null', () => {
+        const originalData = {
+          ...createOriginalData(),
+          interviewDate: null,
+        };
+        const form = {
+          ...originalData,
+          interviewDate: '2025-02-25T10:00:00.000Z', // User set a new date
+        };
+        const statusChanged = false;
+
+        const result = toBackendFormatForUpdate(form, originalData, statusChanged);
+
+        expect(result.interviewDate).toBeDefined();
+        expect(result.interviewDate).toBe('2025-02-25T10:00:00.000Z');
+      });
+
+      it('should include interviewDate as null if user clears it', () => {
+        const originalData = {
+          ...createOriginalData(),
+          interviewDate: '2025-02-20T14:00:00.000Z',
+        };
+        const form = {
+          ...originalData,
+          interviewDate: null, // User cleared the date
+        };
+        const statusChanged = false;
+
+        const result = toBackendFormatForUpdate(form, originalData, statusChanged);
+
+        expect(result.interviewDate).toBeDefined();
+        expect(result.interviewDate).toBeNull();
+      });
     });
   });
 
@@ -423,6 +516,265 @@ describe('dataAdapter', () => {
 
       expect(uiFormat.appliedAt).toBe('2025-01-15T10:00:00');
       expect(uiFormat.lastUpdate).toBe('2025-01-20T14:30:00');
+    });
+
+    it('should handle epoch seconds format from backend (java.time.Instant)', () => {
+      // Backend returns dates as epoch seconds when using Instant type
+      // 1769644800 = 2026-01-29T00:00:00.000Z
+      // 1771993345 = 2026-02-25T04:22:25.000Z
+      const backendApp = {
+        id: 1,
+        companyName: 'Test',
+        positionTitle: 'Dev',
+        status: 'APPLIED',
+        appliedDate: 1769644800.0, // Epoch seconds
+        statusChangedAt: 1771993345.0,
+        updatedAt: null,
+      };
+
+      const uiFormat = toUIFormat(backendApp);
+
+      // Should convert epoch seconds to ISO string
+      expect(uiFormat.appliedAt).toBe('2026-01-29T00:00:00.000Z');
+      expect(uiFormat.lastUpdate).toBe('2026-02-25T04:22:25.000Z');
+    });
+
+    it('should handle epoch seconds with fractional values', () => {
+      const backendApp = {
+        id: 1,
+        companyName: 'Test',
+        positionTitle: 'Dev',
+        status: 'APPLIED',
+        appliedDate: 1769644800.5, // Epoch seconds with fractional part
+        statusChangedAt: null,
+        updatedAt: null,
+      };
+
+      const uiFormat = toUIFormat(backendApp);
+
+      // Should still convert correctly (fractional seconds become milliseconds)
+      expect(uiFormat.appliedAt).toContain('2026-01-29');
+    });
+
+    it('should handle epoch value of 0 (1970-01-01)', () => {
+      const backendApp = {
+        id: 1,
+        companyName: 'Test',
+        positionTitle: 'Dev',
+        status: 'APPLIED',
+        appliedDate: 0, // Edge case: Unix epoch
+        statusChangedAt: null,
+        updatedAt: null,
+      };
+
+      const uiFormat = toUIFormat(backendApp);
+
+      // 0 should be treated as a valid date, not as falsy
+      expect(uiFormat.appliedAt).toBe('1970-01-01T00:00:00.000Z');
+    });
+  });
+
+  /**
+   * Bug fix tests: Date editing in Modal not persisting
+   * Issue: When user edits dates in the Modal, changes don't persist
+   */
+  describe('Bug: Date editing in Modal should persist', () => {
+    // Helper to simulate toLocalDateTimeInput from newUI.jsx
+    const toLocalDateTimeInput = (dateStr) => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    // Helper to simulate how the Modal converts datetime-local input value
+    const convertDateTimeInputToISO = (inputValue) => {
+      return inputValue ? new Date(inputValue).toISOString() : null;
+    };
+
+    it('should include appliedDate when user changes the date in Modal', () => {
+      // Original data from backend (simulating what toUIFormat returns)
+      const originalData = {
+        id: 1,
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'APPLIED',
+        appliedAt: '2025-01-15T10:00:00.000Z',
+        lastUpdate: '2025-01-15T10:00:00.000Z',
+      };
+
+      // User opens Modal, sees date displayed via toLocalDateTimeInput
+      const displayedDate = toLocalDateTimeInput(originalData.appliedAt);
+
+      // User changes the date in the datetime-local input
+      const newInputValue = '2025-01-20T14:30'; // User picks a new date
+      const newAppliedAt = convertDateTimeInputToISO(newInputValue);
+
+      const formData = {
+        ...originalData,
+        appliedAt: newAppliedAt,
+      };
+
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // appliedDate MUST be included since user changed it
+      expect(backendData.appliedDate).toBeDefined();
+      expect(backendData.appliedDate).not.toBeNull();
+    });
+
+    it('should include statusChangedAt (lastUpdate) when user changes the date in Modal', () => {
+      const originalData = {
+        id: 1,
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'RECRUITER_SCREEN',
+        appliedAt: '2025-01-15T10:00:00.000Z',
+        lastUpdate: '2025-01-20T10:00:00.000Z',
+      };
+
+      // User changes the status changed date (lastUpdate)
+      const newInputValue = '2025-01-25T16:00';
+      const newLastUpdate = convertDateTimeInputToISO(newInputValue);
+
+      const formData = {
+        ...originalData,
+        lastUpdate: newLastUpdate,
+      };
+
+      // Status did NOT change, so user's date edit should be respected
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // statusChangedAt MUST be included since user manually edited it
+      expect(backendData.statusChangedAt).toBeDefined();
+      expect(backendData.statusChangedAt).not.toBeNull();
+    });
+
+    it('should correctly detect date change even when original has no timezone indicator', () => {
+      // Backend might return dates without 'Z' suffix (LocalDateTime format)
+      const originalData = {
+        id: 1,
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'APPLIED',
+        appliedAt: '2025-01-15T10:00:00', // No 'Z' - common format from backend
+        lastUpdate: '2025-01-15T10:00:00',
+      };
+
+      // User changes date
+      const newInputValue = '2025-01-20T14:30';
+      const newAppliedAt = convertDateTimeInputToISO(newInputValue);
+
+      const formData = {
+        ...originalData,
+        appliedAt: newAppliedAt,
+      };
+
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // appliedDate MUST be included
+      expect(backendData.appliedDate).toBeDefined();
+    });
+
+    it('should NOT include appliedDate when user does not change it (just opens and saves)', () => {
+      const originalData = {
+        id: 1,
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'APPLIED',
+        appliedAt: '2025-01-15T10:00:00.000Z',
+        lastUpdate: '2025-01-15T10:00:00.000Z',
+        notes: 'Original notes',
+      };
+
+      // User only changes notes, not the date
+      const formData = {
+        ...originalData,
+        notes: 'Updated notes',
+      };
+
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // appliedDate should NOT be included since it wasn't changed
+      expect(backendData.appliedDate).toBeUndefined();
+    });
+
+    it('BUG SCENARIO: should handle date format mismatch between backend and UI conversion', () => {
+      // This tests the EXACT scenario causing the bug:
+      // 1. Backend returns date WITHOUT 'Z' suffix (LocalDateTime format)
+      // 2. toUIFormat keeps it as-is: '2025-01-15T10:00:00'
+      // 3. User edits date, onChange converts via toISOString() which adds 'Z'
+      // 4. areDatesEqual compares them - but timezone interpretation differs!
+
+      // Simulating backend response via toUIFormat (no Z suffix)
+      const backendDateWithoutZ = '2025-01-15T10:00:00';
+
+      // User changes to a NEW date
+      const userEditedDate = '2025-01-20T14:30';
+      const convertedUserDate = new Date(userEditedDate).toISOString();
+
+      const originalData = {
+        id: 1,
+        company: 'Test Company',
+        role: 'Developer',
+        status: 'APPLIED',
+        appliedAt: backendDateWithoutZ,
+        lastUpdate: backendDateWithoutZ,
+      };
+
+      const formData = {
+        ...originalData,
+        appliedAt: convertedUserDate, // User changed the date
+      };
+
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // appliedDate MUST be included since user changed it
+      expect(backendData.appliedDate).toBeDefined();
+      expect(backendData.appliedDate).toContain('2025-01-20');
+    });
+
+    it('CRITICAL: should properly compare dates with different timezone formats', () => {
+      // The most subtle bug case: same logical date, different string formats
+      // Backend: '2025-01-15T10:00:00' (interpreted as LOCAL)
+      // After UI conversion: '2025-01-15T18:00:00.000Z' (UTC, assuming PST offset)
+      // These are the SAME moment in time, but different strings
+
+      // This test verifies the comparison handles this correctly
+      // The user should NOT see a false positive "date changed" when they didn't change it
+
+      const backendDate = '2025-01-15T10:00:00'; // No Z - local time
+      const sameTimeAsUTC = new Date('2025-01-15T10:00:00').toISOString(); // Converts to UTC
+
+      const originalData = {
+        id: 1,
+        company: 'Test',
+        role: 'Dev',
+        status: 'APPLIED',
+        appliedAt: backendDate,
+        lastUpdate: backendDate,
+      };
+
+      // Form has the same date but in ISO format (as would happen if user clicks input)
+      const formData = {
+        ...originalData,
+        appliedAt: sameTimeAsUTC, // Same moment, different format
+      };
+
+      const statusChanged = false;
+      const backendData = toBackendFormatForUpdate(formData, originalData, statusChanged);
+
+      // appliedDate should NOT be included - the dates represent the same moment
+      expect(backendData.appliedDate).toBeUndefined();
     });
   });
 

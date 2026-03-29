@@ -1275,7 +1275,7 @@ export default function JobTracker() {
         </div>
       </div>
 
-      {editing && <Modal app={editing} onClose={()=>setEditing(null)} onSave={handleSave} saving={saving} />}
+      {editing && <Modal key={editing.id || 'new'} app={editing} onClose={()=>setEditing(null)} onSave={handleSave} saving={saving} />}
     </>
   );
 }
