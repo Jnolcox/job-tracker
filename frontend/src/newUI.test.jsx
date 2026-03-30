@@ -88,22 +88,23 @@ describe('JobTracker (newUI)', () => {
   describe('Default sorting by lastUpdate date', () => {
     it('should have lastUpdate as the default sort key', async () => {
       // Arrange: Create applications with different lastUpdate dates
+      // lastUpdate uses updatedAt, so we set updatedAt values
       const oldApplication = createMockApplication({
         id: 'old',
         companyName: 'Old Company',
-        statusChangedAt: '2025-01-10T10:00:00', // January 10, 2025
+        updatedAt: '2025-01-10T10:00:00', // January 10, 2025
       });
 
       const newApplication = createMockApplication({
         id: 'new',
         companyName: 'New Company',
-        statusChangedAt: '2025-02-20T10:00:00', // February 20, 2025
+        updatedAt: '2025-02-20T10:00:00', // February 20, 2025
       });
 
       const middleApplication = createMockApplication({
         id: 'middle',
         companyName: 'Middle Company',
-        statusChangedAt: '2025-01-25T10:00:00', // January 25, 2025
+        updatedAt: '2025-01-25T10:00:00', // January 25, 2025
       });
 
       // Return applications in random order to verify sorting
@@ -159,16 +160,17 @@ describe('JobTracker (newUI)', () => {
     });
 
     it('should sort with newest entries at the top (descending order)', async () => {
+      // lastUpdate uses updatedAt, so we set updatedAt values
       const jan1App = createMockApplication({
         id: '1',
         companyName: 'January First',
-        statusChangedAt: '2025-01-01T10:00:00',
+        updatedAt: '2025-01-01T10:00:00',
       });
 
       const dec31App = createMockApplication({
         id: '2',
         companyName: 'December ThirtyFirst',
-        statusChangedAt: '2025-12-31T10:00:00',
+        updatedAt: '2025-12-31T10:00:00',
       });
 
       jobApplicationsAPI.getAll.mockResolvedValueOnce({

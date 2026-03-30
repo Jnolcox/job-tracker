@@ -157,8 +157,8 @@ function convertDate(dateValue, fallback = null) {
  */
 export function toUIFormat(application) {
   const appliedAt = convertDate(application.appliedDate, new Date().toISOString());
-  const statusChangedAt = convertDate(application.statusChangedAt);
   const updatedAt = convertDate(application.updatedAt);
+  const statusChangedAt = convertDate(application.statusChangedAt);
 
   return {
     id: application.id,
@@ -166,7 +166,8 @@ export function toUIFormat(application) {
     role: application.positionTitle,
     status: application.status,
     appliedAt: appliedAt,
-    lastUpdate: statusChangedAt || updatedAt || appliedAt,
+    lastUpdate: updatedAt || appliedAt,
+    statusChangedAt: statusChangedAt || appliedAt,  // For Status Age calculation
     notes: application.notes || "",
     jobDescription: application.jobDescription || "",
     interviewDate: convertDate(application.interviewDate),

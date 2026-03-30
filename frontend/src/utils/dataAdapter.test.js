@@ -45,7 +45,8 @@ describe('dataAdapter', () => {
         role: 'Software Engineer',
         status: 'APPLIED',
         appliedAt: '2025-01-15T10:00:00',
-        lastUpdate: '2025-01-20T14:30:00', // statusChangedAt takes precedence
+        lastUpdate: '2025-01-21T09:00:00', // updatedAt is used for lastUpdate
+        statusChangedAt: '2025-01-20T14:30:00', // statusChangedAt for Status Age
         notes: 'Some notes',
         jobDescription: 'Job description',
         interviewDate: null,
@@ -61,7 +62,7 @@ describe('dataAdapter', () => {
       });
     });
 
-    it('should use appliedAt as lastUpdate fallback when statusChangedAt is null', () => {
+    it('should use appliedAt as fallback when updatedAt/statusChangedAt are null', () => {
       const backendApp = {
         id: 1,
         companyName: 'Test Company',
@@ -75,6 +76,7 @@ describe('dataAdapter', () => {
       const result = toUIFormat(backendApp);
 
       expect(result.lastUpdate).toBe('2025-01-15T10:00:00');
+      expect(result.statusChangedAt).toBe('2025-01-15T10:00:00');
     });
   });
 
@@ -510,19 +512,21 @@ describe('dataAdapter', () => {
         status: 'APPLIED',
         appliedDate: [2025, 1, 15, 10, 0, 0], // LocalDateTime array format
         statusChangedAt: [2025, 1, 20, 14, 30, 0],
-        updatedAt: null,
+        updatedAt: [2025, 1, 21, 9, 0, 0],
       };
 
       const uiFormat = toUIFormat(backendApp);
 
       expect(uiFormat.appliedAt).toBe('2025-01-15T10:00:00');
-      expect(uiFormat.lastUpdate).toBe('2025-01-20T14:30:00');
+      expect(uiFormat.lastUpdate).toBe('2025-01-21T09:00:00'); // updatedAt
+      expect(uiFormat.statusChangedAt).toBe('2025-01-20T14:30:00'); // statusChangedAt
     });
 
     it('should handle epoch seconds format from backend (java.time.Instant)', () => {
       // Backend returns dates as epoch seconds when using Instant type
       // 1769644800 = 2026-01-29T00:00:00.000Z
       // 1771993345 = 2026-02-25T04:22:25.000Z
+      // 1772079745 = 2026-02-26T04:22:25.000Z
       const backendApp = {
         id: 1,
         companyName: 'Test',
@@ -530,14 +534,15 @@ describe('dataAdapter', () => {
         status: 'APPLIED',
         appliedDate: 1769644800.0, // Epoch seconds
         statusChangedAt: 1771993345.0,
-        updatedAt: null,
+        updatedAt: 1772079745.0,
       };
 
       const uiFormat = toUIFormat(backendApp);
 
       // Should convert epoch seconds to ISO string
       expect(uiFormat.appliedAt).toBe('2026-01-29T00:00:00.000Z');
-      expect(uiFormat.lastUpdate).toBe('2026-02-25T04:22:25.000Z');
+      expect(uiFormat.lastUpdate).toBe('2026-02-26T04:22:25.000Z'); // updatedAt
+      expect(uiFormat.statusChangedAt).toBe('2026-02-25T04:22:25.000Z'); // statusChangedAt
     });
 
     it('should handle epoch seconds with fractional values', () => {
