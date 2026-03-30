@@ -31,6 +31,7 @@ import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateReques
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
@@ -122,12 +123,14 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
                 "+1-555-0123",
                 null, // appliedDate - let service use default
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         // When
@@ -176,12 +179,14 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Notes",
                 "Jane Smith",
                 "invalid-email", // Invalid email format
                 "+1-555-0123",
                 null, // appliedDate
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         // When & Then
@@ -304,6 +309,7 @@ class JobApplicationIntegrationTest {
                 85000.0,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.SENIOR, // level
                 "Updated notes",
                 "John Doe",
                 "john.doe@updated.com",
@@ -348,6 +354,7 @@ class JobApplicationIntegrationTest {
                 2000000.0,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                null, // level
                 "Hacking attempt",
                 "Hacker",
                 "hacker@evil.com",
@@ -414,7 +421,7 @@ class JobApplicationIntegrationTest {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         mockMvc.perform(put("/v1/job-applications/{id}", nonExistentId)
@@ -445,17 +452,19 @@ class JobApplicationIntegrationTest {
                 null,
                 null,
                 null,
+                null, // level
                 null,
                 null,
                 null,
                 null,
                 null, // appliedDate
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         // When & Then - All endpoints should require authentication
@@ -515,12 +524,14 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
                 "+1-555-0123",
                 null, // appliedDate
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         MvcResult createResult = mockMvc.perform(post("/v1/job-applications")
@@ -555,6 +566,7 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Updated after interview scheduled",
                 "Jane Smith",
                 "jane@example.com",
@@ -623,6 +635,7 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "Test location",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Updated notes",
                 "John Doe",
                 "john@example.com",
@@ -886,6 +899,7 @@ class JobApplicationIntegrationTest {
                 TEST_SALARY_MAX,
                 "Test location",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Updated notes",
                 "John Doe",
                 "john@example.com",

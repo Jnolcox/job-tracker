@@ -6,6 +6,7 @@ import java.time.Instant;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
 
@@ -23,6 +24,7 @@ public class JobApplicationFixture {
     private Double salaryMax = 150000.0;
     private String location = "San Francisco, CA";
     private RtoType rtoType = RtoType.HYBRID_3;
+    private Level level = Level.MID;
     private String notes = "Great company culture";
     private String jobUrl = "https://example.com/jobs/123";
     private String contactName = "Jane Smith";
@@ -103,6 +105,11 @@ public class JobApplicationFixture {
         return this;
     }
 
+    public JobApplicationFixture withLevel(Level level) {
+        this.level = level;
+        return this;
+    }
+
     public JobApplicationFixture withNotes(String notes) {
         this.notes = notes;
         return this;
@@ -177,6 +184,7 @@ public class JobApplicationFixture {
                 .salaryMax(salaryMax)
                 .location(location)
                 .rtoType(rtoType)
+                .level(level)
                 .notes(notes)
                 .jobUrl(jobUrl)
                 .contactName(contactName)
@@ -202,6 +210,7 @@ public class JobApplicationFixture {
                 salaryMax,
                 location,
                 rtoType,
+                level,
                 notes,
                 jobUrl,
                 contactName,

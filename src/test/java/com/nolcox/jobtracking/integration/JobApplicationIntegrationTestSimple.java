@@ -22,6 +22,7 @@ import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
@@ -102,12 +103,14 @@ class JobApplicationIntegrationTestSimple {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
                 "+1-555-0123",
                 null, // appliedDate
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         // When
@@ -238,6 +241,7 @@ class JobApplicationIntegrationTestSimple {
                 85000.0,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.SENIOR, // level
                 "Updated notes",
                 "John Doe",
                 "john.doe@updated.com",
@@ -281,6 +285,7 @@ class JobApplicationIntegrationTestSimple {
                 2000000.0,
                 null,
                 null,
+                null, // level
                 "Hacking attempt",
                 "Hacker",
                 "hacker@evil.com",
@@ -340,7 +345,7 @@ class JobApplicationIntegrationTestSimple {
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
                 "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
-                null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         assertThrows(ResourceNotFoundException.class, () -> 
@@ -385,12 +390,14 @@ class JobApplicationIntegrationTestSimple {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
                 "+1-555-0123",
                 null, // appliedDate
-                null  // statusChangedAt
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         JobApplicationResponse created = jobApplicationService.createApplication(createRequest, testUser.getId());
@@ -414,6 +421,7 @@ class JobApplicationIntegrationTestSimple {
                 TEST_SALARY_MAX,
                 "San Francisco, CA",
                 RtoType.HYBRID_3,
+                Level.MID, // level
                 "Updated after interview scheduled",
                 "Jane Smith",
                 "jane@example.com",

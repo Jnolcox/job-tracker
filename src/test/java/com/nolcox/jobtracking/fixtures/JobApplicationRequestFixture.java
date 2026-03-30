@@ -6,6 +6,7 @@ import java.time.Instant;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 
 public class JobApplicationRequestFixture {
@@ -19,6 +20,7 @@ public class JobApplicationRequestFixture {
     private Double salaryMax = 150000.0;
     private String location = "San Francisco, CA";
     private RtoType rtoType = RtoType.HYBRID_3;
+    private Level level = Level.MID;
     private String notes = "Great company culture";
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
@@ -71,6 +73,11 @@ public class JobApplicationRequestFixture {
 
     public JobApplicationRequestFixture withRtoType(RtoType rtoType) {
         this.rtoType = rtoType;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withLevel(Level level) {
+        this.level = level;
         return this;
     }
 
@@ -127,6 +134,7 @@ public class JobApplicationRequestFixture {
         this.salaryMax = null;
         this.location = null;
         this.rtoType = null;
+        this.level = null;
         this.notes = null;
         this.contactName = null;
         this.contactEmail = null;
@@ -182,12 +190,14 @@ public class JobApplicationRequestFixture {
                 salaryMax,
                 location,
                 rtoType,
+                level,
                 notes,
                 contactName,
                 contactEmail,
                 contactPhone,
                 appliedDate,
-                statusChangedAt
+                statusChangedAt,
+                interviewDate
         );
     }
 
@@ -205,6 +215,7 @@ public class JobApplicationRequestFixture {
                 salaryMax,
                 location,
                 rtoType,
+                level,
                 notes,
                 contactName,
                 contactEmail,
