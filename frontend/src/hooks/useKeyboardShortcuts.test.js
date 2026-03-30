@@ -496,5 +496,61 @@ describe('useKeyboardShortcuts', () => {
 
       expect(mockPreventDefault).toHaveBeenCalled();
     });
+
+    it('should prevent n key from typing into input when modal opens with focus', () => {
+      // This test verifies that shortcuts with preventDefault: true
+      // will stop the character from being typed into a subsequently focused input
+      const handler = jest.fn();
+      const shortcuts = [{ key: 'n', handler, preventDefault: true }];
+
+      renderHook(() => useKeyboardShortcuts(shortcuts));
+
+      const mockPreventDefault = jest.fn();
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'preventDefault', {
+        value: mockPreventDefault,
+        writable: false,
+      });
+
+      act(() => {
+        document.dispatchEvent(event);
+      });
+
+      // Handler should be called
+      expect(handler).toHaveBeenCalledTimes(1);
+      // preventDefault should be called to stop the 'n' from being typed
+      expect(mockPreventDefault).toHaveBeenCalled();
+    });
+
+    it('should NOT call preventDefault when option is not set', () => {
+      const handler = jest.fn();
+      const shortcuts = [{ key: 'n', handler }]; // No preventDefault option
+
+      renderHook(() => useKeyboardShortcuts(shortcuts));
+
+      const mockPreventDefault = jest.fn();
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, 'preventDefault', {
+        value: mockPreventDefault,
+        writable: false,
+      });
+
+      act(() => {
+        document.dispatchEvent(event);
+      });
+
+      // Handler should be called
+      expect(handler).toHaveBeenCalledTimes(1);
+      // preventDefault should NOT be called
+      expect(mockPreventDefault).not.toHaveBeenCalled();
+    });
   });
 });

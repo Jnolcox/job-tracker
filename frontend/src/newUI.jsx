@@ -148,7 +148,7 @@ export default function JobTracker() {
 
   // Global keyboard shortcuts (only active when modal is closed)
   useKeyboardShortcuts([
-    { key: 'n', handler: createNewApplication },
+    { key: 'n', handler: createNewApplication, preventDefault: true },
     { key: '/', handler: focusSearch, preventDefault: true },
     { key: '?', handler: toggleHelp },
     { key: 'Escape', handler: handleEscape },
