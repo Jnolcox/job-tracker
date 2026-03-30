@@ -3,7 +3,7 @@
  * @description Modal dialog for creating and editing job applications.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useKeyboardShortcuts } from "../../hooks";
 import {
   APPLICATION_STATUSES,
@@ -54,6 +54,9 @@ function getCurrentLocalDateTime() {
  * date handling. When saving, it passes both the form data and change context
  * to the parent to determine which date fields should be sent to the backend.
  *
+ * The company name input is automatically focused when the modal opens,
+ * allowing users to start typing immediately without needing to tab or click.
+ *
  * @param {Object} props - Component props
  * @param {Object} props.app - Application data to edit (or empty object for new)
  * @param {Function} props.onClose - Callback when modal should close
@@ -76,6 +79,15 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
   const [form, setForm] = useState({...app});
   // Store original app data for comparison (to detect user changes)
   const originalData = useRef(app);
+  // Ref for autofocusing the company input when modal opens
+  const companyInputRef = useRef(null);
+
+  // Focus the company input when the modal opens
+  useEffect(() => {
+    if (app && companyInputRef.current) {
+      companyInputRef.current.focus();
+    }
+  }, [app]);
 
   // Handle keyboard shortcuts for modal
   const handleSave = useCallback(() => {
@@ -165,6 +177,7 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
             <label style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
               <span style={labelStyle}>COMPANY *</span>
               <input
+                ref={companyInputRef}
                 type="text"
                 value={form.company || ''}
                 onChange={e => set("company", e.target.value)}
