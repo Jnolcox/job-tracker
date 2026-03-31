@@ -1,11 +1,13 @@
 package com.nolcox.jobtracking.fixtures;
 
+import java.time.Duration;
+import java.time.Instant;
+
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import com.nolcox.jobtracking.domain.entity.Level;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 
 public class JobApplicationRequestFixture {
 
@@ -14,7 +16,11 @@ public class JobApplicationRequestFixture {
     private String positionTitle = "Senior Software Engineer";
     private String jobDescription = "Exciting opportunity to work with cutting-edge technologies";
     private String jobUrl = "https://example.com/jobs/123";
-    private BigDecimal salaryExpectation = new BigDecimal("120000");
+    private Double salaryMin = 100000.0;
+    private Double salaryMax = 150000.0;
+    private String location = "San Francisco, CA";
+    private RtoType rtoType = RtoType.HYBRID_3;
+    private Level level = Level.MID;
     private String notes = "Great company culture";
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
@@ -22,7 +28,9 @@ public class JobApplicationRequestFixture {
     
     // Fields specific to update request
     private ApplicationStatus status = ApplicationStatus.APPLIED;
-    private LocalDateTime interviewDate = null;
+    private Instant appliedDate = null;
+    private Instant statusChangedAt = null;
+    private Instant interviewDate = null;
 
     public static JobApplicationRequestFixture aJobApplicationRequest() {
         return new JobApplicationRequestFixture();
@@ -48,13 +56,28 @@ public class JobApplicationRequestFixture {
         return this;
     }
 
-    public JobApplicationRequestFixture withSalaryExpectation(BigDecimal salaryExpectation) {
-        this.salaryExpectation = salaryExpectation;
+    public JobApplicationRequestFixture withSalaryMin(Double salaryMin) {
+        this.salaryMin = salaryMin;
         return this;
     }
 
-    public JobApplicationRequestFixture withSalaryExpectation(String salaryExpectation) {
-        this.salaryExpectation = new BigDecimal(salaryExpectation);
+    public JobApplicationRequestFixture withSalaryMax(Double salaryMax) {
+        this.salaryMax = salaryMax;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withLocation(String location) {
+        this.location = location;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withRtoType(RtoType rtoType) {
+        this.rtoType = rtoType;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withLevel(Level level) {
+        this.level = level;
         return this;
     }
 
@@ -83,21 +106,35 @@ public class JobApplicationRequestFixture {
         return this;
     }
 
-    public JobApplicationRequestFixture withInterviewDate(LocalDateTime interviewDate) {
+    public JobApplicationRequestFixture withAppliedDate(Instant appliedDate) {
+        this.appliedDate = appliedDate;
+        return this;
+    }
+
+    public JobApplicationRequestFixture withInterviewDate(Instant interviewDate) {
         this.interviewDate = interviewDate;
         return this;
     }
 
+    public JobApplicationRequestFixture withStatusChangedAt(Instant statusChangedAt) {
+        this.statusChangedAt = statusChangedAt;
+        return this;
+    }
+
     public JobApplicationRequestFixture withInterviewScheduled() {
-        this.status = ApplicationStatus.INTERVIEW_SCHEDULED;
-        this.interviewDate = LocalDateTime.now().plusDays(7);
+        this.status = ApplicationStatus.TECH_SCREEN;
+        this.interviewDate = Instant.now().plus(Duration.ofDays(7));
         return this;
     }
 
     public JobApplicationRequestFixture withMinimalData() {
         this.jobDescription = null;
         this.jobUrl = null;
-        this.salaryExpectation = null;
+        this.salaryMin = null;
+        this.salaryMax = null;
+        this.location = null;
+        this.rtoType = null;
+        this.level = null;
         this.notes = null;
         this.contactName = null;
         this.contactEmail = null;
@@ -123,14 +160,16 @@ public class JobApplicationRequestFixture {
     public JobApplicationRequestFixture forFrontendPosition() {
         this.positionTitle = "Frontend Developer";
         this.jobDescription = "Build modern web applications using React and TypeScript";
-        this.salaryExpectation = new BigDecimal("100000");
+        this.salaryMin = 90000.0;
+        this.salaryMax = 120000.0;
         return this;
     }
 
     public JobApplicationRequestFixture forBackendPosition() {
         this.positionTitle = "Backend Developer";
         this.jobDescription = "Design and implement scalable microservices using Java and Spring Boot";
-        this.salaryExpectation = new BigDecimal("110000");
+        this.salaryMin = 100000.0;
+        this.salaryMax = 130000.0;
         return this;
     }
 
@@ -145,12 +184,20 @@ public class JobApplicationRequestFixture {
                 companyName,
                 positionTitle,
                 jobDescription,
+                status,
                 jobUrl,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
+                location,
+                rtoType,
+                level,
                 notes,
                 contactName,
                 contactEmail,
-                contactPhone
+                contactPhone,
+                appliedDate,
+                statusChangedAt,
+                interviewDate
         );
     }
 
@@ -159,9 +206,16 @@ public class JobApplicationRequestFixture {
                 companyName,
                 positionTitle,
                 jobDescription,
+                jobUrl,
                 status,
+                appliedDate,
+                statusChangedAt,
                 interviewDate,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
+                location,
+                rtoType,
+                level,
                 notes,
                 contactName,
                 contactEmail,

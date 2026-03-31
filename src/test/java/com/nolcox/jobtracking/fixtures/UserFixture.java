@@ -3,8 +3,7 @@ package com.nolcox.jobtracking.fixtures;
 import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.User;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.Instant;
 
 public class UserFixture {
 
@@ -15,8 +14,8 @@ public class UserFixture {
     private String lastName = "Doe";
     private Role role = Role.USER;
     private boolean enabled = true;
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
+    private Instant updatedAt = Instant.now();
 
     public static UserFixture aUser() {
         return new UserFixture();
@@ -67,12 +66,12 @@ public class UserFixture {
         return this;
     }
 
-    public UserFixture withCreatedAt(LocalDateTime createdAt) {
+    public UserFixture withCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
         return this;
     }
 
-    public UserFixture withUpdatedAt(LocalDateTime updatedAt) {
+    public UserFixture withUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
         return this;
     }
@@ -88,7 +87,6 @@ public class UserFixture {
                 .enabled(enabled)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
-                .jobApplications(new ArrayList<>())
                 .build();
     }
 }

@@ -1,0 +1,11 @@
+/**
+ * @file index.js
+ * @description Barrel export for chart components.
+ */
+
+export { default as StageFunnel } from './StageFunnel';
+export { default as TimeInStageChart } from './TimeInStageChart';
+export { default as MaxTimePerStageChart } from './MaxTimePerStageChart';
+export { default as SalaryRangeChart } from './SalaryRangeChart';
+export { default as DayOfWeekBar } from './DayOfWeekBar';
+export { default as HourBar } from './HourBar';

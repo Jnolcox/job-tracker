@@ -1,9 +1,10 @@
 package com.nolcox.jobtracking.application.dto.response;
 
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.Level;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record JobApplicationResponse(
         Long id,
@@ -11,14 +12,19 @@ public record JobApplicationResponse(
         String positionTitle,
         String jobDescription,
         ApplicationStatus status,
-        LocalDateTime appliedDate,
-        LocalDateTime interviewDate,
-        BigDecimal salaryExpectation,
+        Instant appliedDate,
+        Instant interviewDate,
+        Double salaryMin,
+        Double salaryMax,
+        String location,
+        RtoType rtoType,
+        Level level,
         String notes,
         String jobUrl,
         String contactName,
         String contactEmail,
         String contactPhone,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt,
+        Instant statusChangedAt
 ) {}

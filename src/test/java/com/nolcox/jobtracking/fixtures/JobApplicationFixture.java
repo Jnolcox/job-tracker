@@ -1,12 +1,14 @@
 package com.nolcox.jobtracking.fixtures;
 
+import java.time.Duration;
+import java.time.Instant;
+
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Level;
+import com.nolcox.jobtracking.domain.entity.RtoType;
 import com.nolcox.jobtracking.domain.entity.User;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class JobApplicationFixture {
 
@@ -16,16 +18,21 @@ public class JobApplicationFixture {
     private String positionTitle = "Software Engineer";
     private String jobDescription = "Exciting opportunity to work with cutting-edge technologies";
     private ApplicationStatus status = ApplicationStatus.APPLIED;
-    private LocalDateTime appliedDate = LocalDateTime.now();
-    private LocalDateTime interviewDate = null;
-    private BigDecimal salaryExpectation = new BigDecimal("120000");
+    private Instant appliedDate = Instant.now();
+    private Instant interviewDate = null;
+    private Double salaryMin = 100000.0;
+    private Double salaryMax = 150000.0;
+    private String location = "San Francisco, CA";
+    private RtoType rtoType = RtoType.HYBRID_3;
+    private Level level = Level.MID;
     private String notes = "Great company culture";
     private String jobUrl = "https://example.com/jobs/123";
     private String contactName = "Jane Smith";
     private String contactEmail = "jane.smith@techcorp.com";
     private String contactPhone = "+1-555-0123";
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
+    private Instant updatedAt = Instant.now();
+    private Instant statusChangedAt = Instant.now();
     private Long version = 0L;
 
     public static JobApplicationFixture aJobApplication() {
@@ -62,29 +69,44 @@ public class JobApplicationFixture {
         return this;
     }
 
-    public JobApplicationFixture withAppliedDate(LocalDateTime appliedDate) {
+    public JobApplicationFixture withAppliedDate(Instant appliedDate) {
         this.appliedDate = appliedDate;
         return this;
     }
 
-    public JobApplicationFixture withInterviewDate(LocalDateTime interviewDate) {
+    public JobApplicationFixture withInterviewDate(Instant interviewDate) {
         this.interviewDate = interviewDate;
         return this;
     }
 
     public JobApplicationFixture withInterviewScheduled() {
-        this.status = ApplicationStatus.INTERVIEW_SCHEDULED;
-        this.interviewDate = LocalDateTime.now().plusDays(7);
+        this.status = ApplicationStatus.TECH_SCREEN;
+        this.interviewDate = Instant.now().plus(Duration.ofDays(7));
         return this;
     }
 
-    public JobApplicationFixture withSalaryExpectation(BigDecimal salaryExpectation) {
-        this.salaryExpectation = salaryExpectation;
+    public JobApplicationFixture withSalaryMin(Double salaryMin) {
+        this.salaryMin = salaryMin;
         return this;
     }
 
-    public JobApplicationFixture withSalaryExpectation(String salaryExpectation) {
-        this.salaryExpectation = new BigDecimal(salaryExpectation);
+    public JobApplicationFixture withSalaryMax(Double salaryMax) {
+        this.salaryMax = salaryMax;
+        return this;
+    }
+
+    public JobApplicationFixture withLocation(String location) {
+        this.location = location;
+        return this;
+    }
+
+    public JobApplicationFixture withRtoType(RtoType rtoType) {
+        this.rtoType = rtoType;
+        return this;
+    }
+
+    public JobApplicationFixture withLevel(Level level) {
+        this.level = level;
         return this;
     }
 
@@ -113,13 +135,18 @@ public class JobApplicationFixture {
         return this;
     }
 
-    public JobApplicationFixture withCreatedAt(LocalDateTime createdAt) {
+    public JobApplicationFixture withCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
         return this;
     }
 
-    public JobApplicationFixture withUpdatedAt(LocalDateTime updatedAt) {
+    public JobApplicationFixture withUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+        return this;
+    }
+
+    public JobApplicationFixture withStatusChangedAt(Instant statusChangedAt) {
+        this.statusChangedAt = statusChangedAt;
         return this;
     }
 
@@ -139,7 +166,7 @@ public class JobApplicationFixture {
     }
 
     public JobApplicationFixture accepted() {
-        this.status = ApplicationStatus.ACCEPTED;
+        this.status = ApplicationStatus.OFFER_ACCEPTED;
         return this;
     }
 
@@ -153,7 +180,11 @@ public class JobApplicationFixture {
                 .status(status)
                 .appliedDate(appliedDate)
                 .interviewDate(interviewDate)
-                .salaryExpectation(salaryExpectation)
+                .salaryMin(salaryMin)
+                .salaryMax(salaryMax)
+                .location(location)
+                .rtoType(rtoType)
+                .level(level)
                 .notes(notes)
                 .jobUrl(jobUrl)
                 .contactName(contactName)
@@ -161,6 +192,7 @@ public class JobApplicationFixture {
                 .contactPhone(contactPhone)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
+                .statusChangedAt(statusChangedAt)
                 .version(version)
                 .build();
     }
@@ -174,14 +206,19 @@ public class JobApplicationFixture {
                 status,
                 appliedDate,
                 interviewDate,
-                salaryExpectation,
+                salaryMin,
+                salaryMax,
+                location,
+                rtoType,
+                level,
                 notes,
                 jobUrl,
                 contactName,
                 contactEmail,
                 contactPhone,
                 createdAt,
-                updatedAt
+                updatedAt,
+                statusChangedAt
         );
     }
 }

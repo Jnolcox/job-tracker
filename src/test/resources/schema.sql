@@ -21,7 +21,11 @@ CREATE TABLE IF NOT EXISTS job_applications (
     applied_date TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL,
     interview_date TIMESTAMP,
-    salary_expectation DECIMAL(38,2),
+    salary_min DOUBLE,
+    salary_max DOUBLE,
+    location VARCHAR(255),
+    rto_type VARCHAR(50),
+    level VARCHAR(50),
     contact_name VARCHAR(255),
     contact_email VARCHAR(255),
     contact_phone VARCHAR(255),
@@ -29,5 +33,21 @@ CREATE TABLE IF NOT EXISTS job_applications (
     version BIGINT DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
+    status_changed_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- Application events table for audit trail tracking
+CREATE TABLE IF NOT EXISTS application_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    field_name VARCHAR(100),
+    old_value VARCHAR(500),
+    new_value VARCHAR(500),
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_events ON application_events(application_id, created_at);

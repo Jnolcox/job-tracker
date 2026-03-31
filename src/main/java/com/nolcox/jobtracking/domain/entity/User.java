@@ -12,8 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -51,14 +50,17 @@ public class User implements UserDetails {
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<JobApplication> jobApplications = new ArrayList<>();
+    // NOTE: The bidirectional @OneToMany relationship to JobApplication was removed
+    // because it causes issues with Hibernate's persistence context management during
+    // application deletion. Job applications are accessed through JobApplicationRepository
+    // instead of navigating from User. This is a cleaner design that follows the
+    // "favor aggregates over entity relationships" principle.
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

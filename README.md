@@ -1,10 +1,9 @@
-Job Tracking Application
 
 ![Dashboard](https://github.com/Jnolcox/job-tracker/blob/test-account/img.png)
 
 A full-stack job application tracking system with React frontend and Spring Boot backend, featuring JWT-based authentication and comprehensive job application management.
 
-## 🚀 Features
+## Features
 
 - **Full-Stack Architecture**: React frontend with Spring Boot REST API backend
 - **User Authentication**: Secure JWT-based authentication system with role-based access
@@ -16,7 +15,7 @@ A full-stack job application tracking system with React frontend and Spring Boot
 - **Default Test User**: Pre-configured test credentials for easy development/testing
 - **API Documentation**: Integrated Swagger UI for API exploration
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Backend
 - **Language**: Java 17 (Maven compiler targets Java 22)
@@ -36,7 +35,7 @@ A full-stack job application tracking system with React frontend and Spring Boot
 - **Authentication**: Context API for state management
 - **Build Tool**: Create React App
 
-## 📊 Architecture Diagrams
+## Architecture Diagrams
 
 ### System Architecture
 ```mermaid
@@ -258,7 +257,7 @@ stateDiagram-v2
     end note
 ```
 
-## 🏗 Project Structure
+## Project Structure
 
 ```
 jobtracking/
@@ -324,7 +323,7 @@ jobtracking/
 └── pom.xml                    # Maven configuration
 ```
 
-## 🚦 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -362,12 +361,12 @@ Frontend will start on `http://localhost:3000`
    - **Swagger UI**: http://localhost:8080/api/swagger-ui.html
    - **H2 Console**: http://localhost:8080/api/h2-console
 
-### 🔑 Default Test Credentials
+### Default Test Credentials
 
 The application automatically creates a test user on startup:
 
-- **Email**: `test@example.com`
-- **Password**: `password123`
+- **Email**: `test@example.com` and `job search eamil`
+- **Password**: `password123` and `(sakHoh-sezvo0-gehner)` for personal
 
 The test user comes with 5 sample job applications across different statuses for immediate testing.
 
@@ -398,7 +397,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 ```
 
-## 📡 API Documentation
+## API Documentation
 
 ### Base URLs
 - **Backend**: `http://localhost:8080/api`
@@ -434,7 +433,7 @@ curl -X GET http://localhost:8080/api/v1/job-applications \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-## 📊 Application Statuses
+## Application Statuses
 
 The system tracks job applications through these statuses:
 - `APPLIED` - Initial application submitted
@@ -446,7 +445,7 @@ The system tracks job applications through these statuses:
 - `REJECTED` - Application rejected
 - `WITHDRAWN` - Application withdrawn
 
-## 🔐 Security Features
+## Security Features
 
 - **JWT Authentication**: 24-hour token expiration
 - **Password Encryption**: BCrypt hashing
@@ -455,7 +454,7 @@ The system tracks job applications through these statuses:
 - **Request Validation**: Comprehensive input validation
 - **Error Handling**: Standardized error responses
 
-## 🧪 Testing
+## Testing
 
 ### Backend Testing
 
@@ -505,7 +504,7 @@ npm test                    # Run React tests
 npm run test:coverage      # Generate coverage report
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Building for Production
 
@@ -532,7 +531,7 @@ EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app.jar"]
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Backend Configuration (`application.yml`)
 ```yaml
@@ -562,7 +561,7 @@ logging:
 - **Environment Variables**: Can be configured via `.env` files
 - **CORS**: Backend configured to accept requests from `localhost:3000`
 
-## 📈 Recent Updates
+## Recent Updates
 
 ### Major Features Added
 1. **Complete React Frontend**: Modern, responsive UI with authentication
@@ -591,7 +590,7 @@ logging:
 7. **Integration Tests**: Updated status code expectations (403 Forbidden vs 404 Not Found)
 8. **Unit Test Isolation**: Converted @WebMvcTest to @ExtendWith(MockitoExtension.class) for cleaner tests
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 ### Planned Features
 - [ ] **File Upload**: Resume/cover letter attachments
@@ -609,7 +608,7 @@ logging:
 - [ ] **Monitoring**: Application health metrics
 - [ ] **CI/CD Pipeline**: Automated testing and deployment
 
-## 🤝 Contributing
+## Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
@@ -624,11 +623,11 @@ logging:
 - Use conventional commit messages
 - Update documentation for new features
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## Support
 
 - **Issues**: Report bugs on GitHub Issues
 - **Documentation**: Check Swagger UI at `/api/swagger-ui.html`
@@ -637,4 +636,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-**Built with ❤️ using Spring Boot and React**
+**Built with Spring Boot and React**

@@ -12,8 +12,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "job_applications")
@@ -50,13 +49,28 @@ public class JobApplication {
     private ApplicationStatus status;
 
     @Column(name = "applied_date", nullable = false)
-    private LocalDateTime appliedDate;
+    private Instant appliedDate;
 
     @Column(name = "interview_date")
-    private LocalDateTime interviewDate;
+    private Instant interviewDate;
 
-    @Column(name = "salary_expectation")
-    private BigDecimal salaryExpectation;
+    @Column(name = "salary_min")
+    private Double salaryMin;
+
+    @Column(name = "salary_max")
+    private Double salaryMax;
+
+    @Column(name = "location")
+    @Size(max = 255)
+    private String location;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rto_type")
+    private RtoType rtoType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "level")
+    private Level level;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
@@ -76,12 +90,21 @@ public class JobApplication {
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
+
+    @Column(name = "status_changed_at")
+    private Instant statusChangedAt;
 
     @Version
     private Long version;
+
+    // NOTE: The bidirectional @OneToMany relationship to ApplicationEvent was removed
+    // to avoid Hibernate persistence context issues during application deletion within
+    // transactional tests. Events are cascade-deleted at the database level via
+    // ON DELETE CASCADE in the schema. Events are accessed through
+    // ApplicationEventRepository instead of navigating from JobApplication.
 }

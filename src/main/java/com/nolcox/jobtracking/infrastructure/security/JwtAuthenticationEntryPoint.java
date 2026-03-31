@@ -14,7 +14,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 HttpStatus.UNAUTHORIZED,
                 "Authentication Failed",
                 "You need to be authenticated to access this resource",
-                LocalDateTime.now()
+                Instant.now()
         );
 
         objectMapper.writeValue(response.getOutputStream(), errorResponse);

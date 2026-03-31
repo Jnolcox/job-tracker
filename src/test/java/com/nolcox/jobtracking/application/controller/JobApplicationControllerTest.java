@@ -2,14 +2,20 @@ package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.service.ApplicationEventService;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.EventType;
 import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.fixtures.ApplicationEventFixture;
 import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
 import com.nolcox.jobtracking.fixtures.JobApplicationRequestFixture;
 import com.nolcox.jobtracking.fixtures.UserFixture;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
+import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,6 +30,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +46,9 @@ class JobApplicationControllerTest {
 
     @Mock
     private JobApplicationService applicationService;
+
+    @Mock
+    private ApplicationEventService eventService;
 
     @InjectMocks
     private JobApplicationController jobApplicationController;
@@ -238,7 +249,7 @@ class JobApplicationControllerTest {
             Long applicationId = 1L;
 
             // When
-            ResponseEntity<Void> response = 
+            ResponseEntity<Void> response =
                     jobApplicationController.deleteApplication(applicationId, authentication);
 
             // Then
@@ -258,6 +269,91 @@ class JobApplicationControllerTest {
             assertThatThrownBy(() -> jobApplicationController.deleteApplication(applicationId, authentication))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage("Cannot delete application");
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Application Events Tests")
+    class GetApplicationEventsTests {
+
+        @Test
+        @DisplayName("Should return events for authorized user's application")
+        void shouldReturnEventsForAuthorizedUserApplication() {
+            // Given
+            Long applicationId = 1L;
+            List<ApplicationEventResponse> events = List.of(
+                    ApplicationEventFixture.statusChangedEvent()
+                            .withId(2L)
+                            .withCreatedAt(Instant.now())
+                            .buildResponse(),
+                    ApplicationEventFixture.applicationCreatedEvent()
+                            .withId(1L)
+                            .withCreatedAt(Instant.now().minusSeconds(3600))
+                            .buildResponse()
+            );
+
+            when(eventService.getEventsForApplication(applicationId, testUser.getId()))
+                    .thenReturn(events);
+
+            // When
+            ResponseEntity<List<ApplicationEventResponse>> response =
+                    jobApplicationController.getApplicationEvents(applicationId, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).hasSize(2);
+            assertThat(response.getBody().get(0).eventType()).isEqualTo(EventType.STATUS_CHANGED);
+            assertThat(response.getBody().get(1).eventType()).isEqualTo(EventType.APPLICATION_CREATED);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no events exist")
+        void shouldReturnEmptyListWhenNoEventsExist() {
+            // Given
+            Long applicationId = 1L;
+
+            when(eventService.getEventsForApplication(applicationId, testUser.getId()))
+                    .thenReturn(List.of());
+
+            // When
+            ResponseEntity<List<ApplicationEventResponse>> response =
+                    jobApplicationController.getApplicationEvents(applicationId, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when application not found")
+        void shouldThrowResourceNotFoundExceptionWhenApplicationNotFound() {
+            // Given
+            Long applicationId = 999L;
+
+            when(eventService.getEventsForApplication(applicationId, testUser.getId()))
+                    .thenThrow(new ResourceNotFoundException("Application not found"));
+
+            // When & Then
+            assertThatThrownBy(() -> jobApplicationController.getApplicationEvents(applicationId, authentication))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Application not found");
+        }
+
+        @Test
+        @DisplayName("Should throw UnauthorizedException when user not authorized")
+        void shouldThrowUnauthorizedExceptionWhenUserNotAuthorized() {
+            // Given
+            Long applicationId = 1L;
+
+            when(eventService.getEventsForApplication(applicationId, testUser.getId()))
+                    .thenThrow(new UnauthorizedException("Access denied"));
+
+            // When & Then
+            assertThatThrownBy(() -> jobApplicationController.getApplicationEvents(applicationId, authentication))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessage("Access denied");
         }
     }
 }

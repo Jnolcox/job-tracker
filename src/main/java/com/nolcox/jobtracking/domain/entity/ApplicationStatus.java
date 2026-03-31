@@ -2,11 +2,21 @@ package com.nolcox.jobtracking.domain.entity;
 
 public enum ApplicationStatus {
     APPLIED,
-    REVIEWING,
-    INTERVIEW_SCHEDULED,
-    INTERVIEWED,
+    RECRUITER_SCREEN,
+    TECH_SCREEN,
+    TAKE_HOME,          
+    SYSTEM_DESIGN,
+    TECHNICAL_I,
+    TECHNICAL_II,
+    REFERENCE_CHECK,
     OFFER_RECEIVED,
-    ACCEPTED,
+    NEGOTIATING,
+    OFFER_ACCEPTED,
+    OFFER_DECLINED,
+    OFFER_RESCINDED,
     REJECTED,
-    WITHDRAWN
+    WITHDRAWN,
+    ON_HOLD,
+    WAITING_FOR_RESPONSE,
+    GHOSTED
 }

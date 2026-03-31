@@ -1,16 +1,10 @@
 package com.nolcox.jobtracking.integration;
 
-import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
-import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
-import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
-import com.nolcox.jobtracking.application.service.JobApplicationService;
-import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-import com.nolcox.jobtracking.domain.entity.JobApplication;
-import com.nolcox.jobtracking.domain.entity.Role;
-import com.nolcox.jobtracking.domain.entity.User;
-import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
-import com.nolcox.jobtracking.domain.repository.UserRepository;
-import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import java.time.Duration;
+import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,11 +16,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
+import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.service.JobApplicationService;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Level;
+import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.RtoType;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.domain.repository.UserRepository;
+import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
 /**
  * Simplified Integration tests for Job Application functionality.
@@ -55,7 +58,8 @@ class JobApplicationIntegrationTestSimple {
     private final String TEST_COMPANY = "Tech Corp";
     private final String TEST_POSITION = "Software Engineer";
     private final String TEST_DESCRIPTION = "Exciting opportunity to work with cutting-edge technology";
-    private final BigDecimal TEST_SALARY = new BigDecimal("75000.00");
+    private final Double TEST_SALARY_MIN = 70000.0;
+    private final Double TEST_SALARY_MAX = 80000.0;
 
     @BeforeEach
     void setUp() {
@@ -93,12 +97,20 @@ class JobApplicationIntegrationTestSimple {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
+                ApplicationStatus.APPLIED,
                 "https://example.com/job",
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
+                Level.MID, // level
                 "Looks like a great opportunity",
                 "Jane Smith",
                 "jane.smith@techcorp.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null, // appliedDate
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         // When
@@ -111,7 +123,8 @@ class JobApplicationIntegrationTestSimple {
         assertThat(response.positionTitle()).isEqualTo(TEST_POSITION);
         assertThat(response.jobDescription()).isEqualTo(TEST_DESCRIPTION);
         assertThat(response.status()).isEqualTo(ApplicationStatus.APPLIED);
-        assertThat(response.salaryExpectation()).isEqualTo(TEST_SALARY);
+        assertThat(response.salaryMin()).isEqualTo(TEST_SALARY_MIN);
+        assertThat(response.salaryMax()).isEqualTo(TEST_SALARY_MAX);
         assertThat(response.appliedDate()).isNotNull();
         assertThat(response.createdAt()).isNotNull();
 
@@ -154,7 +167,7 @@ class JobApplicationIntegrationTestSimple {
         jobApplicationRepository.save(appliedApp);
 
         JobApplication interviewApp = createJobApplication(testUser, "Company B", "Role B");
-        interviewApp.setStatus(ApplicationStatus.INTERVIEW_SCHEDULED);
+        interviewApp.setStatus(ApplicationStatus.TECH_SCREEN);
         jobApplicationRepository.save(interviewApp);
 
         // When - Filter by APPLIED status
@@ -205,7 +218,7 @@ class JobApplicationIntegrationTestSimple {
         JobApplication otherApplication = createJobApplication(otherUser, TEST_COMPANY, TEST_POSITION);
 
         // When & Then - Try to access with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.getApplication(otherApplication.getId(), testUser.getId()));
     }
 
@@ -219,9 +232,16 @@ class JobApplicationIntegrationTestSimple {
                 "Updated Company",
                 "Updated Position",
                 "Updated description",
-                ApplicationStatus.INTERVIEW_SCHEDULED,
-                LocalDateTime.now().plusDays(3),
-                new BigDecimal("80000.00"),
+                "https://example.com/updated-job",
+                ApplicationStatus.TECH_SCREEN,
+                null,
+                null,
+                Instant.now().plus(Duration.ofDays(3)),
+                75000.0,
+                85000.0,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
+                Level.SENIOR, // level
                 "Updated notes",
                 "John Doe",
                 "john.doe@updated.com",
@@ -235,14 +255,15 @@ class JobApplicationIntegrationTestSimple {
         // Then
         assertThat(response.companyName()).isEqualTo("Updated Company");
         assertThat(response.positionTitle()).isEqualTo("Updated Position");
-        assertThat(response.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
-        assertThat(response.salaryExpectation()).isEqualTo(new BigDecimal("80000.00"));
+        assertThat(response.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
+        assertThat(response.salaryMin()).isEqualTo(75000.0);
+        assertThat(response.salaryMax()).isEqualTo(85000.0);
 
         // Verify in database
         JobApplication updatedApplication = jobApplicationRepository.findById(application.getId()).orElse(null);
         assertThat(updatedApplication).isNotNull();
         assertThat(updatedApplication.getCompanyName()).isEqualTo("Updated Company");
-        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(updatedApplication.getStatus()).isEqualTo(ApplicationStatus.TECH_SCREEN);
     }
 
     @Test
@@ -255,9 +276,16 @@ class JobApplicationIntegrationTestSimple {
                 "Hacked Company",
                 "Hacked Position",
                 "Should not work",
+                null,
                 ApplicationStatus.REJECTED,
                 null,
-                new BigDecimal("1000000.00"),
+                null,
+                null,
+                1000000.0,
+                2000000.0,
+                null,
+                null,
+                null, // level
                 "Hacking attempt",
                 "Hacker",
                 "hacker@evil.com",
@@ -265,7 +293,7 @@ class JobApplicationIntegrationTestSimple {
         );
 
         // When & Then - Try to update with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.updateApplication(otherApplication.getId(), updateRequest, testUser.getId()));
 
         // Verify original data is unchanged
@@ -297,7 +325,7 @@ class JobApplicationIntegrationTestSimple {
         Long applicationId = otherApplication.getId();
 
         // When & Then - Try to delete with different user's ID
-        assertThrows(ResourceNotFoundException.class, () -> 
+        assertThrows(UnauthorizedException.class, () ->
             jobApplicationService.deleteApplication(applicationId, testUser.getId()));
 
         // Then - Verify application still exists
@@ -316,8 +344,8 @@ class JobApplicationIntegrationTestSimple {
 
         // When & Then - PUT
         JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
-                "Company", "Position", "Description", ApplicationStatus.APPLIED,
-                null, null, null, null, null, null
+                "Company", "Position", "Description", null, ApplicationStatus.APPLIED,
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
 
         assertThrows(ResourceNotFoundException.class, () -> 
@@ -356,12 +384,20 @@ class JobApplicationIntegrationTestSimple {
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
+                ApplicationStatus.APPLIED,
                 "https://example.com/job",
-                TEST_SALARY,
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
+                Level.MID, // level
                 "Initial notes",
                 "Jane Smith",
                 "jane@example.com",
-                "+1-555-0123"
+                "+1-555-0123",
+                null, // appliedDate
+                null, // statusChangedAt
+                null  // interviewDate
         );
 
         JobApplicationResponse created = jobApplicationService.createApplication(createRequest, testUser.getId());
@@ -372,13 +408,20 @@ class JobApplicationIntegrationTestSimple {
         assertThat(read.companyName()).isEqualTo(TEST_COMPANY);
 
         // Step 3: Update the application
-        JobApplicationUpdateRequest updateRequest = new JobApplicationUpdateRequest(
+        JobApplicationUpdateRequest updateRequest2 = new JobApplicationUpdateRequest(
                 TEST_COMPANY,
                 TEST_POSITION,
                 TEST_DESCRIPTION,
-                ApplicationStatus.INTERVIEW_SCHEDULED,
-                LocalDateTime.now().plusDays(2),
-                TEST_SALARY,
+                "https://example.com/job",
+                ApplicationStatus.TECH_SCREEN,
+                null,
+                null,
+                Instant.now().plus(Duration.ofDays(2)),
+                TEST_SALARY_MIN,
+                TEST_SALARY_MAX,
+                "San Francisco, CA",
+                RtoType.HYBRID_3,
+                Level.MID, // level
                 "Updated after interview scheduled",
                 "Jane Smith",
                 "jane@example.com",
@@ -386,12 +429,12 @@ class JobApplicationIntegrationTestSimple {
         );
 
         JobApplicationResponse updated = jobApplicationService.updateApplication(
-                created.id(), updateRequest, testUser.getId());
-        assertThat(updated.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+                created.id(), updateRequest2, testUser.getId());
+        assertThat(updated.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
 
         // Step 4: Verify the update
         JobApplicationResponse verified = jobApplicationService.getApplication(created.id(), testUser.getId());
-        assertThat(verified.status()).isEqualTo(ApplicationStatus.INTERVIEW_SCHEDULED);
+        assertThat(verified.status()).isEqualTo(ApplicationStatus.TECH_SCREEN);
 
         // Step 5: Delete the application
         jobApplicationService.deleteApplication(created.id(), testUser.getId());
@@ -409,8 +452,11 @@ class JobApplicationIntegrationTestSimple {
                 .positionTitle(positionTitle)
                 .jobDescription("Test job description")
                 .status(ApplicationStatus.APPLIED)
-                .appliedDate(LocalDateTime.now())
-                .salaryExpectation(TEST_SALARY)
+                .appliedDate(Instant.now())
+                .salaryMin(TEST_SALARY_MIN)
+                .salaryMax(TEST_SALARY_MAX)
+                .location("San Francisco, CA")
+                .rtoType(RtoType.HYBRID_3)
                 .notes("Test notes")
                 .build();
         return jobApplicationRepository.save(application);

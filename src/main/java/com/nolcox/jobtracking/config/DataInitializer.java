@@ -1,20 +1,23 @@
 package com.nolcox.jobtracking.config;
 
-import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
-import com.nolcox.jobtracking.domain.entity.JobApplication;
-import com.nolcox.jobtracking.domain.entity.Role;
-import com.nolcox.jobtracking.domain.entity.User;
-import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
-import com.nolcox.jobtracking.domain.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Duration;
+import java.time.Instant;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
+import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.entity.Role;
+import com.nolcox.jobtracking.domain.entity.RtoType;
+import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
+import com.nolcox.jobtracking.domain.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
@@ -45,7 +48,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             
             userRepository.save(testUser);
-            log.info("✅ Created default test user: test@example.com / password123");
+            log.info("Created default test user: test@example.com / password123");
         }
     }
 
@@ -62,8 +65,11 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Senior Software Engineer")
                     .jobDescription("Exciting opportunity to work with cutting-edge technologies including React, Spring Boot, and AWS")
                     .status(ApplicationStatus.APPLIED)
-                    .appliedDate(LocalDateTime.now().minusDays(5))
-                    .salaryExpectation(new BigDecimal("120000"))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(5)))
+                    .salaryMin(110000.0)
+                    .salaryMax(130000.0)
+                    .location("San Francisco, CA")
+                    .rtoType(RtoType.HYBRID_2)
                     .notes("Great company culture, remote-friendly")
                     .jobUrl("https://techcorp.com/jobs/senior-engineer")
                     .contactName("Jane Smith")
@@ -76,10 +82,13 @@ public class DataInitializer implements CommandLineRunner {
                     .companyName("StartupXYZ")
                     .positionTitle("Full Stack Developer")
                     .jobDescription("Join our fast-growing startup and help build the next generation platform")
-                    .status(ApplicationStatus.INTERVIEW_SCHEDULED)
-                    .appliedDate(LocalDateTime.now().minusDays(8))
-                    .interviewDate(LocalDateTime.now().plusDays(2))
-                    .salaryExpectation(new BigDecimal("95000"))
+                    .status(ApplicationStatus.TECH_SCREEN)
+                    .appliedDate(Instant.now().minus(Duration.ofDays(8)))
+                    .interviewDate(Instant.now().plus(Duration.ofDays(2)))
+                    .salaryMin(90000.0)
+                    .salaryMax(100000.0)
+                    .location("Austin, TX")
+                    .rtoType(RtoType.REMOTE)
                     .notes("Interview scheduled for Thursday at 2 PM")
                     .jobUrl("https://startupxyz.com/careers")
                     .contactName("Mike Johnson")
@@ -92,8 +101,11 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Frontend Developer")
                     .jobDescription("Work on user-facing features for millions of users")
                     .status(ApplicationStatus.REJECTED)
-                    .appliedDate(LocalDateTime.now().minusDays(15))
-                    .salaryExpectation(new BigDecimal("110000"))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(15)))
+                    .salaryMin(100000.0)
+                    .salaryMax(120000.0)
+                    .location("Seattle, WA")
+                    .rtoType(RtoType.HYBRID_3)
                     .notes("Not selected for this role, but they encouraged me to apply again in the future")
                     .jobUrl("https://bigtech.com/jobs/frontend-dev")
                     .contactName("Sarah Wilson")
@@ -106,9 +118,12 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("Backend Engineer")
                     .jobDescription("Build scalable financial systems and APIs")
                     .status(ApplicationStatus.OFFER_RECEIVED)
-                    .appliedDate(LocalDateTime.now().minusDays(20))
-                    .interviewDate(LocalDateTime.now().minusDays(3))
-                    .salaryExpectation(new BigDecimal("125000"))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(20)))
+                    .interviewDate(Instant.now().minus(Duration.ofDays(3)))
+                    .salaryMin(120000.0)
+                    .salaryMax(140000.0)
+                    .location("New York, NY")
+                    .rtoType(RtoType.ONSITE)
                     .notes("Received offer! Need to respond by end of week. Great benefits package.")
                     .jobUrl("https://financeflow.com/careers/backend")
                     .contactName("David Chen")
@@ -122,8 +137,11 @@ public class DataInitializer implements CommandLineRunner {
                     .positionTitle("DevOps Engineer")
                     .jobDescription("Manage cloud infrastructure and CI/CD pipelines")
                     .status(ApplicationStatus.APPLIED)
-                    .appliedDate(LocalDateTime.now().minusDays(2))
-                    .salaryExpectation(new BigDecimal("115000"))
+                    .appliedDate(Instant.now().minus(Duration.ofDays(2)))
+                    .salaryMin(105000.0)
+                    .salaryMax(125000.0)
+                    .location("Denver, CO")
+                    .rtoType(RtoType.HYBRID_4)
                     .notes("Applied through LinkedIn, waiting for response")
                     .jobUrl("https://cloudsolutions.com/jobs/devops")
                     .contactName("Lisa Rodriguez")
@@ -136,7 +154,7 @@ public class DataInitializer implements CommandLineRunner {
             jobApplicationRepository.save(app4);
             jobApplicationRepository.save(app5);
             
-            log.info("✅ Created 5 sample job applications for test user");
+            log.info("Created 5 sample job applications for test user");
         }
     }
 }

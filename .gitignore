@@ -45,3 +45,4 @@ build/
 /.idea/misc.xml
 /.idea/dictionaries/project.xml
 /.idea/vcs.xml
+.claude/agents/

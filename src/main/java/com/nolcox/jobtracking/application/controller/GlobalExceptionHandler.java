@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "Resource Not Found",
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Validation Failed",
                 errors,
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN,
                 "Access Denied",
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
                     HttpStatus.UNAUTHORIZED,
                     "Authentication Failed",
                     ex.getMessage(),
-                    LocalDateTime.now()
+                    Instant.now()
             );
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
@@ -84,7 +84,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Business Logic Error",
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
                 "An unexpected error occurred",
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 }
