@@ -14,11 +14,13 @@ import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapt
  * @component AppTable
  * @description Table displaying job applications with sorting, filtering, and search.
  * Supports keyboard navigation with visual row selection.
+ * Company names are clickable to open a view modal.
  *
  * @param {Object} props - Component props
  * @param {Array} props.apps - Array of application objects
  * @param {Function} props.onEdit - Callback when edit is triggered
  * @param {Function} props.onDelete - Callback when delete is triggered
+ * @param {Function} [props.onView] - Callback when company name is clicked to view details
  * @param {React.RefObject} props.searchInputRef - Ref for the search input (for focus shortcut)
  * @param {number} [props.selectedIndex=-1] - Currently selected row index
  * @param {Function} props.onSelectionChange - Callback when selection changes
@@ -29,6 +31,7 @@ import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapt
  *   apps={applications}
  *   onEdit={handleEdit}
  *   onDelete={handleDelete}
+ *   onView={handleView}
  *   searchInputRef={searchRef}
  *   selectedIndex={selectedIdx}
  *   onSelectionChange={setSelectedIdx}
@@ -41,6 +44,7 @@ export default function AppTable({
   apps,
   onEdit,
   onDelete,
+  onView,
   searchInputRef,
   selectedIndex = -1,
   onSelectionChange,
@@ -233,7 +237,23 @@ export default function AppTable({
                   onMouseEnter={e => e.currentTarget.style.background = hoverBackground}
                   onMouseLeave={e => e.currentTarget.style.background = isSelected ? selectedBackground : baseBackground}
                 >
-                  <td style={{ padding: "10px 14px", color: "#F9FAFB", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 600 }}>{a.company}</td>
+                  <td style={{ padding: "10px 14px" }}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); if (onView) onView(a); }}
+                      style={{
+                        color: "#F9FAFB",
+                        fontFamily: "'DM Mono',monospace",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        textDecoration: "none",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                      onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                    >
+                      {a.company}
+                    </span>
+                  </td>
                   <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.role}</td>
                   <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10 }}>{a.level ? LEVEL_LABELS[a.level] : "\u2014"}</td>
                   <td style={{ padding: "10px 14px" }}><Badge status={a.status}/></td>

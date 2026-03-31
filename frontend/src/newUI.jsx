@@ -26,7 +26,7 @@ import {
   HourBar,
 } from "./components/charts";
 import { AppTable } from "./components/table";
-import { ApplicationModal } from "./components/modal";
+import { ApplicationModal, ApplicationViewModal } from "./components/modal";
 
 /**
  * @component JobTracker
@@ -50,6 +50,7 @@ export default function JobTracker() {
   const { toggleHelp } = useKeyboardShortcutContext();
   const [apps, setApps] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -107,10 +108,12 @@ export default function JobTracker() {
   const handleEscape = useCallback(() => {
     if (editing) {
       setEditing(null);
+    } else if (viewing) {
+      setViewing(null);
     } else if (selectedIndex !== -1) {
       setSelectedIndex(-1);
     }
-  }, [editing, selectedIndex]);
+  }, [editing, viewing, selectedIndex]);
 
   // Handle navigation down (j or ArrowDown)
   const handleNavigateDown = useCallback(() => {
@@ -159,7 +162,7 @@ export default function JobTracker() {
     { key: 'Enter', handler: handleEditSelected },
     { key: 'Delete', handler: handleDeleteSelected },
     { key: 'Backspace', handler: handleDeleteSelected },
-  ], { enabled: !editing && !loading });
+  ], { enabled: !editing && !viewing && !loading });
 
   // Fetch applications on mount
   useEffect(() => {
@@ -376,20 +379,20 @@ export default function JobTracker() {
         )}
 
         {/* Stat Cards -- 5 x 2 grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}>
+        {/* <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}> */}
           {/* Row 1 */}
-          <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" />
-          <StatCard label="Response Rate" value={`${responseRate}%`} sub="moved past Applied" accent="#A78BFA" />
-          <StatCard label="Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" />
-          <StatCard label="Avg Days Active" value={`${avgDays}d`} sub="per application" accent="#F59E0B" />
-          <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference check`} accent="#34D399" />
+          {/* <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" /> */}
+          {/* <StatCard label="Response Rate" value={`${responseRate}%`} sub="moved past Applied" accent="#A78BFA" /> */}
+          {/* <StatCard label="Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" /> */}
+          {/* <StatCard label="Avg Days Active" value={`${avgDays}d`} sub="per application" accent="#F59E0B" /> */}
+          {/* <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference check`} accent="#34D399" /> */}
           {/* Row 2 */}
-          <StatCard label="Offer Rate" value={`${offerRate}%`} sub={`${offers} of ${apps.length} apps`} accent="#10B981" />
-          <StatCard label="Phone Screen %" value={`${phoneScreenRate}%`} sub="recruiter conversion" accent="#38BDF8" />
-          <StatCard label="Rejected" value={rejected} sub={`${Math.round((rejected / apps.length) * 100)}% rejection rate`} accent="#F87171" />
-          <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" />
-          <StatCard label="Stalest App" value={`${maxStageDays}d`} sub={stalestApp ? stalestApp.company : "\u2014"} accent="#E879F9" />
-        </div>
+          {/* <StatCard label="Offer Rate" value={`${offerRate}%`} sub={`${offers} of ${apps.length} apps`} accent="#10B981" /> */}
+          {/* <StatCard label="Phone Screen %" value={`${phoneScreenRate}%`} sub="recruiter conversion" accent="#38BDF8" /> */}
+          {/* <StatCard label="Rejected" value={rejected} sub={`${Math.round((rejected / apps.length) * 100)}% rejection rate`} accent="#F87171" /> */}
+          {/* <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" /> */}
+          {/* <StatCard label="Stalest App" value={`${maxStageDays}d`} sub={stalestApp ? stalestApp.company : "\u2014"} accent="#E879F9" /> */}
+        {/* </div> */}
 
         {/* Charts row 1 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -428,6 +431,7 @@ export default function JobTracker() {
           apps={apps}
           onEdit={setEditing}
           onDelete={handleDelete}
+          onView={setViewing}
           searchInputRef={searchInputRef}
           selectedIndex={selectedIndex}
           onSelectionChange={setSelectedIndex}
@@ -453,6 +457,14 @@ export default function JobTracker() {
           onClose={() => setEditing(null)}
           onSave={handleSave}
           saving={saving}
+        />
+      )}
+
+      {viewing && (
+        <ApplicationViewModal
+          key={viewing.id}
+          app={viewing}
+          onClose={() => setViewing(null)}
         />
       )}
     </>

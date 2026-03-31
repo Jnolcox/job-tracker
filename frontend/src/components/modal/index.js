@@ -4,3 +4,4 @@
  */
 
 export { default as ApplicationModal } from './ApplicationModal';
+export { default as ApplicationViewModal } from './ApplicationViewModal';
