@@ -43,12 +43,18 @@ export const authAPI = {
 
 // Job Applications API
 export const jobApplicationsAPI = {
-  getAll: (page = API_CONFIG.PAGINATION.DEFAULT_PAGE, size = API_CONFIG.PAGINATION.DEFAULT_SIZE) => 
+  getAll: (page = API_CONFIG.PAGINATION.DEFAULT_PAGE, size = API_CONFIG.PAGINATION.DEFAULT_SIZE) =>
     api.get(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE, { params: { page, size } }),
   getById: (id) => api.get(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id)),
   create: (applicationData) => api.post(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE, applicationData),
   update: (id, applicationData) => api.put(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id), applicationData),
   delete: (id) => api.delete(API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id)),
+  /**
+   * Fetch audit trail events for a specific job application.
+   * @param {string|number} id - The job application ID
+   * @returns {Promise} Axios promise resolving to events array
+   */
+  getEvents: (id) => api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id)}/events`),
 };
 
 export default api;

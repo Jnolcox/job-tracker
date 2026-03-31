@@ -126,8 +126,12 @@ export const LEVEL_LABELS = {
  * - Epoch seconds (e.g., 1769644800.0) - most common with java.time.Instant
  * - ISO strings (e.g., "2025-01-15T10:00:00Z")
  * - Arrays [year, month, day, hour, minute, second] - LocalDateTime serialization
+ *
+ * @param {string|number|Array|null} dateValue - Date in any supported format
+ * @param {string|null} fallback - Value to return if dateValue is null/undefined
+ * @returns {string|null} ISO date string or fallback value
  */
-function convertDate(dateValue, fallback = null) {
+export function convertDate(dateValue, fallback = null) {
   if (!dateValue && dateValue !== 0) return fallback;
 
   // If it's already a string, return it
@@ -150,6 +154,42 @@ function convertDate(dateValue, fallback = null) {
   }
 
   return fallback;
+}
+
+/**
+ * Parse a date value from various backend formats into a JavaScript Date object.
+ * This is useful when you need to perform date operations (comparisons, sorting, etc.)
+ * rather than just displaying the date as a string.
+ *
+ * Backend may return dates as:
+ * - Epoch seconds (e.g., 1769644800.0) - most common with java.time.Instant
+ * - ISO strings (e.g., "2025-01-15T10:00:00Z")
+ * - Arrays [year, month, day, hour, minute, second] - LocalDateTime serialization
+ *
+ * @param {string|number|Array|null} dateValue - Date in any supported format
+ * @returns {Date|null} JavaScript Date object or null if invalid/empty
+ *
+ * @example
+ * // Parse epoch seconds
+ * const date = parseBackendDate(1737024600);
+ * // Returns: Date object for Jan 16, 2025
+ *
+ * @example
+ * // Parse ISO string
+ * const date = parseBackendDate('2025-01-15T10:00:00Z');
+ * // Returns: Date object
+ *
+ * @example
+ * // Parse array format
+ * const date = parseBackendDate([2025, 1, 17, 14, 45, 30]);
+ * // Returns: Date object for Jan 17, 2025 14:45:30
+ */
+export function parseBackendDate(dateValue) {
+  const isoString = convertDate(dateValue);
+  if (!isoString) return null;
+
+  const date = new Date(isoString);
+  return isNaN(date.getTime()) ? null : date;
 }
 
 /**

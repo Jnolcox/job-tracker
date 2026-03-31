@@ -3,9 +3,10 @@
  * @description Read-only modal dialog for viewing job application details.
  * This modal is distinct from ApplicationModal (edit modal) - it displays
  * application information in a clean, readable format without any edit capability.
+ * Includes an audit trail timeline showing the history of changes to the application.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useKeyboardShortcuts } from "../../hooks";
 import {
   STATUS_LABELS,
@@ -13,6 +14,8 @@ import {
   RTO_LABELS,
   LEVEL_LABELS,
 } from "../../utils/dataAdapter";
+import { jobApplicationsAPI } from "../../services/api";
+import AuditTrailTimeline from "./AuditTrailTimeline";
 
 /**
  * Format a date string to a human-readable format.
@@ -199,6 +202,10 @@ function SectionDivider({ title }) {
  * @returns {JSX.Element|null} Modal component or null if no app
  */
 export default function ApplicationViewModal({ app, onClose }) {
+  // State for audit trail events
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
   // Handle Escape key to close
   const handleEscape = useCallback(() => {
     onClose();
@@ -208,6 +215,26 @@ export default function ApplicationViewModal({ app, onClose }) {
     [{ key: "Escape", handler: handleEscape, preventDefault: true }],
     { enabled: !!app }
   );
+
+  // Fetch audit trail events when modal opens
+  useEffect(() => {
+    if (!app?.id) return;
+
+    const fetchEvents = async () => {
+      setEventsLoading(true);
+      try {
+        const response = await jobApplicationsAPI.getEvents(app.id);
+        setEvents(response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch audit trail events:', error);
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, [app?.id]);
 
   if (!app) return null;
 
@@ -447,6 +474,9 @@ export default function ApplicationViewModal({ app, onClose }) {
               </p>
             </>
           )}
+
+          {/* Audit Trail Timeline */}
+          <AuditTrailTimeline events={events} loading={eventsLoading} />
         </div>
 
         {/* Footer */}

@@ -9,15 +9,24 @@
  * - Close button functionality
  * - Clicking backdrop closes modal
  * - Escape key closes modal
+ * - Audit trail timeline integration
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ApplicationViewModal from './ApplicationViewModal';
+import { jobApplicationsAPI } from '../../services/api';
 
 // Mock the useKeyboardShortcuts hook
 jest.mock('../../hooks', () => ({
   useKeyboardShortcuts: jest.fn(),
+}));
+
+// Mock the API
+jest.mock('../../services/api', () => ({
+  jobApplicationsAPI: {
+    getEvents: jest.fn(),
+  },
 }));
 
 // Mock the dataAdapter exports
@@ -45,6 +54,25 @@ jest.mock('../../utils/dataAdapter', () => ({
     RECRUITER_SCREEN: '#A78BFA',
     REJECTED: '#F87171',
     OFFER_RECEIVED: '#10B981',
+  },
+  /**
+   * Parse backend date formats to JavaScript Date object.
+   * This mock implementation handles the formats used in tests.
+   */
+  parseBackendDate: (dateValue) => {
+    if (!dateValue && dateValue !== 0) return null;
+    if (typeof dateValue === 'string') {
+      const date = new Date(dateValue);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    if (typeof dateValue === 'number') {
+      return new Date(dateValue * 1000);
+    }
+    if (Array.isArray(dateValue)) {
+      const [year, month, day, hour = 0, minute = 0, second = 0] = dateValue;
+      return new Date(year, month - 1, day, hour, minute, second);
+    }
+    return null;
   },
 }));
 
@@ -341,6 +369,123 @@ describe('ApplicationViewModal', () => {
       expect(screen.getByText('Close')).toBeInTheDocument();
       expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
       expect(screen.queryByText('Save')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Audit Trail Timeline', () => {
+    beforeEach(() => {
+      jobApplicationsAPI.getEvents.mockResolvedValue({ data: [] });
+    });
+
+    it('should fetch events when modal opens with an application', async () => {
+      const app = createMockApplication({ id: 'app-123' });
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      await waitFor(() => {
+        expect(jobApplicationsAPI.getEvents).toHaveBeenCalledWith('app-123');
+      });
+    });
+
+    it('should not fetch events when app is null', () => {
+      render(<ApplicationViewModal {...defaultProps} app={null} />);
+
+      expect(jobApplicationsAPI.getEvents).not.toHaveBeenCalled();
+    });
+
+    it('should display the Activity Timeline section', async () => {
+      const app = createMockApplication();
+      jobApplicationsAPI.getEvents.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            eventType: 'APPLICATION_CREATED',
+            createdAt: '2025-01-15T10:00:00Z',
+          },
+        ],
+      });
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Activity Timeline')).toBeInTheDocument();
+      });
+    });
+
+    it('should display loading state while fetching events', async () => {
+      const app = createMockApplication();
+      // Create a promise that won't resolve immediately
+      let resolvePromise;
+      jobApplicationsAPI.getEvents.mockReturnValue(
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        })
+      );
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      expect(screen.getByText('Loading activity...')).toBeInTheDocument();
+
+      // Resolve the promise to clean up
+      resolvePromise({ data: [] });
+      await waitFor(() => {
+        expect(screen.queryByText('Loading activity...')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should display events after loading', async () => {
+      const app = createMockApplication();
+      const mockEvents = [
+        {
+          id: 1,
+          eventType: 'APPLICATION_CREATED',
+          createdAt: '2025-01-15T10:00:00Z',
+        },
+        {
+          id: 2,
+          eventType: 'STATUS_CHANGED',
+          oldValue: 'APPLIED',
+          newValue: 'RECRUITER_SCREEN',
+          createdAt: '2025-01-18T14:00:00Z',
+        },
+      ];
+      jobApplicationsAPI.getEvents.mockResolvedValue({ data: mockEvents });
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Application created')).toBeInTheDocument();
+        // Status values should be formatted as Title Case
+        expect(
+          screen.getByText(/Status changed from Applied to Recruiter Screen/)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should display empty state when no events', async () => {
+      const app = createMockApplication();
+      jobApplicationsAPI.getEvents.mockResolvedValue({ data: [] });
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('No activity recorded yet')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle API errors gracefully', async () => {
+      const app = createMockApplication();
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      jobApplicationsAPI.getEvents.mockRejectedValue(new Error('Network error'));
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      await waitFor(() => {
+        // Should show empty state on error
+        expect(screen.getByText('No activity recorded yet')).toBeInTheDocument();
+      });
+
+      consoleError.mockRestore();
     });
   });
 });

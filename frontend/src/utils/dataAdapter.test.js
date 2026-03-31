@@ -12,9 +12,77 @@ import {
   toBackendFormat,
   toBackendFormatForUpdate,
   toUIFormat,
+  parseBackendDate,
 } from './dataAdapter';
 
 describe('dataAdapter', () => {
+  describe('parseBackendDate', () => {
+    it('should parse ISO string dates to Date objects', () => {
+      const isoString = '2025-01-15T10:30:00Z';
+      const result = parseBackendDate(isoString);
+
+      expect(result).toBeInstanceOf(Date);
+      expect(result.toISOString()).toBe('2025-01-15T10:30:00.000Z');
+    });
+
+    it('should parse epoch seconds (number) to Date objects', () => {
+      // 1737024600 = Jan 16, 2025 10:30:00 UTC
+      const epochSeconds = 1737024600;
+      const result = parseBackendDate(epochSeconds);
+
+      expect(result).toBeInstanceOf(Date);
+      expect(result.getUTCFullYear()).toBe(2025);
+      expect(result.getUTCMonth()).toBe(0); // January
+      expect(result.getUTCDate()).toBe(16);
+    });
+
+    it('should parse array format from Java LocalDateTime', () => {
+      // [year, month, day, hour, minute, second]
+      const arrayFormat = [2025, 1, 17, 14, 45, 30];
+      const result = parseBackendDate(arrayFormat);
+
+      expect(result).toBeInstanceOf(Date);
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0); // January (0-indexed in JS)
+      expect(result.getDate()).toBe(17);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(45);
+    });
+
+    it('should return null for null input', () => {
+      expect(parseBackendDate(null)).toBeNull();
+    });
+
+    it('should return null for undefined input', () => {
+      expect(parseBackendDate(undefined)).toBeNull();
+    });
+
+    it('should return null for invalid date strings', () => {
+      expect(parseBackendDate('not-a-date')).toBeNull();
+    });
+
+    it('should return null for empty string', () => {
+      expect(parseBackendDate('')).toBeNull();
+    });
+
+    it('should handle epoch value of 0 (1970-01-01)', () => {
+      const result = parseBackendDate(0);
+
+      expect(result).toBeInstanceOf(Date);
+      expect(result.toISOString()).toBe('1970-01-01T00:00:00.000Z');
+    });
+
+    it('should handle ISO strings without timezone indicator', () => {
+      const localDateString = '2025-01-15T10:00:00';
+      const result = parseBackendDate(localDateString);
+
+      expect(result).toBeInstanceOf(Date);
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0); // January
+      expect(result.getDate()).toBe(15);
+    });
+  });
+
   describe('toUIFormat', () => {
     it('should convert backend application to UI format', () => {
       const backendApp = {
