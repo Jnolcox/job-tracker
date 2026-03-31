@@ -33,6 +33,7 @@ import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.fixtures.JobApplicationFixture;
 import com.nolcox.jobtracking.fixtures.JobApplicationRequestFixture;
@@ -47,6 +48,9 @@ class JobApplicationServiceImplTest {
 
     @Mock
     private JobApplicationRepository repository;
+
+    @Mock
+    private ApplicationEventRepository eventRepository;
 
     @Mock
     private ModelMapper modelMapper;

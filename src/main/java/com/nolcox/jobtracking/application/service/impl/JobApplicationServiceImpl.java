@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,25 +14,63 @@ import org.springframework.transaction.annotation.Transactional;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.service.ApplicationEventService;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.entity.User;
+import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link JobApplicationService} for managing job applications.
+ *
+ * <p>This service handles all CRUD operations for job applications and integrates
+ * with the audit trail system to log significant changes. Each modification to
+ * an application generates appropriate events that can be retrieved via the
+ * {@link ApplicationEventService}.</p>
+ *
+ * <p>The service enforces authorization rules ensuring users can only access
+ * their own applications.</p>
+ */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class JobApplicationServiceImpl implements JobApplicationService {
 
     private final JobApplicationRepository repository;
     private final UserRepository userRepository;
+    private final ApplicationEventRepository eventRepository;
     private final ModelMapper modelMapper;
+
+    /**
+     * Event service for logging audit trail events.
+     * Optional dependency - if not available, events are simply not logged.
+     * This allows the service to function in tests without event logging.
+     */
+    private ApplicationEventService eventService;
+
+    /**
+     * Sets the optional event service for audit trail logging.
+     *
+     * <p>Using setter injection (with @Autowired(required = false)) allows the service
+     * to function in tests and environments where event logging is not needed.</p>
+     *
+     * @param eventService the event service to use for logging, or null to disable logging
+     */
+    @Autowired(required = false)
+    public void setEventService(ApplicationEventService eventService) {
+        this.eventService = eventService;
+        log.debug("ApplicationEventService {} for audit trail logging",
+                eventService != null ? "configured" : "not configured");
+    }
 
     @Override
     public Page<JobApplicationResponse> getUserApplications(
@@ -56,6 +95,12 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         return mapToResponse(application);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>After creating the application, an APPLICATION_CREATED event is logged
+     * to the audit trail. This marks the beginning of the application's history.</p>
+     */
     @Override
     @Transactional
     public JobApplicationResponse createApplication(
@@ -71,6 +116,13 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         application.setStatusChangedAt(request.statusChangedAt() != null ? request.statusChangedAt() : Instant.now());
 
         JobApplication saved = repository.save(application);
+
+        // AUDIT TRAIL: Log the application creation event
+        if (eventService != null) {
+            log.debug("Logging APPLICATION_CREATED event for application ID: {}", saved.getId());
+            eventService.logApplicationCreated(saved);
+        }
+
         return mapToResponse(saved);
     }
 
@@ -95,6 +147,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
      * </li>
      * </ul>
      *
+     * <p>After updating, all detected changes are logged to the audit trail
+     * using the event service.</p>
+     *
      * @param id the ID of the job application to update
      * @param request the update request containing new field values
      * @param userId the ID of the authenticated user (for authorization check)
@@ -113,6 +168,10 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         if (!application.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("Access denied");
         }
+
+        // AUDIT TRAIL: Capture the old state before any modifications
+        // This snapshot is used to detect what changed for event logging
+        JobApplication oldState = captureApplicationState(application);
 
         // Preserve original values that should be protected from accidental overwrites
         // These are captured BEFORE ModelMapper modifies the entity
@@ -142,7 +201,48 @@ public class JobApplicationServiceImpl implements JobApplicationService {
 
         JobApplication updated = repository.save(application);
 
+        // AUDIT TRAIL: Log all detected changes by comparing old and new states
+        if (eventService != null) {
+            log.debug("Logging changes for application ID: {}", updated.getId());
+            eventService.compareAndLogChanges(oldState, updated);
+        }
+
         return mapToResponse(updated);
+    }
+
+    /**
+     * Creates a deep copy of the application state for change comparison.
+     *
+     * <p>This method captures the current field values before they are modified,
+     * allowing the event service to detect what changed during an update.</p>
+     *
+     * @param application the application to capture
+     * @return a new JobApplication instance with the same field values
+     */
+    private JobApplication captureApplicationState(JobApplication application) {
+        return JobApplication.builder()
+                .id(application.getId())
+                .user(application.getUser())
+                .companyName(application.getCompanyName())
+                .positionTitle(application.getPositionTitle())
+                .jobDescription(application.getJobDescription())
+                .status(application.getStatus())
+                .appliedDate(application.getAppliedDate())
+                .interviewDate(application.getInterviewDate())
+                .salaryMin(application.getSalaryMin())
+                .salaryMax(application.getSalaryMax())
+                .location(application.getLocation())
+                .rtoType(application.getRtoType())
+                .level(application.getLevel())
+                .notes(application.getNotes())
+                .jobUrl(application.getJobUrl())
+                .contactName(application.getContactName())
+                .contactEmail(application.getContactEmail())
+                .contactPhone(application.getContactPhone())
+                .createdAt(application.getCreatedAt())
+                .updatedAt(application.getUpdatedAt())
+                .statusChangedAt(application.getStatusChangedAt())
+                .build();
     }
 
     @Override
@@ -154,6 +254,13 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         if (!application.getUser().getId().equals(userId)) {
             throw new UnauthorizedException("Access denied");
         }
+
+        // IMPORTANT: Delete associated events before deleting the application.
+        // This ensures the Hibernate persistence context is consistent and avoids
+        // TransientObjectException when events reference the deleted application.
+        // While the database has ON DELETE CASCADE, we need to manage the JPA
+        // persistence context explicitly to prevent issues in transactional contexts.
+        eventRepository.deleteByApplicationId(id);
 
         repository.delete(application);
     }
@@ -182,6 +289,12 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         return applications.map(this::mapToResponse);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This method specifically handles status updates and logs a STATUS_CHANGED
+     * event to the audit trail.</p>
+     */
     @Override
     @Transactional
     public JobApplicationResponse updateApplicationStatus(Long id,
@@ -194,9 +307,19 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             throw new UnauthorizedException("Access denied");
         }
 
+        // AUDIT TRAIL: Capture old status for event logging
+        ApplicationStatus oldStatus = application.getStatus();
+
         application.setStatus(status);
         application.setStatusChangedAt(Instant.now());
         JobApplication updated = repository.save(application);
+
+        // AUDIT TRAIL: Log the status change event
+        if (eventService != null && !oldStatus.equals(status)) {
+            log.debug("Logging STATUS_CHANGED event for application ID: {} ({} -> {})",
+                    updated.getId(), oldStatus, status);
+            eventService.logStatusChanged(updated, oldStatus, status);
+        }
 
         return mapToResponse(updated);
     }

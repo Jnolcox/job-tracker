@@ -4,7 +4,6 @@ import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.User;
 
 import java.time.Instant;
-import java.util.ArrayList;
 
 public class UserFixture {
 
@@ -88,7 +87,6 @@ public class UserFixture {
                 .enabled(enabled)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
-                .jobApplications(new ArrayList<>())
                 .build();
     }
 }

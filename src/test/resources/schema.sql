@@ -36,3 +36,18 @@ CREATE TABLE IF NOT EXISTS job_applications (
     status_changed_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- Application events table for audit trail tracking
+CREATE TABLE IF NOT EXISTS application_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    application_id BIGINT NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    field_name VARCHAR(100),
+    old_value VARCHAR(500),
+    new_value VARCHAR(500),
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (application_id) REFERENCES job_applications(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_events ON application_events(application_id, created_at);

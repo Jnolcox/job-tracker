@@ -101,4 +101,10 @@ public class JobApplication {
 
     @Version
     private Long version;
+
+    // NOTE: The bidirectional @OneToMany relationship to ApplicationEvent was removed
+    // to avoid Hibernate persistence context issues during application deletion within
+    // transactional tests. Events are cascade-deleted at the database level via
+    // ON DELETE CASCADE in the schema. Events are accessed through
+    // ApplicationEventRepository instead of navigating from JobApplication.
 }

@@ -2,7 +2,9 @@ package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.service.ApplicationEventService;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.User;
@@ -19,8 +21,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 
+/**
+ * REST controller for managing job applications and their audit trails.
+ *
+ * <p>Provides endpoints for CRUD operations on job applications and retrieval
+ * of application events (audit trail). All endpoints require authentication.</p>
+ *
+ * @see JobApplicationService
+ * @see ApplicationEventService
+ */
 @RestController
 @RequestMapping("/v1/job-applications")
 @RequiredArgsConstructor
@@ -28,6 +40,7 @@ import java.net.URI;
 public class JobApplicationController {
 
     private final JobApplicationService applicationService;
+    private final ApplicationEventService eventService;
 
     @GetMapping
     @Operation(summary = "Get all job applications for current user")
@@ -98,6 +111,29 @@ public class JobApplicationController {
         Long userId = getUserIdFromAuthentication(authentication);
         applicationService.deleteApplication(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Retrieves the audit trail (events) for a specific job application.
+     *
+     * <p>Returns all events associated with the application in reverse chronological
+     * order (newest first). Events include application creation, status changes,
+     * interview scheduling, and field updates.</p>
+     *
+     * @param id the ID of the job application
+     * @param authentication the current user's authentication
+     * @return list of events ordered by creation time descending
+     */
+    @GetMapping("/{id}/events")
+    @Operation(summary = "Get audit trail for job application",
+            description = "Returns all events/changes for the specified application in reverse chronological order")
+    public ResponseEntity<List<ApplicationEventResponse>> getApplicationEvents(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        List<ApplicationEventResponse> events = eventService.getEventsForApplication(id, userId);
+        return ResponseEntity.ok(events);
     }
 
     private Long getUserIdFromAuthentication(Authentication authentication) {
