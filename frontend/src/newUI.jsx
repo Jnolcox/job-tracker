@@ -40,7 +40,8 @@ import { ApplicationModal, ApplicationViewModal } from "./components/modal";
  * - Escape: Close modal / clear selection
  * - j/ArrowDown: Select next row
  * - k/ArrowUp: Select previous row
- * - Enter: Edit selected application
+ * - Enter: View selected application (opens read-only modal)
+ * - e: Edit selected application (opens edit modal)
  * - Delete/Backspace: Delete selected (with confirm)
  *
  * @returns {JSX.Element} JobTracker dashboard
@@ -138,7 +139,14 @@ export default function JobTracker() {
     });
   }, [sortedItems.length]);
 
-  // Handle Enter to edit selected
+  // Handle Enter to view selected application
+  const handleViewSelected = useCallback(() => {
+    if (selectedIndex >= 0 && selectedIndex < sortedItems.length) {
+      setViewing(sortedItems[selectedIndex]);
+    }
+  }, [selectedIndex, sortedItems]);
+
+  // Handle 'e' to edit selected application
   const handleEditSelected = useCallback(() => {
     if (selectedIndex >= 0 && selectedIndex < sortedItems.length) {
       setEditing(sortedItems[selectedIndex]);
@@ -162,7 +170,8 @@ export default function JobTracker() {
     { key: 'ArrowDown', handler: handleNavigateDown },
     { key: 'k', handler: handleNavigateUp },
     { key: 'ArrowUp', handler: handleNavigateUp },
-    { key: 'Enter', handler: handleEditSelected },
+    { key: 'Enter', handler: handleViewSelected },
+    { key: 'e', handler: handleEditSelected },
     { key: 'Delete', handler: handleDeleteSelected },
     { key: 'Backspace', handler: handleDeleteSelected },
   ], { enabled: !editing && !viewing && !loading });

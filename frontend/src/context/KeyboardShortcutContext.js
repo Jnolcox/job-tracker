@@ -60,7 +60,8 @@ export const SHORTCUT_DEFINITIONS = [
     shortcuts: [
       { key: 'j / ArrowDown', description: 'Select next row' },
       { key: 'k / ArrowUp', description: 'Select previous row' },
-      { key: 'Enter', description: 'Edit selected application' },
+      { key: 'Enter', description: 'View selected application' },
+      { key: 'e', description: 'Edit selected application' },
       { key: 'Delete', description: 'Delete selected (with confirm)' },
     ],
   },
