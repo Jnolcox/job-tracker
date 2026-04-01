@@ -56,22 +56,13 @@ export const jobApplicationsAPI = {
    */
   getEvents: (id) => api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id)}/events`),
   /**
-   * Fetch audit trail events for all job applications (parallel fetch).
-   * @param {Array<Object>} apps - Array of application objects with id property
-   * @returns {Promise<Array>} All events from all applications flattened into single array
+   * Fetch all audit trail events for the current user's applications.
+   * Uses bulk endpoint for efficiency (single request vs N parallel requests).
+   * @returns {Promise<Array>} All events for current user's applications
    */
-  getAllEvents: async (apps) => {
-    if (!apps || apps.length === 0) return [];
-
-    // Fetch events for each application in parallel
-    const eventPromises = apps.map(app =>
-      api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(app.id)}/events`)
-        .then(response => response.data || [])
-        .catch(() => []) // Gracefully handle individual failures
-    );
-
-    const results = await Promise.all(eventPromises);
-    return results.flat();
+  getAllEvents: async () => {
+    const response = await api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/events/all`);
+    return response.data || [];
   },
 };
 

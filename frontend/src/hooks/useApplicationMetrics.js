@@ -72,8 +72,8 @@ export function useApplicationMetrics(apps) {
       try {
         setLoading(true);
         setError(null);
-        const currentApps = appsRef.current;
-        const allEvents = await jobApplicationsAPI.getAllEvents(currentApps);
+        // Uses bulk endpoint - no need to pass apps, backend uses authenticated user
+        const allEvents = await jobApplicationsAPI.getAllEvents();
         if (!cancelled) {
           setEvents(allEvents);
         }
