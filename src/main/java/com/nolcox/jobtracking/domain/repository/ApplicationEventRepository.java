@@ -103,4 +103,21 @@ public interface ApplicationEventRepository extends JpaRepository<ApplicationEve
      * @param applicationId the ID of the job application
      */
     void deleteByApplicationId(Long applicationId);
+
+    /**
+     * Retrieves all events for all applications owned by a specific user.
+     *
+     * <p>This bulk query fetches events across all of a user's applications in a single
+     * database call, which is more efficient than making N separate calls (one per application).
+     * Events are returned in reverse chronological order (newest first).</p>
+     *
+     * <p>PERFORMANCE NOTE: This query joins through application to user, so an index on
+     * application_id is utilized. For users with many applications and events, consider
+     * adding pagination if performance becomes a concern.</p>
+     *
+     * @param userId the ID of the user whose application events to retrieve
+     * @return list of all events for the user's applications, ordered by createdAt descending
+     */
+    @Query("SELECT e FROM ApplicationEvent e WHERE e.application.user.id = :userId ORDER BY e.createdAt DESC")
+    List<ApplicationEvent> findAllByUserId(@Param("userId") Long userId);
 }

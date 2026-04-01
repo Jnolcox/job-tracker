@@ -9,3 +9,4 @@ export { default as MaxTimePerStageChart } from './MaxTimePerStageChart';
 export { default as SalaryRangeChart } from './SalaryRangeChart';
 export { default as DayOfWeekBar } from './DayOfWeekBar';
 export { default as HourBar } from './HourBar';
+export { default as StageDurationChart } from './StageDurationChart';

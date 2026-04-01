@@ -653,7 +653,7 @@ describe('dataAdapter', () => {
    * Issue: When user edits dates in the Modal, changes don't persist
    */
   describe('Bug: Date editing in Modal should persist', () => {
-    // Helper to simulate toLocalDateTimeInput from newUI.jsx
+    // Helper to simulate toLocalDateTimeInput from Dashboard.jsx
     const toLocalDateTimeInput = (dateStr) => {
       if (!dateStr) return '';
       const date = new Date(dateStr);

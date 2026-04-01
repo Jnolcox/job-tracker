@@ -55,6 +55,15 @@ export const jobApplicationsAPI = {
    * @returns {Promise} Axios promise resolving to events array
    */
   getEvents: (id) => api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BY_ID(id)}/events`),
+  /**
+   * Fetch all audit trail events for the current user's applications.
+   * Uses bulk endpoint for efficiency (single request vs N parallel requests).
+   * @returns {Promise<Array>} All events for current user's applications
+   */
+  getAllEvents: async () => {
+    const response = await api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/events/all`);
+    return response.data || [];
+  },
 };
 
 export default api;

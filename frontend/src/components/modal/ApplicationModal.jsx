@@ -104,9 +104,15 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
     }
   }, [form, onSave, saving, app.id]);
 
+  // Handle Escape key to close modal
+  const handleEscape = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
   useKeyboardShortcuts([
     { key: 'Enter', handler: handleSave, cmdOrCtrl: true, preventDefault: true },
     { key: 's', handler: handleSave, cmdOrCtrl: true, preventDefault: true },
+    { key: 'Escape', handler: handleEscape, preventDefault: true },
   ], { enabled: !!app });
 
   if (!app) return null;

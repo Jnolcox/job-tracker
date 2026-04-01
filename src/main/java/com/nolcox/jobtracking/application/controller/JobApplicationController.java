@@ -114,6 +114,30 @@ public class JobApplicationController {
     }
 
     /**
+     * Retrieves all audit events for all of the current user's job applications.
+     *
+     * <p>This bulk endpoint returns all events across all applications in a single request,
+     * which is more efficient than making N parallel requests to the per-application events
+     * endpoint. Events are returned in reverse chronological order (newest first).</p>
+     *
+     * <p>Use this endpoint for dashboard activity feeds or when you need to display
+     * a unified timeline of all application activity.</p>
+     *
+     * @param authentication the current user's authentication
+     * @return list of all events for the user's applications, ordered by creation time descending
+     */
+    @GetMapping("/events/all")
+    @Operation(summary = "Get all events for current user's applications",
+            description = "Returns all audit events across all applications for the authenticated user in reverse chronological order")
+    public ResponseEntity<List<ApplicationEventResponse>> getAllEventsForUser(
+            Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        List<ApplicationEventResponse> events = eventService.getAllEventsForUser(userId);
+        return ResponseEntity.ok(events);
+    }
+
+    /**
      * Retrieves the audit trail (events) for a specific job application.
      *
      * <p>Returns all events associated with the application in reverse chronological

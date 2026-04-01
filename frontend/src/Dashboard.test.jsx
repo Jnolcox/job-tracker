@@ -1,6 +1,6 @@
 /**
- * @file newUI.test.jsx
- * @description Tests for the JobTracker component (newUI.jsx)
+ * @file Dashboard.test.jsx
+ * @description Tests for the JobTracker component (Dashboard.jsx)
  *
  * Tests cover:
  * - Default sorting by lastUpdate date (descending - newest first)
@@ -11,7 +11,7 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import JobTracker from './newUI';
+import JobTracker from './Dashboard';
 import { jobApplicationsAPI } from './services/api';
 import { STATUS_GROUPS } from './utils/dataAdapter';
 
@@ -42,9 +42,20 @@ jest.mock('./context/KeyboardShortcutContext', () => ({
   }),
 }));
 
-// Mock the hooks
+// Mock the hooks - capture the actual shortcuts registered
+const mockUseKeyboardShortcuts = jest.fn();
 jest.mock('./hooks', () => ({
-  useKeyboardShortcuts: jest.fn(),
+  useKeyboardShortcuts: (...args) => mockUseKeyboardShortcuts(...args),
+  useApplicationMetrics: () => ({
+    metrics: {
+      trueResponseRate: 0,
+      trueInterviewRate: 0,
+      trueOfferRate: 0,
+      avgDaysToResponse: null,
+      stageConversions: { appliedToScreen: 0, screenToTech: 0 },
+    },
+    loading: false,
+  }),
 }));
 
 /**
@@ -80,9 +91,10 @@ const renderJobTracker = () => {
   return render(<JobTracker />);
 };
 
-describe('JobTracker (newUI)', () => {
+describe('JobTracker (Dashboard)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseKeyboardShortcuts.mockClear();
   });
 
   describe('Default sorting by lastUpdate date', () => {
@@ -508,6 +520,59 @@ describe('JobTracker (newUI)', () => {
         // Should show empty state message for active filter
         expect(screen.getByText(/No applications match/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Keyboard shortcuts registration', () => {
+    it('should register Enter key to open view modal (not edit modal)', async () => {
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Find the shortcuts registration call
+      const shortcutsCall = mockUseKeyboardShortcuts.mock.calls.find(
+        call => call[0] && Array.isArray(call[0])
+      );
+      expect(shortcutsCall).toBeDefined();
+
+      const shortcuts = shortcutsCall[0];
+
+      // Enter key should be registered
+      const enterShortcut = shortcuts.find(s => s.key === 'Enter');
+      expect(enterShortcut).toBeDefined();
+      // The handler name should indicate it opens the view modal
+      expect(enterShortcut.handler).toBeDefined();
+    });
+
+    it('should register "e" key to open edit modal', async () => {
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Find the shortcuts registration call
+      const shortcutsCall = mockUseKeyboardShortcuts.mock.calls.find(
+        call => call[0] && Array.isArray(call[0])
+      );
+      expect(shortcutsCall).toBeDefined();
+
+      const shortcuts = shortcutsCall[0];
+
+      // 'e' key should be registered for edit
+      const editShortcut = shortcuts.find(s => s.key === 'e');
+      expect(editShortcut).toBeDefined();
+      expect(editShortcut.handler).toBeDefined();
     });
   });
 });

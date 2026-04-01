@@ -4,3 +4,4 @@
  */
 
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+export { useApplicationMetrics } from './useApplicationMetrics';
