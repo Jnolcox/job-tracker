@@ -1,3 +1,4 @@
+![Metrics](https://github.com/Jnolcox/job-tracker/blob/test-account/img2.png)
 
 ![Dashboard](https://github.com/Jnolcox/job-tracker/blob/test-account/img.png)
 
@@ -607,35 +608,6 @@ logging:
 - **Proxy**: Configured in `package.json` to proxy API calls to backend
 - **Environment Variables**: Can be configured via `.env` files
 - **CORS**: Backend configured to accept requests from `localhost:3000`
-
-## Recent Updates
-
-### Major Features Added
-1. **Complete React Frontend**: Modern, responsive UI with authentication
-2. **Default Test User**: Automatic test data creation for easy development
-3. **Enhanced Dashboard**: Statistics and analytics for job applications
-4. **Improved Security**: Fixed authentication flow and error handling
-5. **Context Path Support**: Proper API routing with `/api` context path
-
-### Technical Improvements
-1. **Fixed Authentication Flow**: JWT authentication now works end-to-end
-2. **Error Handling**: Proper HTTP status codes and error responses
-3. **Database Migration**: Switched to H2 for development ease
-4. **Test Coverage**: Comprehensive test suite with >85% coverage
-5. **API Documentation**: Swagger UI integration
-6. **Test Suite Overhaul**: Converted controller tests to unit tests for better performance
-7. **Authorization Security**: Enhanced security with proper UnauthorizedException handling
-8. **Code Quality**: Removed unused imports, fields, and improved code cleanliness
-
-### Bug Fixes
-1. **Controller Mappings**: Fixed context path issues
-2. **Security Configuration**: Proper endpoint protection
-3. **Exception Handling**: Standardized error responses
-4. **JWT Token Handling**: Fixed token validation and refresh
-5. **Test Framework**: Fixed ApplicationContext loading issues in controller tests
-6. **Authorization Logic**: Fixed service layer to throw UnauthorizedException instead of ResourceNotFoundException
-7. **Integration Tests**: Updated status code expectations (403 Forbidden vs 404 Not Found)
-8. **Unit Test Isolation**: Converted @WebMvcTest to @ExtendWith(MockitoExtension.class) for cleaner tests
 
 ## Future Enhancements
 
