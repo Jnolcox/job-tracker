@@ -16,6 +16,7 @@ import {
 } from "../../utils/dataAdapter";
 import { jobApplicationsAPI } from "../../services/api";
 import AuditTrailTimeline from "./AuditTrailTimeline";
+import JourneyTimeline from "./JourneyTimeline";
 
 /**
  * Format a date string to a human-readable format.
@@ -474,6 +475,13 @@ export default function ApplicationViewModal({ app, onClose }) {
               </p>
             </>
           )}
+
+          {/* Journey Timeline (Stage History) */}
+          <JourneyTimeline
+            applicationId={app.id}
+            events={events}
+            loading={eventsLoading}
+          />
 
           {/* Audit Trail Timeline */}
           <AuditTrailTimeline events={events} loading={eventsLoading} />

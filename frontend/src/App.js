@@ -6,7 +6,7 @@ import { KeyboardShortcutHelp } from './components/KeyboardShortcutHelp';
 import Home from './components/Home';
 import Login from './components/Login';
 import Register from './components/Register';
-import JobTracker from './newUI';
+import JobTracker from './Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 /**

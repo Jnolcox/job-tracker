@@ -1,6 +1,6 @@
 /**
- * @file newUI.test.jsx
- * @description Tests for the JobTracker component (newUI.jsx)
+ * @file Dashboard.test.jsx
+ * @description Tests for the JobTracker component (Dashboard.jsx)
  *
  * Tests cover:
  * - Default sorting by lastUpdate date (descending - newest first)
@@ -11,7 +11,7 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import JobTracker from './newUI';
+import JobTracker from './Dashboard';
 import { jobApplicationsAPI } from './services/api';
 import { STATUS_GROUPS } from './utils/dataAdapter';
 
@@ -91,7 +91,7 @@ const renderJobTracker = () => {
   return render(<JobTracker />);
 };
 
-describe('JobTracker (newUI)', () => {
+describe('JobTracker (Dashboard)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseKeyboardShortcuts.mockClear();

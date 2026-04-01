@@ -1,9 +1,9 @@
 /**
- * @file newUI.jsx
+ * @file Dashboard.jsx
  * @description Main dashboard component for job application tracking.
  */
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts, useApplicationMetrics } from "./hooks";
@@ -14,16 +14,15 @@ import {
   toBackendFormatForUpdate,
   isStatusInGroup,
 } from "./utils/dataAdapter";
-import { timeInStage, totalDaysActive } from "./utils/dateHelpers";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import { StatCard } from "./components/common";
 import {
   StageFunnel,
-  TimeInStageChart,
   MaxTimePerStageChart,
   SalaryRangeChart,
   DayOfWeekBar,
   HourBar,
+  StageDurationChart,
 } from "./components/charts";
 import { AppTable } from "./components/table";
 import { ApplicationModal, ApplicationViewModal } from "./components/modal";
@@ -69,7 +68,7 @@ export default function JobTracker() {
   }, []);
 
   // Fetch and compute metrics from audit trail events
-  const { metrics, loading: metricsLoading } = useApplicationMetrics(apps);
+  const { metrics, events, loading: metricsLoading } = useApplicationMetrics(apps);
 
   // Sync selectedIndex when items change (clamp to valid range)
   useEffect(() => {
@@ -253,13 +252,7 @@ export default function JobTracker() {
   // Derived metrics
   const activeApps = apps.filter(a => !isStatusInGroup(a.status, 'REJECTED') && !isStatusInGroup(a.status, 'WITHDRAWN'));
   const offers = apps.filter(a => isStatusInGroup(a.status, 'OFFER')).length;
-  const rejected = apps.filter(a => isStatusInGroup(a.status, 'REJECTED')).length;
-  const responseRate = apps.length > 0 ? Math.round((apps.filter(a => a.status !== "APPLIED").length / apps.length) * 100) : 0;
-  const avgDays = apps.length > 0 ? Math.round(apps.reduce((s, a) => s + totalDaysActive(a), 0) / apps.length) : 0;
   const inInterview = apps.filter(a => isStatusInGroup(a.status, 'INTERVIEWING')).length;
-  const offerRate = apps.length > 0 ? Math.round((offers / apps.length) * 100) : 0;
-  const maxStageDays = apps.length > 0 ? Math.max(...apps.map(a => timeInStage(a))) : 0;
-  const stalestApp = apps.find(a => timeInStage(a) === maxStageDays);
   const weeklyPace = (() => {
     if (apps.length === 0) return "0.0";
     const dates = apps.map(a => new Date(a.appliedAt));
@@ -267,9 +260,6 @@ export default function JobTracker() {
     const weeks = Math.max((maxD - minD) / (7 * 86400000), 1);
     return (apps.length / weeks).toFixed(1);
   })();
-  const phoneScreenRate = apps.length > 0 ? Math.round(
-    (apps.filter(a => isStatusInGroup(a.status, 'INTERVIEWING') || isStatusInGroup(a.status, 'OFFER')).length / apps.length) * 100
-  ) : 0;
 
   // Loading state
   if (loading) {
@@ -448,6 +438,11 @@ export default function JobTracker() {
           <StageFunnel apps={apps} />
           <SalaryRangeChart apps={apps} />
           <MaxTimePerStageChart apps={apps} />
+        </div>
+
+        {/* Charts row 2 - Stage insights */}
+        <div style={{ marginBottom: 12 }}>
+          <StageDurationChart events={events || []} loading={metricsLoading} />
         </div>
 
         {/* Charts row 3 */}

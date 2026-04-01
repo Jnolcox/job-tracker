@@ -32,6 +32,7 @@ const EMPTY_EVENTS = [];
  * @param {Array<{id: number}>} apps - Array of application objects
  * @returns {{
  *   metrics: ApplicationMetrics | null,
+ *   events: Array | null,
  *   loading: boolean,
  *   error: Error | null
  * }}
@@ -103,7 +104,7 @@ export function useApplicationMetrics(apps) {
     return getAllMetrics(events, appsRef.current);
   }, [events]);
 
-  return { metrics, loading, error };
+  return { metrics, events, loading, error };
 }
 
 export default useApplicationMetrics;
