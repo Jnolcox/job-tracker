@@ -18,7 +18,7 @@ A full-stack job application tracking system with React frontend and Spring Boot
 ## Tech Stack
 
 ### Backend
-- **Language**: Java 17 (Maven compiler targets Java 22)
+- **Language**: Java 17
 - **Framework**: Spring Boot 3.4.5
 - **Security**: Spring Security with JWT (jjwt 0.12.5)
 - **Database**: H2 (development) / MySQL 8.3.0 (production)
@@ -178,39 +178,46 @@ graph LR
         A[POST /api/v1/auth/register]
         B[POST /api/v1/auth/login]
     end
-    
+
     subgraph "Protected Endpoints"
         C[GET /api/v1/job-applications]
         D[GET /api/v1/job-applications/id]
         E[POST /api/v1/job-applications]
         F[PUT /api/v1/job-applications/id]
         G[DELETE /api/v1/job-applications/id]
+        H2[GET /api/v1/job-applications/id/events]
+        H3[GET /api/v1/job-applications/events/all]
     end
-    
+
     subgraph "Security Layer"
         H[JWT Authentication Filter]
         I[User Authorization Check]
         J[Exception Handler]
     end
-    
+
     subgraph "Business Logic"
         K[AuthService]
         L[JobApplicationService]
+        L2[ApplicationEventService]
         M[User Isolation Logic]
     end
-    
+
     A --> K
     B --> K
-    
+
     C --> H
     D --> H
     E --> H
     F --> H
     G --> H
-    
+    H2 --> H
+    H3 --> H
+
     H --> I
     I --> L
+    I --> L2
     L --> M
+    L2 --> M
     M -.->|UnauthorizedException| J
     J -.->|403 Forbidden| C
     J -.->|403 Forbidden| D
@@ -222,38 +229,50 @@ graph LR
 ```mermaid
 stateDiagram-v2
     [*] --> APPLIED: Submit Application
-    
-    APPLIED --> REVIEWING: HR Review
+
+    APPLIED --> RECRUITER_SCREEN: Initial Screen
     APPLIED --> REJECTED: Early Rejection
     APPLIED --> WITHDRAWN: Candidate Withdraws
-    
-    REVIEWING --> INTERVIEW_SCHEDULED: Passed Initial Review
-    REVIEWING --> REJECTED: Failed Review
-    REVIEWING --> WITHDRAWN: Candidate Withdraws
-    
-    INTERVIEW_SCHEDULED --> INTERVIEWED: Complete Interview
-    INTERVIEW_SCHEDULED --> WITHDRAWN: Candidate Cancels
-    
-    INTERVIEWED --> OFFER_RECEIVED: Successful Interview
-    INTERVIEWED --> REJECTED: Unsuccessful Interview
-    INTERVIEWED --> WITHDRAWN: Candidate Withdraws
-    
-    OFFER_RECEIVED --> ACCEPTED: Accept Offer
-    OFFER_RECEIVED --> REJECTED: Decline Offer
-    OFFER_RECEIVED --> WITHDRAWN: Candidate Withdraws
-    
-    ACCEPTED --> [*]: Process Complete
+    APPLIED --> GHOSTED: No Response
+
+    RECRUITER_SCREEN --> TECH_SCREEN: Passed Screen
+    RECRUITER_SCREEN --> REJECTED: Failed Screen
+    RECRUITER_SCREEN --> ON_HOLD: Process Paused
+
+    TECH_SCREEN --> TAKE_HOME: Take Home Assignment
+    TECH_SCREEN --> SYSTEM_DESIGN: System Design Interview
+    TECH_SCREEN --> TECHNICAL_I: Technical Interview
+    TECH_SCREEN --> REJECTED: Failed Screen
+
+    TAKE_HOME --> TECHNICAL_I: Passed Assignment
+    SYSTEM_DESIGN --> TECHNICAL_II: Next Round
+    TECHNICAL_I --> TECHNICAL_II: Next Round
+    TECHNICAL_II --> REFERENCE_CHECK: Final Stage
+
+    REFERENCE_CHECK --> OFFER_RECEIVED: References Passed
+    REFERENCE_CHECK --> REJECTED: References Failed
+
+    OFFER_RECEIVED --> NEGOTIATING: Counter Offer
+    OFFER_RECEIVED --> OFFER_ACCEPTED: Accept Offer
+    OFFER_RECEIVED --> OFFER_DECLINED: Decline Offer
+    OFFER_RECEIVED --> OFFER_RESCINDED: Company Rescinds
+
+    NEGOTIATING --> OFFER_ACCEPTED: Accept Terms
+    NEGOTIATING --> OFFER_DECLINED: Walk Away
+
+    ON_HOLD --> WAITING_FOR_RESPONSE: Resume Process
+    WAITING_FOR_RESPONSE --> GHOSTED: No Response
+
+    OFFER_ACCEPTED --> [*]: Process Complete
+    OFFER_DECLINED --> [*]: Process Complete
+    OFFER_RESCINDED --> [*]: Process Complete
     REJECTED --> [*]: Process Complete
     WITHDRAWN --> [*]: Process Complete
-    
+    GHOSTED --> [*]: Process Complete
+
     note right of APPLIED
         Initial status when
         job application is created
-    end note
-    
-    note right of OFFER_RECEIVED
-        Test data includes this status
-        with sample offer details
     end note
 ```
 
@@ -266,21 +285,30 @@ jobtracking/
 │   │   └── index.html              # HTML template
 │   ├── src/
 │   │   ├── components/             # React components
-│   │   │   ├── Dashboard.js        # Main dashboard with stats
-│   │   │   ├── Login.js           # Login form with test credentials
+│   │   │   ├── ActivityHeatmap.jsx # Activity visualization
+│   │   │   ├── charts/            # Chart components
+│   │   │   ├── common/            # Shared UI components
+│   │   │   ├── modal/             # Modal components
+│   │   │   ├── table/             # Table components
+│   │   │   ├── Home.js            # Home page
+│   │   │   ├── Login.js           # Login form
 │   │   │   ├── Register.js        # User registration
-│   │   │   ├── ApplicationForm.js  # Job application form
-│   │   │   ├── Header.js          # Navigation header
-│   │   │   └── ProtectedRoute.js  # Route protection
+│   │   │   ├── ProtectedRoute.js  # Route protection
+│   │   │   └── KeyboardShortcutHelp.js  # Keyboard shortcuts
 │   │   ├── context/
-│   │   │   └── AuthContext.js     # Authentication state management
+│   │   │   ├── AuthContext.js     # Authentication state management
+│   │   │   └── KeyboardShortcutContext.js  # Keyboard shortcuts
+│   │   ├── constants/             # Application constants
+│   │   ├── hooks/                 # Custom React hooks
 │   │   ├── services/
-│   │   │   └── api.js            # Axios HTTP client
-│   │   ├── App.js                # Main app component
-│   │   ├── index.js             # React entry point
-│   │   └── index.css            # Global styles
-│   ├── package.json             # Dependencies and scripts
-│   └── README.md               # Frontend documentation
+│   │   │   └── api.js             # Axios HTTP client
+│   │   ├── utils/                 # Utility functions
+│   │   ├── App.js                 # Main app component
+│   │   ├── Dashboard.jsx          # Main dashboard with stats
+│   │   ├── index.js               # React entry point
+│   │   └── index.css              # Global styles
+│   ├── package.json               # Dependencies and scripts
+│   └── README.md                  # Frontend documentation
 ├── src/main/java/com/nolcox/jobtracking/
 │   ├── application/              # Application layer
 │   │   ├── controller/          # REST endpoints
@@ -291,29 +319,36 @@ jobtracking/
 │   │   │   ├── request/        # Request DTOs
 │   │   │   └── response/       # Response DTOs
 │   │   └── service/            # Business logic interfaces & implementations
+│   ├── common/                  # Common utilities
+│   │   └── constants/          # Application constants
 │   ├── config/                  # Configuration layer
 │   │   ├── SecurityConfig.java  # Spring Security configuration
 │   │   ├── DataInitializer.java # Test data initialization
-│   │   └── ModelMapperConfig.java
+│   │   ├── DatabaseConfig.java  # Database configuration
+│   │   ├── ModelMapperConfig.java
+│   │   └── OpenApiConfig.java   # Swagger configuration
 │   ├── domain/                  # Domain layer
 │   │   ├── entity/             # JPA entities
 │   │   │   ├── User.java
 │   │   │   ├── JobApplication.java
+│   │   │   ├── ApplicationEvent.java
+│   │   │   ├── ApplicationStatus.java
+│   │   │   ├── EventType.java
+│   │   │   ├── Level.java
 │   │   │   ├── Role.java
-│   │   │   └── ApplicationStatus.java
+│   │   │   └── RtoType.java
 │   │   └── repository/         # Data access interfaces
 │   ├── infrastructure/          # Infrastructure layer
-│   │   ├── mapper/            # Object mapping utilities
 │   │   └── security/          # JWT & Security implementations
 │   │       ├── JwtService.java
 │   │       ├── JwtAuthenticationFilter.java
 │   │       ├── JwtAuthenticationEntryPoint.java
 │   │       └── CustomUserDetailsService.java
 │   └── shared/                  # Shared utilities
-│       ├── constants/         # Application constants
 │       └── exception/         # Custom exceptions
 ├── src/main/resources/
 │   ├── application.yml         # Configuration
+│   ├── application-docker.yml  # Docker configuration
 │   └── database/              # Database scripts
 ├── src/test/java/              # Test suite
 │   ├── application/           # Application layer tests
@@ -365,8 +400,8 @@ Frontend will start on `http://localhost:3000`
 
 The application automatically creates a test user on startup:
 
-- **Email**: `test@example.com` and `job search eamil`
-- **Password**: `password123` and `(sakHoh-sezvo0-gehner)` for personal
+- **Email**: `test@example.com`
+- **Password**: `password123`
 
 The test user comes with 5 sample job applications across different statuses for immediate testing.
 
@@ -411,11 +446,13 @@ POST /api/v1/auth/login        # Login user
 
 ### Job Application Endpoints (Authenticated)
 ```http
-GET    /api/v1/job-applications           # List applications (paginated)
-GET    /api/v1/job-applications/{id}      # Get specific application
-POST   /api/v1/job-applications          # Create new application
-PUT    /api/v1/job-applications/{id}     # Update application
-DELETE /api/v1/job-applications/{id}     # Delete application
+GET    /api/v1/job-applications              # List applications (paginated, filterable)
+GET    /api/v1/job-applications/{id}         # Get specific application
+POST   /api/v1/job-applications              # Create new application
+PUT    /api/v1/job-applications/{id}         # Update application
+DELETE /api/v1/job-applications/{id}         # Delete application
+GET    /api/v1/job-applications/{id}/events  # Get audit trail for application
+GET    /api/v1/job-applications/events/all   # Get all events for user
 ```
 
 ### Example Requests
@@ -437,13 +474,23 @@ curl -X GET http://localhost:8080/api/v1/job-applications \
 
 The system tracks job applications through these statuses:
 - `APPLIED` - Initial application submitted
-- `REVIEWING` - Application under review
-- `INTERVIEW_SCHEDULED` - Interview scheduled
-- `INTERVIEWED` - Interview completed
+- `RECRUITER_SCREEN` - Recruiter screening call
+- `TECH_SCREEN` - Technical screening
+- `TAKE_HOME` - Take home assignment
+- `SYSTEM_DESIGN` - System design interview
+- `TECHNICAL_I` - First technical interview
+- `TECHNICAL_II` - Second technical interview
+- `REFERENCE_CHECK` - Reference checking stage
 - `OFFER_RECEIVED` - Job offer received
-- `ACCEPTED` - Offer accepted
+- `NEGOTIATING` - Negotiating offer terms
+- `OFFER_ACCEPTED` - Offer accepted
+- `OFFER_DECLINED` - Offer declined by candidate
+- `OFFER_RESCINDED` - Offer rescinded by company
 - `REJECTED` - Application rejected
-- `WITHDRAWN` - Application withdrawn
+- `WITHDRAWN` - Application withdrawn by candidate
+- `ON_HOLD` - Application process paused
+- `WAITING_FOR_RESPONSE` - Awaiting response from company
+- `GHOSTED` - No response received
 
 ## Security Features
 
@@ -598,13 +645,13 @@ logging:
 - [ ] **Advanced Search**: Filter by multiple criteria
 - [ ] **Data Export**: CSV/PDF export functionality
 - [ ] **Calendar Integration**: Interview scheduling
-- [ ] **Analytics Dashboard**: Advanced reporting
+- [X] **Analytics Dashboard**: Advanced reporting
 - [ ] **Mobile App**: React Native implementation
 
 ### Technical Improvements
 - [ ] **Caching**: Redis integration for performance
 - [ ] **Rate Limiting**: API protection
-- [ ] **Audit Logging**: User activity tracking
+- [X] **Audit Logging**: User activity tracking
 - [ ] **Monitoring**: Application health metrics
 - [ ] **CI/CD Pipeline**: Automated testing and deployment
 
@@ -632,7 +679,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - **Issues**: Report bugs on GitHub Issues
 - **Documentation**: Check Swagger UI at `/api/swagger-ui.html`
 - **API Reference**: Available in the running application
-- **Test Credentials**: `test@example.com` / `password123`
+- **Test Credentials**: See Default Test Credentials section above
 
 ---
 
