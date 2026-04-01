@@ -118,7 +118,7 @@ describe('AuditTrailTimeline', () => {
       ).toBeInTheDocument();
     });
 
-    it('should format INTERVIEW_SCHEDULED event with new value', () => {
+    it('should format INTERVIEW_SCHEDULED event with human-readable date', () => {
       const events = [
         createMockEvent({
           eventType: 'INTERVIEW_SCHEDULED',
@@ -128,12 +128,13 @@ describe('AuditTrailTimeline', () => {
 
       render(<AuditTrailTimeline events={events} loading={false} />);
 
+      // Interview date should be formatted as human-readable, not raw ISO
       expect(
-        screen.getByText(/Interview scheduled for 2025-02-01T14:00:00Z/)
+        screen.getByText(/Interview scheduled for Feb 1, 2025/)
       ).toBeInTheDocument();
     });
 
-    it('should format INTERVIEW_UPDATED event with old and new values', () => {
+    it('should format INTERVIEW_UPDATED event with human-readable dates', () => {
       const events = [
         createMockEvent({
           eventType: 'INTERVIEW_UPDATED',
@@ -144,10 +145,43 @@ describe('AuditTrailTimeline', () => {
 
       render(<AuditTrailTimeline events={events} loading={false} />);
 
+      // Both old and new interview dates should be human-readable
       expect(
         screen.getByText(
-          /Interview rescheduled from 2025-02-01T14:00:00Z to 2025-02-03T10:00:00Z/
+          /Interview rescheduled from Feb 1, 2025.*to Feb 3, 2025/
         )
+      ).toBeInTheDocument();
+    });
+
+    it('should format INTERVIEW_SCHEDULED with epoch seconds to human-readable date', () => {
+      // 1738425600 = Feb 1, 2025 14:00:00 UTC
+      const events = [
+        createMockEvent({
+          eventType: 'INTERVIEW_SCHEDULED',
+          newValue: 1738425600,
+        }),
+      ];
+
+      render(<AuditTrailTimeline events={events} loading={false} />);
+
+      expect(
+        screen.getByText(/Interview scheduled for Feb 1, 2025/)
+      ).toBeInTheDocument();
+    });
+
+    it('should format INTERVIEW_SCHEDULED with array format to human-readable date', () => {
+      // [year, month, day, hour, minute, second] format from Java LocalDateTime
+      const events = [
+        createMockEvent({
+          eventType: 'INTERVIEW_SCHEDULED',
+          newValue: [2025, 2, 1, 14, 0, 0],
+        }),
+      ];
+
+      render(<AuditTrailTimeline events={events} loading={false} />);
+
+      expect(
+        screen.getByText(/Interview scheduled for Feb 1, 2025/)
       ).toBeInTheDocument();
     });
 

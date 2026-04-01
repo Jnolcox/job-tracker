@@ -477,11 +477,11 @@ export default function ApplicationViewModal({ app, onClose }) {
           )}
 
           {/* Journey Timeline (Stage History) */}
-          <JourneyTimeline
+          {/*<JourneyTimeline
             applicationId={app.id}
             events={events}
             loading={eventsLoading}
-          />
+          />*/}
 
           {/* Audit Trail Timeline */}
           <AuditTrailTimeline events={events} loading={eventsLoading} />

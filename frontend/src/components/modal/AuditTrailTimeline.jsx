@@ -27,6 +27,32 @@ function formatTimestamp(dateValue) {
 }
 
 /**
+ * Format an interview date value to a human-readable format.
+ * Used specifically for formatting interview dates in event descriptions.
+ * Handles multiple input formats from the backend (ISO string, epoch seconds, array).
+ *
+ * @param {string|number|Array} dateValue - Date in ISO string, epoch seconds, or array format
+ * @returns {string} Formatted date string (e.g., "Feb 1, 2025 at 2:00 PM") or original value if unparseable
+ */
+function formatInterviewDate(dateValue) {
+  if (dateValue === null || dateValue === undefined) return '';
+
+  const date = parseBackendDate(dateValue);
+  if (!date) {
+    // Return original value as string if we cannot parse it
+    return String(dateValue);
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/**
  * Format a status value to its human-readable label.
  * Uses STATUS_LABELS from dataAdapter.js for known statuses,
  * falls back to the raw value for unknown statuses.
@@ -60,10 +86,10 @@ function formatEventDescription(event) {
       return `Status changed from ${formatStatusValue(oldValue)} to ${formatStatusValue(newValue)}`;
 
     case 'INTERVIEW_SCHEDULED':
-      return `Interview scheduled for ${newValue}`;
+      return `Interview scheduled for ${formatInterviewDate(newValue)}`;
 
     case 'INTERVIEW_UPDATED':
-      return `Interview rescheduled from ${oldValue} to ${newValue}`;
+      return `Interview rescheduled from ${formatInterviewDate(oldValue)} to ${formatInterviewDate(newValue)}`;
 
     case 'NOTE_ADDED':
       return 'Note added';
@@ -176,6 +202,7 @@ function TimelineItem({ event, isLast }) {
           fontSize: 10,
           flexShrink: 0,
           zIndex: 1,
+          color: ['STATUS_CHANGED', 'APPLICATION_CREATED'].includes(event.eventType) ? '#9CA3AF' : 'inherit',
         }}
       >
         {icon}
