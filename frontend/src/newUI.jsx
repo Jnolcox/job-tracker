@@ -6,7 +6,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
-import { useKeyboardShortcuts } from "./hooks";
+import { useKeyboardShortcuts, useApplicationMetrics } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
 import {
   toUIFormat,
@@ -66,6 +66,9 @@ export default function JobTracker() {
   const handleGetSortedItems = useCallback((items) => {
     setSortedItems(items);
   }, []);
+
+  // Fetch and compute metrics from audit trail events
+  const { metrics, loading: metricsLoading } = useApplicationMetrics(apps);
 
   // Sync selectedIndex when items change (clamp to valid range)
   useEffect(() => {
@@ -379,20 +382,57 @@ export default function JobTracker() {
         )}
 
         {/* Stat Cards -- 5 x 2 grid */}
-        {/* <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}> */}
-          {/* Row 1 */}
-          {/* <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" /> */}
-          {/* <StatCard label="Response Rate" value={`${responseRate}%`} sub="moved past Applied" accent="#A78BFA" /> */}
-          {/* <StatCard label="Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" /> */}
-          {/* <StatCard label="Avg Days Active" value={`${avgDays}d`} sub="per application" accent="#F59E0B" /> */}
-          {/* <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference check`} accent="#34D399" /> */}
-          {/* Row 2 */}
-          {/* <StatCard label="Offer Rate" value={`${offerRate}%`} sub={`${offers} of ${apps.length} apps`} accent="#10B981" /> */}
-          {/* <StatCard label="Phone Screen %" value={`${phoneScreenRate}%`} sub="recruiter conversion" accent="#38BDF8" /> */}
-          {/* <StatCard label="Rejected" value={rejected} sub={`${Math.round((rejected / apps.length) * 100)}% rejection rate`} accent="#F87171" /> */}
-          {/* <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" /> */}
-          {/* <StatCard label="Stalest App" value={`${maxStageDays}d`} sub={stalestApp ? stalestApp.company : "\u2014"} accent="#E879F9" /> */}
-        {/* </div> */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}>
+          {/* Row 1 - Overview metrics */}
+          <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" />
+          <StatCard
+            label="True Response Rate"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
+            sub="got any response"
+            accent="#A78BFA"
+            loading={metricsLoading}
+          />
+          <StatCard
+            label="True Interview Rate"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.trueInterviewRate || 0)}%`}
+            sub="reached interviews"
+            accent="#38BDF8"
+            loading={metricsLoading}
+          />
+          <StatCard
+            label="True Offer Rate"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
+            sub="received offers"
+            accent="#10B981"
+            loading={metricsLoading}
+          />
+          <StatCard
+            label="Avg Response Time"
+            value={metricsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
+            sub="days to hear back"
+            accent="#F59E0B"
+            loading={metricsLoading}
+          />
+
+          {/* Row 2 - Funnel and current state */}
+          <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`} accent="#34D399" />
+          <StatCard
+            label="Applied → Screen"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}
+            sub="recruiter conversion"
+            accent="#A78BFA"
+            loading={metricsLoading}
+          />
+          <StatCard
+            label="Screen → Tech"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.stageConversions?.screenToTech || 0)}%`}
+            sub="technical conversion"
+            accent="#38BDF8"
+            loading={metricsLoading}
+          />
+          <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" />
+          <StatCard label="Current Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" />
+        </div>
 
         {/* Charts row 1 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
