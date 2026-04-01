@@ -252,6 +252,78 @@ class ApplicationEventServiceImplTest {
     }
 
     @Nested
+    @DisplayName("Get All Events For User Tests")
+    class GetAllEventsForUserTests {
+
+        @Test
+        @DisplayName("Should return all events for user's applications")
+        void shouldReturnAllEventsForUserApplications() {
+            // Given
+            Long userId = 1L;
+
+            JobApplication application1 = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withCompanyName("Company A")
+                    .build();
+
+            JobApplication application2 = JobApplicationFixture.aJobApplication()
+                    .withId(2L)
+                    .withUser(testUser)
+                    .withCompanyName("Company B")
+                    .build();
+
+            List<ApplicationEvent> allEvents = List.of(
+                    ApplicationEventFixture.statusChangedEvent()
+                            .withId(3L)
+                            .withApplication(application2)
+                            .withCreatedAt(Instant.now())
+                            .build(),
+                    ApplicationEventFixture.applicationCreatedEvent()
+                            .withId(2L)
+                            .withApplication(application2)
+                            .withCreatedAt(Instant.now().minus(Duration.ofHours(1)))
+                            .build(),
+                    ApplicationEventFixture.applicationCreatedEvent()
+                            .withId(1L)
+                            .withApplication(application1)
+                            .withCreatedAt(Instant.now().minus(Duration.ofDays(1)))
+                            .build()
+            );
+
+            when(eventRepository.findAllByUserId(userId)).thenReturn(allEvents);
+
+            // When
+            List<ApplicationEventResponse> result = eventService.getAllEventsForUser(userId);
+
+            // Then
+            assertThat(result).hasSize(3);
+            // Events should be ordered by createdAt desc (newest first)
+            assertThat(result.get(0).id()).isEqualTo(3L);
+            assertThat(result.get(1).id()).isEqualTo(2L);
+            assertThat(result.get(2).id()).isEqualTo(1L);
+
+            verify(eventRepository).findAllByUserId(userId);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when user has no events")
+        void shouldReturnEmptyListWhenUserHasNoEvents() {
+            // Given
+            Long userId = 1L;
+
+            when(eventRepository.findAllByUserId(userId)).thenReturn(List.of());
+
+            // When
+            List<ApplicationEventResponse> result = eventService.getAllEventsForUser(userId);
+
+            // Then
+            assertThat(result).isEmpty();
+            verify(eventRepository).findAllByUserId(userId);
+        }
+    }
+
+    @Nested
     @DisplayName("Get Events Tests")
     class GetEventsTests {
 

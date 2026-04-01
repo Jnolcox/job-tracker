@@ -183,6 +183,27 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
     /**
      * {@inheritDoc}
      *
+     * <p>This bulk query is more efficient than fetching events per application because
+     * it uses a single database call with a JOIN through the application to the user.
+     * No additional authorization check is needed since the query itself filters by userId.</p>
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ApplicationEventResponse> getAllEventsForUser(Long userId) {
+        log.debug("Fetching all events for user ID: {}", userId);
+
+        // PERFORMANCE: Single query to get all events for all user's applications
+        // The query joins through application.user.id, so only the user's events are returned
+        List<ApplicationEvent> events = eventRepository.findAllByUserId(userId);
+
+        return events.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * <p>Authorization is enforced by checking that the requesting user owns the application.
      * Events are returned in reverse chronological order for display in the UI.</p>
      */

@@ -273,6 +273,63 @@ class JobApplicationControllerTest {
     }
 
     @Nested
+    @DisplayName("Get All User Events Tests")
+    class GetAllUserEventsTests {
+
+        @Test
+        @DisplayName("Should return all events for current user's applications")
+        void shouldReturnAllEventsForCurrentUserApplications() {
+            // Given
+            List<ApplicationEventResponse> events = List.of(
+                    ApplicationEventFixture.statusChangedEvent()
+                            .withId(3L)
+                            .withCreatedAt(Instant.now())
+                            .buildResponse(),
+                    ApplicationEventFixture.applicationCreatedEvent()
+                            .withId(2L)
+                            .withCreatedAt(Instant.now().minusSeconds(3600))
+                            .buildResponse(),
+                    ApplicationEventFixture.applicationCreatedEvent()
+                            .withId(1L)
+                            .withCreatedAt(Instant.now().minusSeconds(86400))
+                            .buildResponse()
+            );
+
+            when(eventService.getAllEventsForUser(testUser.getId()))
+                    .thenReturn(events);
+
+            // When
+            ResponseEntity<List<ApplicationEventResponse>> response =
+                    jobApplicationController.getAllEventsForUser(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).hasSize(3);
+            assertThat(response.getBody().get(0).id()).isEqualTo(3L);
+            assertThat(response.getBody().get(1).id()).isEqualTo(2L);
+            assertThat(response.getBody().get(2).id()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("Should return empty list when user has no events")
+        void shouldReturnEmptyListWhenUserHasNoEvents() {
+            // Given
+            when(eventService.getAllEventsForUser(testUser.getId()))
+                    .thenReturn(List.of());
+
+            // When
+            ResponseEntity<List<ApplicationEventResponse>> response =
+                    jobApplicationController.getAllEventsForUser(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).isEmpty();
+        }
+    }
+
+    @Nested
     @DisplayName("Get Application Events Tests")
     class GetApplicationEventsTests {
 

@@ -107,6 +107,22 @@ public interface ApplicationEventService {
     List<ApplicationEventResponse> getEventsForApplication(Long applicationId, Long userId);
 
     /**
+     * Retrieves all events for all applications owned by a specific user.
+     *
+     * <p>This bulk method provides an efficient way to fetch all audit events for a user
+     * in a single database call, rather than making N separate calls (one per application).
+     * This is particularly useful for dashboard views or activity feeds that need to show
+     * events across all applications.</p>
+     *
+     * <p>Events are returned in reverse chronological order (newest first) to support
+     * typical activity feed display patterns.</p>
+     *
+     * @param userId the ID of the user whose application events to retrieve
+     * @return list of all events for the user's applications, ordered by createdAt descending
+     */
+    List<ApplicationEventResponse> getAllEventsForUser(Long userId);
+
+    /**
      * Compares old and new application states and logs all detected changes.
      *
      * <p>This is the primary method used during application updates. It automatically
