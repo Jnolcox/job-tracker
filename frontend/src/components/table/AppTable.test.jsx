@@ -5,6 +5,8 @@
  * Tests cover:
  * - Company name click triggers onView callback
  * - Company name displays as clickable element
+ * - Table scrolling behavior when rows exceed threshold
+ * - Sticky header while body scrolls
  */
 
 import React from 'react';
@@ -192,6 +194,106 @@ describe('AppTable', () => {
       expect(() => {
         fireEvent.click(companyName);
       }).not.toThrow();
+    });
+  });
+
+  describe('Table scrolling behavior', () => {
+    /**
+     * Helper to generate multiple mock applications
+     * @param {number} count - Number of applications to generate
+     * @returns {Array} Array of mock application objects
+     */
+    const generateMockApplications = (count) => {
+      return Array.from({ length: count }, (_, index) =>
+        createMockApplication({
+          id: `app-${index + 1}`,
+          company: `Company ${index + 1}`,
+          role: `Role ${index + 1}`,
+        })
+      );
+    };
+
+    it('should not enable scrolling when rows are 25 or fewer', () => {
+      const apps = generateMockApplications(25);
+      render(<AppTable {...defaultProps} apps={apps} />);
+
+      // The table body container should not have scrolling enabled
+      const tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).not.toHaveStyle({ overflowY: 'auto' });
+    });
+
+    it('should enable scrolling when rows exceed 25', () => {
+      const apps = generateMockApplications(26);
+      render(<AppTable {...defaultProps} apps={apps} />);
+
+      // The table body container should have scrolling enabled
+      const tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).toHaveStyle({ overflowY: 'auto' });
+    });
+
+    it('should have a max-height when scrolling is enabled', () => {
+      const apps = generateMockApplications(30);
+      render(<AppTable {...defaultProps} apps={apps} />);
+
+      const tableBodyContainer = screen.getByTestId('table-body-container');
+      // Should have a max-height style set when scrolling is enabled
+      expect(tableBodyContainer.style.maxHeight).toBeTruthy();
+    });
+
+    it('should keep header visible (sticky) when scrolling is enabled', () => {
+      const apps = generateMockApplications(30);
+      const { container } = render(<AppTable {...defaultProps} apps={apps} />);
+
+      // The thead should have position sticky and top 0
+      const thead = container.querySelector('thead');
+      expect(thead).toHaveStyle({ position: 'sticky', top: '0' });
+    });
+
+    it('should render all rows even when scrolling is enabled', () => {
+      const apps = generateMockApplications(30);
+      render(<AppTable {...defaultProps} apps={apps} />);
+
+      // All 30 companies should be rendered (virtualization is not implemented)
+      for (let i = 1; i <= 30; i++) {
+        expect(screen.getByText(`Company ${i}`)).toBeInTheDocument();
+      }
+    });
+
+    it('should correctly handle dynamic row count changes', () => {
+      const initialApps = generateMockApplications(20);
+      const { rerender } = render(<AppTable {...defaultProps} apps={initialApps} />);
+
+      // Initially, no scrolling (20 rows)
+      let tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).not.toHaveStyle({ overflowY: 'auto' });
+
+      // Add more apps to exceed threshold
+      const moreApps = generateMockApplications(30);
+      rerender(<AppTable {...defaultProps} apps={moreApps} />);
+
+      // Now scrolling should be enabled
+      tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).toHaveStyle({ overflowY: 'auto' });
+    });
+
+    it('should use the scrollRowThreshold prop when provided', () => {
+      const apps = generateMockApplications(15);
+
+      // With custom threshold of 10, scrolling should be enabled for 15 rows
+      render(<AppTable {...defaultProps} apps={apps} scrollRowThreshold={10} />);
+
+      const tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).toHaveStyle({ overflowY: 'auto' });
+    });
+
+    it('should not enable scrolling when custom threshold is not exceeded', () => {
+      const apps = generateMockApplications(10);
+
+      // With custom threshold of 10, scrolling should not be enabled for exactly 10 rows
+      render(<AppTable {...defaultProps} apps={apps} scrollRowThreshold={10} />);
+
+      const tableBodyContainer = screen.getByTestId('table-body-container');
+      expect(tableBodyContainer).not.toHaveStyle({ overflowY: 'auto' });
     });
   });
 });
