@@ -441,9 +441,9 @@ export default function JobTracker() {
         </div>
 
         {/* Charts row 2 - Stage insights */}
-        <div style={{ marginBottom: 12 }}>
+       {/* <div style={{ marginBottom: 12 }}>
           <StageDurationChart events={events || []} loading={metricsLoading} />
-        </div>
+        </div>*/}
 
         {/* Charts row 3 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
