@@ -25,34 +25,14 @@ import {
   OFFER_STATUSES,
   TECHNICAL_STATUSES,
 } from './metricsEngine';
+import { createMockEvent, createJourneyEvents } from '../test-utils/factories';
 
 describe('metricsEngine', () => {
-  // Helper to create audit events
-  const createEvent = (overrides = {}) => ({
-    id: 1,
-    applicationId: 1,
-    eventType: 'STATUS_CHANGED',
-    fieldName: 'status',
-    oldValue: 'APPLIED',
-    newValue: 'RECRUITER_SCREEN',
-    timestamp: 1737024600, // Jan 16, 2025 10:30:00 UTC
-    ...overrides,
-  });
+  // Using shared factories from test-utils/factories
+  // createMockEvent and createJourneyEvents are imported at the top
 
-  // Helper to create a set of events for a single application journey
-  const createJourneyEvents = (applicationId, statusChanges) => {
-    let timestamp = 1737024600; // Start time
-    return statusChanges.map((change, index) => {
-      timestamp += 86400; // Add 1 day between events
-      return createEvent({
-        id: index + 1,
-        applicationId,
-        oldValue: change.from,
-        newValue: change.to,
-        timestamp,
-      });
-    });
-  };
+  // Local alias for backward compatibility
+  const createEvent = createMockEvent;
 
   describe('Status Constants', () => {
     it('should export RESPONSE_STATUSES containing all response statuses', () => {
@@ -93,15 +73,12 @@ describe('metricsEngine', () => {
   });
 
   describe('buildApplicationJourneys', () => {
-    it('should return empty Map for empty events array', () => {
-      const result = buildApplicationJourneys([]);
-
-      expect(result).toBeInstanceOf(Map);
-      expect(result.size).toBe(0);
-    });
-
-    it('should return empty Map for null input', () => {
-      const result = buildApplicationJourneys(null);
+    it.each([
+      ['empty array', []],
+      ['null', null],
+      ['undefined', undefined],
+    ])('should return empty Map for %s input', (_, input) => {
+      const result = buildApplicationJourneys(input);
 
       expect(result).toBeInstanceOf(Map);
       expect(result.size).toBe(0);
@@ -243,19 +220,11 @@ describe('metricsEngine', () => {
   });
 
   describe('calculateTrueResponseRate', () => {
-    it('should return 0 for empty journeys', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueResponseRate(journeys, 10);
-
-      expect(result).toBe(0);
-    });
-
-    it('should return 0 when totalApps is 0', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueResponseRate(journeys, 0);
-
+    it.each([
+      ['empty journeys with totalApps > 0', new Map(), 10],
+      ['empty journeys with totalApps = 0', new Map(), 0],
+    ])('should return 0 for %s', (_, journeys, totalApps) => {
+      const result = calculateTrueResponseRate(journeys, totalApps);
       expect(result).toBe(0);
     });
 
@@ -327,19 +296,11 @@ describe('metricsEngine', () => {
   });
 
   describe('calculateTrueInterviewRate', () => {
-    it('should return 0 for empty journeys', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueInterviewRate(journeys, 10);
-
-      expect(result).toBe(0);
-    });
-
-    it('should return 0 when totalApps is 0', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueInterviewRate(journeys, 0);
-
+    it.each([
+      ['empty journeys with totalApps > 0', new Map(), 10],
+      ['empty journeys with totalApps = 0', new Map(), 0],
+    ])('should return 0 for %s', (_, journeys, totalApps) => {
+      const result = calculateTrueInterviewRate(journeys, totalApps);
       expect(result).toBe(0);
     });
 
@@ -401,19 +362,11 @@ describe('metricsEngine', () => {
   });
 
   describe('calculateTrueOfferRate', () => {
-    it('should return 0 for empty journeys', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueOfferRate(journeys, 10);
-
-      expect(result).toBe(0);
-    });
-
-    it('should return 0 when totalApps is 0', () => {
-      const journeys = new Map();
-
-      const result = calculateTrueOfferRate(journeys, 0);
-
+    it.each([
+      ['empty journeys with totalApps > 0', new Map(), 10],
+      ['empty journeys with totalApps = 0', new Map(), 0],
+    ])('should return 0 for %s', (_, journeys, totalApps) => {
+      const result = calculateTrueOfferRate(journeys, totalApps);
       expect(result).toBe(0);
     });
 
@@ -683,32 +636,30 @@ describe('metricsEngine', () => {
   });
 
   describe('getAllMetrics', () => {
-    it('should return all zeros/null for empty data', () => {
-      const result = getAllMetrics([], []);
-
-      expect(result.trueResponseRate).toBe(0);
-      expect(result.trueInterviewRate).toBe(0);
-      expect(result.trueOfferRate).toBe(0);
-      expect(result.avgDaysToResponse).toBeNull();
-      expect(result.stageConversions).toEqual({
+    const expectedDefaultMetrics = {
+      trueResponseRate: 0,
+      trueInterviewRate: 0,
+      trueOfferRate: 0,
+      avgDaysToResponse: null,
+      stageConversions: {
         appliedToScreen: 0,
         screenToTech: 0,
         techToOffer: 0,
-      });
-    });
+      },
+    };
 
-    it('should return all zeros/null for null inputs', () => {
-      const result = getAllMetrics(null, null);
+    it.each([
+      ['empty arrays', [], []],
+      ['null inputs', null, null],
+      ['undefined inputs', undefined, undefined],
+    ])('should return all zeros/null for %s', (_, events, apps) => {
+      const result = getAllMetrics(events, apps);
 
-      expect(result.trueResponseRate).toBe(0);
-      expect(result.trueInterviewRate).toBe(0);
-      expect(result.trueOfferRate).toBe(0);
-      expect(result.avgDaysToResponse).toBeNull();
-      expect(result.stageConversions).toEqual({
-        appliedToScreen: 0,
-        screenToTech: 0,
-        techToOffer: 0,
-      });
+      expect(result.trueResponseRate).toBe(expectedDefaultMetrics.trueResponseRate);
+      expect(result.trueInterviewRate).toBe(expectedDefaultMetrics.trueInterviewRate);
+      expect(result.trueOfferRate).toBe(expectedDefaultMetrics.trueOfferRate);
+      expect(result.avgDaysToResponse).toBe(expectedDefaultMetrics.avgDaysToResponse);
+      expect(result.stageConversions).toEqual(expectedDefaultMetrics.stageConversions);
     });
 
     it('should calculate all metrics correctly', () => {

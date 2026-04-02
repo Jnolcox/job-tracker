@@ -10,30 +10,33 @@ import {
   getBottleneckStages,
   getAllStatusDurations,
 } from './stageDurationUtils';
+import { createMockEvent } from '../test-utils/factories';
+import { mockDate, restoreDate } from '../test-utils/helpers/date';
 
 describe('stageDurationUtils', () => {
-  // Helper to create mock events
-  const createEvent = (overrides = {}) => ({
-    id: 1,
-    applicationId: 1,
-    eventType: 'STATUS_CHANGED',
-    fieldName: 'status',
-    oldValue: 'APPLIED',
-    newValue: 'RECRUITER_SCREEN',
-    createdAt: '2025-01-15T10:00:00Z',
-    ...overrides,
+  // Using shared factory from test-utils/factories
+  // Local alias for backward compatibility
+  const createEvent = createMockEvent;
+
+  // Restore Date after each test to prevent leaks
+  afterEach(() => {
+    restoreDate();
   });
 
   describe('getTimeInStageFromAudit', () => {
-    it('returns 0 for null or missing app', () => {
-      expect(getTimeInStageFromAudit(null, [])).toBe(0);
-      expect(getTimeInStageFromAudit(undefined, [])).toBe(0);
+    it.each([
+      ['null app', null, []],
+      ['undefined app', undefined, []],
+    ])('returns 0 for %s', (_, app, events) => {
+      expect(getTimeInStageFromAudit(app, events)).toBe(0);
     });
 
-    it('returns 0 when no events exist', () => {
+    it.each([
+      ['empty events array', []],
+      ['null events', null],
+    ])('returns 0 when events is %s', (_, events) => {
       const app = { id: 1, status: 'APPLIED', statusChangedAt: '2025-01-15T10:00:00Z' };
-      expect(getTimeInStageFromAudit(app, [])).toBe(0);
-      expect(getTimeInStageFromAudit(app, null)).toBe(0);
+      expect(getTimeInStageFromAudit(app, events)).toBe(0);
     });
 
     it('calculates time from the most recent status change to now', () => {
@@ -47,23 +50,11 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      // Mock current date to be 5 days later
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-15T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      // Mock current date to be 5 days later using shared utility
+      mockDate('2025-01-15T10:00:00Z');
 
       const result = getTimeInStageFromAudit(app, events);
       expect(result).toBe(5);
-
-      global.Date = originalDate;
     });
 
     it('uses the latest event for the current status', () => {
@@ -83,22 +74,10 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-13T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-13T10:00:00Z');
 
       const result = getTimeInStageFromAudit(app, events);
       expect(result).toBe(3);
-
-      global.Date = originalDate;
     });
 
     it('filters events to only those for the given application', () => {
@@ -116,22 +95,10 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-15T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-15T10:00:00Z');
 
       const result = getTimeInStageFromAudit(app, events);
       expect(result).toBe(5);
-
-      global.Date = originalDate;
     });
 
     it('handles epoch timestamp format', () => {
@@ -144,30 +111,20 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-15T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-15T10:00:00Z');
 
       const result = getTimeInStageFromAudit(app, events);
       expect(result).toBe(5);
-
-      global.Date = originalDate;
     });
   });
 
   describe('getStageDurations', () => {
-    it('returns empty array for null or missing inputs', () => {
-      expect(getStageDurations(null, [])).toEqual([]);
-      expect(getStageDurations(1, null)).toEqual([]);
-      expect(getStageDurations(1, [])).toEqual([]);
+    it.each([
+      ['null applicationId', null, []],
+      ['null events', 1, null],
+      ['empty events array', 1, []],
+    ])('returns empty array for %s', (_, appId, events) => {
+      expect(getStageDurations(appId, events)).toEqual([]);
     });
 
     it('calculates durations for each stage transition', () => {
@@ -194,17 +151,7 @@ describe('stageDurationUtils', () => {
       ];
 
       // Set current date for active stage calculation
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-15T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-15T10:00:00Z');
 
       const result = getStageDurations(1, events);
 
@@ -224,8 +171,6 @@ describe('stageDurationUtils', () => {
       expect(result[2].status).toBe('TECHNICAL_I');
       expect(result[2].durationDays).toBe(5);
       expect(result[2].isCurrent).toBe(true);
-
-      global.Date = originalDate;
     });
 
     it('filters events to only the specified application', () => {
@@ -248,24 +193,12 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-10T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-10T10:00:00Z');
 
       const result = getStageDurations(1, events);
       expect(result).toHaveLength(2);
       expect(result[0].status).toBe('APPLIED');
       expect(result[1].status).toBe('RECRUITER_SCREEN');
-
-      global.Date = originalDate;
     });
 
     it('handles single CREATED event only', () => {
@@ -279,32 +212,22 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-06T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-06T10:00:00Z');
 
       const result = getStageDurations(1, events);
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe('APPLIED');
       expect(result[0].durationDays).toBe(5);
       expect(result[0].isCurrent).toBe(true);
-
-      global.Date = originalDate;
     });
   });
 
   describe('getAverageStageTime', () => {
-    it('returns empty object for null or empty events', () => {
-      expect(getAverageStageTime(null)).toEqual({});
-      expect(getAverageStageTime([])).toEqual({});
+    it.each([
+      ['null events', null],
+      ['empty events array', []],
+    ])('returns empty object for %s', (_, events) => {
+      expect(getAverageStageTime(events)).toEqual({});
     });
 
     it('calculates average time per stage across all applications', () => {
@@ -399,9 +322,11 @@ describe('stageDurationUtils', () => {
   });
 
   describe('getBottleneckStages', () => {
-    it('returns empty array for null or empty events', () => {
-      expect(getBottleneckStages(null)).toEqual([]);
-      expect(getBottleneckStages([])).toEqual([]);
+    it.each([
+      ['null events', null],
+      ['empty events array', []],
+    ])('returns empty array for %s', (_, events) => {
+      expect(getBottleneckStages(events)).toEqual([]);
     });
 
     it('returns stages sorted by average duration descending', () => {
@@ -474,9 +399,11 @@ describe('stageDurationUtils', () => {
   });
 
   describe('getAllStatusDurations', () => {
-    it('returns empty map for null or empty events', () => {
-      expect(getAllStatusDurations(null).size).toBe(0);
-      expect(getAllStatusDurations([]).size).toBe(0);
+    it.each([
+      ['null events', null],
+      ['empty events array', []],
+    ])('returns empty map for %s', (_, events) => {
+      expect(getAllStatusDurations(events).size).toBe(0);
     });
 
     it('returns a map of applicationId to stage durations', () => {
@@ -499,17 +426,7 @@ describe('stageDurationUtils', () => {
         }),
       ];
 
-      const originalDate = Date;
-      const mockDate = new Date('2025-01-10T10:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args) {
-          if (args.length === 0) return mockDate;
-          return new originalDate(...args);
-        }
-        static now() {
-          return mockDate.getTime();
-        }
-      };
+      mockDate('2025-01-10T10:00:00Z');
 
       const result = getAllStatusDurations(events);
 
@@ -522,8 +439,6 @@ describe('stageDurationUtils', () => {
 
       const app2Durations = result.get(2);
       expect(app2Durations).toHaveLength(1);
-
-      global.Date = originalDate;
     });
   });
 });

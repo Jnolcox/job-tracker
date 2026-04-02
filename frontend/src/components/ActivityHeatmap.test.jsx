@@ -14,12 +14,15 @@
 
 import React from 'react';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import ActivityHeatmap, {
   buildGitHubHeatmapData,
   getWeeksInRange,
   getMonthLabels,
   DAYS
 } from './ActivityHeatmap';
+
+expect.extend(toHaveNoViolations);
 
 describe('ActivityHeatmap', () => {
   describe('buildGitHubHeatmapData', () => {
@@ -301,6 +304,55 @@ describe('ActivityHeatmap', () => {
     });
   });
 
+  describe('Day label alignment', () => {
+    it('should use same layout system for day labels as grid rows to ensure alignment', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
+      const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
+
+      // Find the actual grid rows container (flex column with gap)
+      const gridRows = gridContainer.querySelectorAll('[data-testid="heatmap-day-row"]');
+      expect(gridRows.length).toBe(7);
+
+      // Day labels container should use flex layout to match grid rows layout
+      // NOT CSS Grid with 1fr (which would cause misalignment)
+      expect(dayLabelsContainer.style.display).toBe('flex');
+      expect(dayLabelsContainer.style.flexDirection).toBe('column');
+    });
+
+    it('should use same gap for day labels as grid rows', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
+
+      // Day labels should have the same gap as the grid rows (2px)
+      expect(dayLabelsContainer.style.gap).toBe('2px');
+    });
+
+    it('should render 7 day label elements matching the 7 grid rows', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
+      const dayLabels = dayLabelsContainer.querySelectorAll('span');
+
+      expect(dayLabels.length).toBe(7);
+    });
+
+    it('should NOT use aspectRatio for label sizing (causes misalignment)', () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
+      const dayLabels = dayLabelsContainer.querySelectorAll('span');
+
+      // Labels should NOT use aspectRatio since it causes misalignment
+      // when label width differs from cell width
+      dayLabels.forEach(label => {
+        expect(label.style.aspectRatio).toBeFalsy();
+      });
+    });
+  });
+
   describe('Responsive cell sizing', () => {
     it('should use CSS Grid layout for week rows', () => {
       const { container } = render(<ActivityHeatmap apps={[]} />);
@@ -364,6 +416,33 @@ describe('ActivityHeatmap', () => {
       // The grid container should be present for proper column layout
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
       expect(gridContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations with applications', async () => {
+      const apps = [
+        { id: '1', appliedAt: '2025-02-10T10:00:00Z' },
+        { id: '2', appliedAt: '2025-02-11T10:00:00Z' },
+      ];
+
+      const { container } = render(<ActivityHeatmap apps={apps} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible title', () => {
+      render(<ActivityHeatmap apps={[]} />);
+
+      expect(screen.getByText(/Application Activity/i)).toBeInTheDocument();
     });
   });
 });

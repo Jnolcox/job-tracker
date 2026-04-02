@@ -614,7 +614,7 @@ logging:
 ### Planned Features
 - [ ] **File Upload**: Resume/cover letter attachments
 - [ ] **Email Notifications**: Application status updates
-- [ ] **Advanced Search**: Filter by multiple criteria
+- [X] **Advanced Search**: Filter by multiple criteria
 - [ ] **Data Export**: CSV/PDF export functionality
 - [ ] **Calendar Integration**: Interview scheduling
 - [X] **Analytics Dashboard**: Advanced reporting

@@ -36,5 +36,8 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8080"
+  "proxy": "http://localhost:8080",
+  "devDependencies": {
+    "jest-axe": "^10.0.0"
+  }
 }

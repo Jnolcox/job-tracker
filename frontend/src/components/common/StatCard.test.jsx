@@ -11,7 +11,10 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import StatCard from './StatCard';
+
+expect.extend(toHaveNoViolations);
 
 describe('StatCard', () => {
   const defaultProps = {
@@ -202,6 +205,31 @@ describe('StatCard', () => {
 
       const sub = screen.getByText('10 still active');
       expect(sub.style.color).toBe('rgb(78, 154, 241)'); // #4E9AF1
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const { container } = render(<StatCard {...defaultProps} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations with sub text', async () => {
+      const { container } = render(
+        <StatCard {...defaultProps} sub="10 still active" />
+      );
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations when loading', async () => {
+      const { container } = render(<StatCard {...defaultProps} loading={true} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
     });
   });
 });

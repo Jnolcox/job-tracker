@@ -14,8 +14,12 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import ApplicationViewModal from './ApplicationViewModal';
 import { jobApplicationsAPI } from '../../services/api';
+import { createMockApplication } from '../../test-utils/factories';
+
+expect.extend(toHaveNoViolations);
 
 // Mock the useKeyboardShortcuts hook
 jest.mock('../../hooks', () => ({
@@ -76,33 +80,23 @@ jest.mock('../../utils/dataAdapter', () => ({
   },
 }));
 
-/**
- * Helper to create a complete mock application
- * @param {Object} overrides - Properties to override
- * @returns {Object} Mock application object
- */
-const createMockApplication = (overrides = {}) => ({
-  id: 'app-123',
-  company: 'Acme Corporation',
-  role: 'Senior Software Engineer',
-  level: 'SENIOR',
-  status: 'RECRUITER_SCREEN',
-  appliedAt: '2025-01-15T10:00:00Z',
-  lastUpdate: '2025-01-20T14:30:00Z',
-  statusChangedAt: '2025-01-18T09:00:00Z',
-  interviewDate: '2025-01-25T15:00:00Z',
-  salaryMin: 150000,
-  salaryMax: 200000,
-  location: 'San Francisco, CA',
-  rtoType: 'HYBRID_2',
-  jobUrl: 'https://acme.com/careers/senior-engineer',
-  jobDescription: 'We are looking for a senior engineer to join our team.',
-  contactName: 'Jane Smith',
-  contactEmail: 'jane.smith@acme.com',
-  contactPhone: '(555) 123-4567',
-  notes: 'Great company culture, interesting tech stack.',
-  ...overrides,
-});
+// Local wrapper that provides defaults specific to ApplicationViewModal tests
+const createTestApplication = (overrides = {}) =>
+  createMockApplication({
+    id: 'app-123',
+    company: 'Acme Corporation',
+    role: 'Senior Software Engineer',
+    level: 'SENIOR',
+    status: 'RECRUITER_SCREEN',
+    interviewDate: '2025-01-25T15:00:00Z',
+    salaryMin: 150000,
+    salaryMax: 200000,
+    rtoType: 'HYBRID_2',
+    jobUrl: 'https://acme.com/careers/senior-engineer',
+    jobDescription: 'We are looking for a senior engineer to join our team.',
+    notes: 'Great company culture, interesting tech stack.',
+    ...overrides,
+  });
 
 describe('ApplicationViewModal', () => {
   const defaultProps = {
@@ -123,7 +117,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should render "Application Details" as the modal title', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -131,7 +125,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the company name', () => {
-      const app = createMockApplication({ company: 'Tech Giant Inc' });
+      const app = createTestApplication({ company: 'Tech Giant Inc' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -139,7 +133,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the role', () => {
-      const app = createMockApplication({ role: 'Principal Engineer' });
+      const app = createTestApplication({ role: 'Principal Engineer' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -147,7 +141,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the level when present', () => {
-      const app = createMockApplication({ level: 'SENIOR' });
+      const app = createTestApplication({ level: 'SENIOR' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -155,7 +149,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display dash when level is not present', () => {
-      const app = createMockApplication({ level: null });
+      const app = createTestApplication({ level: null });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -165,7 +159,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the status with human-readable label', () => {
-      const app = createMockApplication({ status: 'RECRUITER_SCREEN' });
+      const app = createTestApplication({ status: 'RECRUITER_SCREEN' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -173,7 +167,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the applied date formatted', () => {
-      const app = createMockApplication({ appliedAt: '2025-01-15T10:00:00Z' });
+      const app = createTestApplication({ appliedAt: '2025-01-15T10:00:00Z' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -182,7 +176,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display salary range when both min and max are present', () => {
-      const app = createMockApplication({ salaryMin: 150000, salaryMax: 200000 });
+      const app = createTestApplication({ salaryMin: 150000, salaryMax: 200000 });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -190,7 +184,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display dash when salary is not present', () => {
-      const app = createMockApplication({ salaryMin: null, salaryMax: null });
+      const app = createTestApplication({ salaryMin: null, salaryMax: null });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -200,7 +194,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display location when present', () => {
-      const app = createMockApplication({ location: 'New York, NY' });
+      const app = createTestApplication({ location: 'New York, NY' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -208,7 +202,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display RTO type with human-readable label', () => {
-      const app = createMockApplication({ rtoType: 'REMOTE' });
+      const app = createTestApplication({ rtoType: 'REMOTE' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -216,7 +210,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display job URL as a clickable link', () => {
-      const app = createMockApplication({ jobUrl: 'https://example.com/job' });
+      const app = createTestApplication({ jobUrl: 'https://example.com/job' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -226,7 +220,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display job description when present', () => {
-      const app = createMockApplication({
+      const app = createTestApplication({
         jobDescription: 'Looking for an experienced developer.',
       });
 
@@ -238,7 +232,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display contact information section', () => {
-      const app = createMockApplication({
+      const app = createTestApplication({
         contactName: 'John Doe',
         contactEmail: 'john@company.com',
         contactPhone: '555-0100',
@@ -252,7 +246,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display notes when present', () => {
-      const app = createMockApplication({
+      const app = createTestApplication({
         notes: 'Had a great initial conversation.',
       });
 
@@ -264,7 +258,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display interview date when present', () => {
-      const app = createMockApplication({
+      const app = createTestApplication({
         interviewDate: '2025-02-01T14:00:00Z',
         status: 'RECRUITER_SCREEN',
       });
@@ -277,7 +271,7 @@ describe('ApplicationViewModal', () => {
 
   describe('Read-only behavior', () => {
     it('should not render any input elements', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -286,7 +280,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should not render any textarea elements', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -294,7 +288,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should not render a Save button', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -305,7 +299,7 @@ describe('ApplicationViewModal', () => {
 
   describe('Close functionality', () => {
     it('should render a Close button', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -314,7 +308,7 @@ describe('ApplicationViewModal', () => {
 
     it('should call onClose when Close button is clicked', () => {
       const onClose = jest.fn();
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal app={app} onClose={onClose} />);
 
@@ -325,7 +319,7 @@ describe('ApplicationViewModal', () => {
 
     it('should call onClose when clicking the backdrop', () => {
       const onClose = jest.fn();
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal app={app} onClose={onClose} />);
 
@@ -338,7 +332,7 @@ describe('ApplicationViewModal', () => {
 
     it('should not call onClose when clicking inside the modal content', () => {
       const onClose = jest.fn();
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal app={app} onClose={onClose} />);
 
@@ -352,7 +346,7 @@ describe('ApplicationViewModal', () => {
 
   describe('Distinct from edit modal', () => {
     it('should have "Application Details" title, not "Edit Application"', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -362,7 +356,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should only have Close button, not Cancel and Save', () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -378,7 +372,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should fetch events when modal opens with an application', async () => {
-      const app = createMockApplication({ id: 'app-123' });
+      const app = createTestApplication({ id: 'app-123' });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
 
@@ -394,7 +388,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display the Activity Timeline section', async () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
       jobApplicationsAPI.getEvents.mockResolvedValue({
         data: [
           {
@@ -413,7 +407,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display loading state while fetching events', async () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
       // Create a promise that won't resolve immediately
       let resolvePromise;
       jobApplicationsAPI.getEvents.mockReturnValue(
@@ -434,7 +428,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display events after loading', async () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
       const mockEvents = [
         {
           id: 1,
@@ -463,7 +457,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should display empty state when no events', async () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
       jobApplicationsAPI.getEvents.mockResolvedValue({ data: [] });
 
       render(<ApplicationViewModal {...defaultProps} app={app} />);
@@ -474,7 +468,7 @@ describe('ApplicationViewModal', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      const app = createMockApplication();
+      const app = createTestApplication();
       const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
       jobApplicationsAPI.getEvents.mockRejectedValue(new Error('Network error'));
 
@@ -486,6 +480,39 @@ describe('ApplicationViewModal', () => {
       });
 
       consoleError.mockRestore();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const app = createTestApplication();
+      jobApplicationsAPI.getEvents.mockResolvedValue({ data: [] });
+
+      const { container } = render(
+        <ApplicationViewModal {...defaultProps} app={app} />
+      );
+
+      // Wait for events to load
+      await waitFor(() => {
+        expect(screen.getByText('No activity recorded yet')).toBeInTheDocument();
+      });
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible modal dialog structure', () => {
+      const app = createTestApplication();
+      jobApplicationsAPI.getEvents.mockResolvedValue({ data: [] });
+
+      render(<ApplicationViewModal {...defaultProps} app={app} />);
+
+      // Modal should have a heading
+      expect(screen.getByText('Application Details')).toBeInTheDocument();
+
+      // Close button should be accessible
+      const closeButton = screen.getByText('Close');
+      expect(closeButton).toBeInTheDocument();
     });
   });
 });

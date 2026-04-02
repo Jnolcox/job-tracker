@@ -12,7 +12,7 @@
  * Based on the appliedAt date of each application.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 
 /**
  * Days of the week, starting with Sunday (matches JavaScript Date.getDay())
@@ -236,6 +236,46 @@ export default function ActivityHeatmap({ apps }) {
   // Gap between cells (in pixels)
   const cellGap = 2;
 
+  /**
+   * Ref to measure the actual row height from the grid.
+   * Used to sync day label heights with cell row heights for proper alignment.
+   */
+  const gridRowsRef = useRef(null);
+  const [rowHeight, setRowHeight] = useState(null);
+
+  /**
+   * Effect to measure the first row's height and update label sizing.
+   * Uses ResizeObserver (when available) to handle container resize and ensure labels
+   * stay aligned when the window or container size changes.
+   * Falls back to window resize listener in environments without ResizeObserver (e.g., Jest).
+   */
+  useEffect(() => {
+    const gridRows = gridRowsRef.current;
+    if (!gridRows) return;
+
+    const measureRowHeight = () => {
+      const firstRow = gridRows.querySelector('[data-testid="heatmap-day-row"]');
+      if (firstRow) {
+        const height = firstRow.getBoundingClientRect().height;
+        setRowHeight(height);
+      }
+    };
+
+    // Initial measurement
+    measureRowHeight();
+
+    // Re-measure on resize using ResizeObserver if available, else window resize
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(measureRowHeight);
+      resizeObserver.observe(gridRows);
+      return () => resizeObserver.disconnect();
+    } else {
+      // Fallback for environments without ResizeObserver (e.g., Jest/jsdom)
+      window.addEventListener('resize', measureRowHeight);
+      return () => window.removeEventListener('resize', measureRowHeight);
+    }
+  }, [weeks.length]);
+
   return (
     <div
       style={{
@@ -264,8 +304,8 @@ export default function ActivityHeatmap({ apps }) {
         <div
           data-testid="heatmap-day-labels"
           style={{
-            display: 'grid',
-            gridTemplateRows: 'repeat(7, 1fr)',
+            display: 'flex',
+            flexDirection: 'column',
             paddingTop: 20, // Space for month labels
             marginRight: 6,
             gap: cellGap,
@@ -284,6 +324,13 @@ export default function ActivityHeatmap({ apps }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
+                /*
+                 * Height is dynamically set to match the grid row height.
+                 * This ensures day labels (Mon, Wed, Fri) align perfectly
+                 * with their corresponding rows in the heatmap grid.
+                 * Falls back to 'auto' during initial render before measurement.
+                 */
+                height: rowHeight != null ? rowHeight : 'auto',
                 // Only show Mon, Wed, Fri for cleaner look (like GitHub)
                 visibility: index % 2 === 1 ? 'visible' : 'hidden',
               }}
@@ -328,7 +375,10 @@ export default function ActivityHeatmap({ apps }) {
           </div>
 
           {/* Grid of cells */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: cellGap }}>
+          <div
+            ref={gridRowsRef}
+            style={{ display: 'flex', flexDirection: 'column', gap: cellGap }}
+          >
             {DAYS.map((day, dayIndex) => (
               <div
                 key={day}

@@ -11,10 +11,23 @@ import { timeInStage, totalDaysActive } from "../../utils/dateHelpers";
 import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapter";
 
 /**
+ * Default number of rows before scrolling is enabled
+ * @constant {number}
+ */
+const DEFAULT_SCROLL_ROW_THRESHOLD = 25;
+
+/**
+ * Approximate row height in pixels for calculating max scroll height
+ * @constant {number}
+ */
+const ROW_HEIGHT_PX = 42;
+
+/**
  * @component AppTable
  * @description Table displaying job applications with sorting, filtering, and search.
  * Supports keyboard navigation with visual row selection.
  * Company names are clickable to open a view modal.
+ * Enables vertical scrolling with sticky headers when row count exceeds threshold.
  *
  * @param {Object} props - Component props
  * @param {Array} props.apps - Array of application objects
@@ -25,6 +38,7 @@ import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapt
  * @param {number} [props.selectedIndex=-1] - Currently selected row index
  * @param {Function} props.onSelectionChange - Callback when selection changes
  * @param {Function} props.getSortedItems - Callback to get sorted items for parent
+ * @param {number} [props.scrollRowThreshold=25] - Number of rows before scrolling is enabled
  *
  * @example
  * <AppTable
@@ -36,6 +50,7 @@ import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapt
  *   selectedIndex={selectedIdx}
  *   onSelectionChange={setSelectedIdx}
  *   getSortedItems={setSortedItems}
+ *   scrollRowThreshold={25}
  * />
  *
  * @returns {JSX.Element} Table component
@@ -48,7 +63,8 @@ export default function AppTable({
   searchInputRef,
   selectedIndex = -1,
   onSelectionChange,
-  getSortedItems
+  getSortedItems,
+  scrollRowThreshold = DEFAULT_SCROLL_ROW_THRESHOLD
 }) {
   // Default sort by lastUpdate (descending - newest first)
   const [sortKey, setSortKey] = useState("lastUpdate");
@@ -96,6 +112,15 @@ export default function AppTable({
       onSelectionChange(index);
     }
   };
+
+  // Determine if scrolling should be enabled based on row count
+  // Scrolling activates when filtered/sorted rows exceed the threshold
+  const shouldEnableScrolling = sorted.length > scrollRowThreshold;
+
+  // Calculate max height for scrollable area (show threshold number of rows)
+  const maxScrollHeight = shouldEnableScrolling
+    ? `${scrollRowThreshold * ROW_HEIGHT_PX}px`
+    : undefined;
 
   return (
     <div style={{
@@ -198,9 +223,23 @@ export default function AppTable({
           + Add
         </button>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      {/* Table container with conditional scrolling */}
+      <div
+        data-testid="table-body-container"
+        style={{
+          overflowX: "auto",
+          overflowY: shouldEnableScrolling ? "auto" : "visible",
+          maxHeight: maxScrollHeight,
+        }}
+      >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
+          <thead
+            style={{
+              position: shouldEnableScrolling ? "sticky" : "static",
+              top: 0,
+              zIndex: 1,
+            }}
+          >
             <tr>
               <TableHeader onClick={() => setSortKey("company")} sorted={sortKey === "company"}>Company</TableHeader>
               <TableHeader onClick={() => setSortKey("role")} sorted={sortKey === "role"}>Role</TableHeader>

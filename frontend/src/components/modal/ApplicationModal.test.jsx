@@ -10,8 +10,12 @@
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import ApplicationModal from './ApplicationModal';
 import { useKeyboardShortcuts } from '../../hooks';
+import { createNewApplication, createExistingApplication } from '../../test-utils/factories';
+
+expect.extend(toHaveNoViolations);
 
 // Mock the useKeyboardShortcuts hook to capture shortcut registrations
 jest.mock('../../hooks', () => ({
@@ -29,27 +33,7 @@ jest.mock('../../utils/dataAdapter', () => ({
   isStatusInGroup: jest.fn(() => false),
 }));
 
-/**
- * Helper to create a mock new application (empty object with default status)
- * @returns {Object} Mock new application object
- */
-const createNewApplication = () => ({
-  status: 'APPLIED',
-});
-
-/**
- * Helper to create a mock existing application for editing
- * @param {Object} overrides - Properties to override
- * @returns {Object} Mock application object
- */
-const createExistingApplication = (overrides = {}) => ({
-  id: 'app-123',
-  company: 'Test Company',
-  role: 'Software Engineer',
-  status: 'APPLIED',
-  appliedAt: '2025-01-15T10:00:00Z',
-  ...overrides,
-});
+// Using shared factory functions from test-utils/factories
 
 describe('ApplicationModal', () => {
   const defaultProps = {
@@ -92,10 +76,22 @@ describe('ApplicationModal', () => {
       });
     });
 
-    // Note: The component has an existing issue where it accesses app.id
-    // in useCallback dependencies before the null check, causing an error
-    // when app is null/undefined. This test is skipped as fixing that issue
-    // is outside the scope of the autofocus enhancement.
+    /**
+     * TODO: Fix null/undefined app handling in ApplicationModal component
+     *
+     * Issue: The component accesses app.id in useCallback dependencies before
+     * performing a null check, causing a runtime error when app is null/undefined.
+     *
+     * Expected behavior: Component should return null (render nothing) when app is null.
+     *
+     * Fix needed in: /src/components/modal/ApplicationModal.jsx
+     * - Add null guard before accessing app.id in useCallback dependencies
+     * - Or move the null check to the top of the component before any hooks
+     *
+     * Tracking: This should be addressed when refactoring modal components.
+     *
+     * @see https://react.dev/learn/conditional-rendering
+     */
     it.skip('should not render anything when app is null', () => {
       // Arrange & Act: Render with null app
       const { container } = render(<ApplicationModal {...defaultProps} app={undefined} />);
@@ -211,6 +207,49 @@ describe('ApplicationModal', () => {
       });
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations for new application modal', async () => {
+      const newApp = createNewApplication();
+
+      const { container } = render(
+        <ApplicationModal {...defaultProps} app={newApp} />
+      );
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations for edit application modal', async () => {
+      const existingApp = createExistingApplication();
+
+      const { container } = render(
+        <ApplicationModal {...defaultProps} app={existingApp} />
+      );
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible form inputs with labels', () => {
+      const newApp = createNewApplication();
+
+      render(<ApplicationModal {...defaultProps} app={newApp} />);
+
+      // Company input should have accessible placeholder
+      const companyInput = screen.getByPlaceholderText('Company name');
+      expect(companyInput).toBeInTheDocument();
+    });
+
+    it('should have accessible modal heading', () => {
+      const newApp = createNewApplication();
+
+      render(<ApplicationModal {...defaultProps} app={newApp} />);
+
+      // Modal should have a title
+      expect(screen.getByText('New Application')).toBeInTheDocument();
     });
   });
 });

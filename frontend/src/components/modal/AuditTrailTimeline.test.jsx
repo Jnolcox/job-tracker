@@ -14,27 +14,24 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AuditTrailTimeline from './AuditTrailTimeline';
+import { createMockEvent } from '../../test-utils/factories';
 
-/**
- * Helper to create a mock audit event
- * @param {Object} overrides - Properties to override
- * @returns {Object} Mock audit event object
- */
-const createMockEvent = (overrides = {}) => ({
-  id: 1,
-  eventType: 'APPLICATION_CREATED',
-  fieldName: null,
-  oldValue: null,
-  newValue: null,
-  details: null,
-  createdAt: '2025-01-15T10:00:00Z',
-  ...overrides,
-});
+// Local wrapper for audit trail specific defaults
+const createAuditEvent = (overrides = {}) =>
+  createMockEvent({
+    eventType: 'APPLICATION_CREATED',
+    fieldName: null,
+    oldValue: null,
+    newValue: null,
+    details: null,
+    createdAt: '2025-01-15T10:00:00Z',
+    ...overrides,
+  });
 
 describe('AuditTrailTimeline', () => {
   describe('Rendering', () => {
     it('should render the "Activity Timeline" section header', () => {
-      const events = [createMockEvent()];
+      const events = [createAuditEvent()];
 
       render(<AuditTrailTimeline events={events} loading={false} />);
 
@@ -59,7 +56,7 @@ describe('AuditTrailTimeline', () => {
   describe('Event type formatting', () => {
     it('should format APPLICATION_CREATED event correctly', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'APPLICATION_CREATED',
         }),
       ];
@@ -71,7 +68,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format STATUS_CHANGED event with human-readable status values', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'STATUS_CHANGED',
           oldValue: 'APPLIED',
           newValue: 'RECRUITER_SCREEN',
@@ -88,7 +85,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format ON_HOLD status as "On Hold"', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'STATUS_CHANGED',
           oldValue: 'APPLIED',
           newValue: 'ON_HOLD',
@@ -104,7 +101,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format TECH_SCREEN status as "Tech Screen"', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'STATUS_CHANGED',
           oldValue: 'TECH_SCREEN',
           newValue: 'TECHNICAL_I',
@@ -120,7 +117,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format INTERVIEW_SCHEDULED event with human-readable date', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'INTERVIEW_SCHEDULED',
           newValue: '2025-02-01T14:00:00Z',
         }),
@@ -136,7 +133,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format INTERVIEW_UPDATED event with human-readable dates', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'INTERVIEW_UPDATED',
           oldValue: '2025-02-01T14:00:00Z',
           newValue: '2025-02-03T10:00:00Z',
@@ -156,7 +153,7 @@ describe('AuditTrailTimeline', () => {
     it('should format INTERVIEW_SCHEDULED with epoch seconds to human-readable date', () => {
       // 1738425600 = Feb 1, 2025 14:00:00 UTC
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'INTERVIEW_SCHEDULED',
           newValue: 1738425600,
         }),
@@ -172,7 +169,7 @@ describe('AuditTrailTimeline', () => {
     it('should format INTERVIEW_SCHEDULED with array format to human-readable date', () => {
       // [year, month, day, hour, minute, second] format from Java LocalDateTime
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'INTERVIEW_SCHEDULED',
           newValue: [2025, 2, 1, 14, 0, 0],
         }),
@@ -187,7 +184,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format NOTE_ADDED event correctly', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'NOTE_ADDED',
         }),
       ];
@@ -199,7 +196,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should format FIELD_UPDATED event with field name and values', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'FIELD_UPDATED',
           fieldName: 'salaryMin',
           oldValue: '100000',
@@ -216,7 +213,7 @@ describe('AuditTrailTimeline', () => {
 
     it('should handle unknown event types gracefully', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           eventType: 'UNKNOWN_EVENT_TYPE',
         }),
       ];
@@ -231,7 +228,7 @@ describe('AuditTrailTimeline', () => {
   describe('Timestamp formatting', () => {
     it('should display ISO string timestamps in human-readable format', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           createdAt: '2025-01-15T10:30:00Z',
         }),
       ];
@@ -246,7 +243,7 @@ describe('AuditTrailTimeline', () => {
       // Java Instant serializes as epoch seconds (1737024600 = Jan 16, 2025 10:30:00 UTC)
       const epochSeconds = 1737024600;
       const events = [
-        createMockEvent({
+        createAuditEvent({
           createdAt: epochSeconds,
         }),
       ];
@@ -260,7 +257,7 @@ describe('AuditTrailTimeline', () => {
     it('should handle array format from Java LocalDateTime', () => {
       // LocalDateTime serializes as array [year, month, day, hour, minute, second]
       const events = [
-        createMockEvent({
+        createAuditEvent({
           createdAt: [2025, 1, 17, 14, 45, 30],
         }),
       ];
@@ -275,12 +272,12 @@ describe('AuditTrailTimeline', () => {
       // Jan 15, 2025 10:00:00 UTC = 1736935200
       // Jan 20, 2025 09:00:00 UTC = 1737363600
       const events = [
-        createMockEvent({
+        createAuditEvent({
           id: 1,
           eventType: 'APPLICATION_CREATED',
           createdAt: 1736935200,
         }),
-        createMockEvent({
+        createAuditEvent({
           id: 2,
           eventType: 'NOTE_ADDED',
           createdAt: 1737363600,
@@ -300,19 +297,19 @@ describe('AuditTrailTimeline', () => {
   describe('Multiple events', () => {
     it('should render multiple events', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           id: 1,
           eventType: 'APPLICATION_CREATED',
           createdAt: '2025-01-15T10:00:00Z',
         }),
-        createMockEvent({
+        createAuditEvent({
           id: 2,
           eventType: 'STATUS_CHANGED',
           oldValue: 'APPLIED',
           newValue: 'RECRUITER_SCREEN',
           createdAt: '2025-01-18T14:00:00Z',
         }),
-        createMockEvent({
+        createAuditEvent({
           id: 3,
           eventType: 'NOTE_ADDED',
           createdAt: '2025-01-20T09:00:00Z',
@@ -330,12 +327,12 @@ describe('AuditTrailTimeline', () => {
 
     it('should display events in reverse chronological order (newest first)', () => {
       const events = [
-        createMockEvent({
+        createAuditEvent({
           id: 1,
           eventType: 'APPLICATION_CREATED',
           createdAt: '2025-01-15T10:00:00Z',
         }),
-        createMockEvent({
+        createAuditEvent({
           id: 2,
           eventType: 'NOTE_ADDED',
           createdAt: '2025-01-20T09:00:00Z',
@@ -360,7 +357,7 @@ describe('AuditTrailTimeline', () => {
     });
 
     it('should not show loading indicator when loading is false', () => {
-      const events = [createMockEvent()];
+      const events = [createAuditEvent()];
 
       render(<AuditTrailTimeline events={events} loading={false} />);
 
@@ -371,8 +368,8 @@ describe('AuditTrailTimeline', () => {
   describe('Accessibility', () => {
     it('should use semantic list elements for timeline', () => {
       const events = [
-        createMockEvent({ id: 1 }),
-        createMockEvent({ id: 2, eventType: 'NOTE_ADDED' }),
+        createAuditEvent({ id: 1 }),
+        createAuditEvent({ id: 2, eventType: 'NOTE_ADDED' }),
       ];
 
       render(<AuditTrailTimeline events={events} loading={false} />);
