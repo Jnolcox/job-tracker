@@ -14,12 +14,15 @@
 
 import React from 'react';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import ActivityHeatmap, {
   buildGitHubHeatmapData,
   getWeeksInRange,
   getMonthLabels,
   DAYS
 } from './ActivityHeatmap';
+
+expect.extend(toHaveNoViolations);
 
 describe('ActivityHeatmap', () => {
   describe('buildGitHubHeatmapData', () => {
@@ -413,6 +416,33 @@ describe('ActivityHeatmap', () => {
       // The grid container should be present for proper column layout
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
       expect(gridContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const { container } = render(<ActivityHeatmap apps={[]} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations with applications', async () => {
+      const apps = [
+        { id: '1', appliedAt: '2025-02-10T10:00:00Z' },
+        { id: '2', appliedAt: '2025-02-11T10:00:00Z' },
+      ];
+
+      const { container } = render(<ActivityHeatmap apps={apps} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible title', () => {
+      render(<ActivityHeatmap apps={[]} />);
+
+      expect(screen.getByText(/Application Activity/i)).toBeInTheDocument();
     });
   });
 });

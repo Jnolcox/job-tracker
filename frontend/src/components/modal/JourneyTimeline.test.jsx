@@ -4,39 +4,24 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import JourneyTimeline from './JourneyTimeline';
+import { createMockEvent } from '../../test-utils/factories';
+import { mockDate, restoreDate } from '../../test-utils/helpers/date';
+
+expect.extend(toHaveNoViolations);
 
 describe('JourneyTimeline', () => {
-  // Helper to create mock events
-  const createEvent = (overrides = {}) => ({
-    id: 1,
-    applicationId: 1,
-    eventType: 'STATUS_CHANGED',
-    fieldName: 'status',
-    oldValue: 'APPLIED',
-    newValue: 'RECRUITER_SCREEN',
-    createdAt: '2025-01-15T10:00:00Z',
-    ...overrides,
-  });
+  // Using shared factory from test-utils/factories
+  const createEvent = createMockEvent;
 
-  // Mock date for consistent testing
-  const originalDate = Date;
-  const mockNow = new Date('2025-01-20T10:00:00Z');
-
+  // Mock date for consistent testing using shared utility
   beforeAll(() => {
-    global.Date = class extends originalDate {
-      constructor(...args) {
-        if (args.length === 0) return mockNow;
-        return new originalDate(...args);
-      }
-      static now() {
-        return mockNow.getTime();
-      }
-    };
+    mockDate('2025-01-20T10:00:00Z');
   });
 
   afterAll(() => {
-    global.Date = originalDate;
+    restoreDate();
   });
 
   it('renders the component with section header', () => {
@@ -202,5 +187,39 @@ describe('JourneyTimeline', () => {
 
     render(<JourneyTimeline applicationId={null} events={events} />);
     expect(screen.getByText('No stage history available')).toBeInTheDocument();
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const events = [
+        createEvent({
+          id: 1,
+          applicationId: 1,
+          eventType: 'CREATED',
+          createdAt: '2025-01-01T10:00:00Z',
+        }),
+        createEvent({
+          id: 2,
+          applicationId: 1,
+          eventType: 'STATUS_CHANGED',
+          oldValue: 'APPLIED',
+          newValue: 'RECRUITER_SCREEN',
+          createdAt: '2025-01-05T10:00:00Z',
+        }),
+      ];
+
+      const { container } = render(
+        <JourneyTimeline applicationId={1} events={events} />
+      );
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible section heading', () => {
+      render(<JourneyTimeline applicationId={1} events={[]} />);
+
+      expect(screen.getByText('Stage History')).toBeInTheDocument();
+    });
   });
 });

@@ -4,33 +4,27 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import StageDurationChart from './StageDurationChart';
+import { createMockEvent } from '../../test-utils/factories';
+
+expect.extend(toHaveNoViolations);
 
 describe('StageDurationChart', () => {
-  // Helper to create mock events
-  const createEvent = (overrides = {}) => ({
-    id: 1,
-    applicationId: 1,
-    eventType: 'STATUS_CHANGED',
-    fieldName: 'status',
-    oldValue: 'APPLIED',
-    newValue: 'RECRUITER_SCREEN',
-    createdAt: '2025-01-15T10:00:00Z',
-    ...overrides,
-  });
+  // Using shared factory from test-utils/factories
+  const createEvent = createMockEvent;
 
   it('renders the chart with header', () => {
     render(<StageDurationChart events={[]} />);
     expect(screen.getByText('Avg. Time Per Stage (days)')).toBeInTheDocument();
   });
 
-  it('shows empty state when no events', () => {
-    render(<StageDurationChart events={[]} />);
-    expect(screen.getByText('No stage data available yet')).toBeInTheDocument();
-  });
-
-  it('shows empty state when events is null', () => {
-    render(<StageDurationChart events={null} />);
+  it.each([
+    ['empty array', []],
+    ['null', null],
+    ['undefined', undefined],
+  ])('shows empty state when events is %s', (_, events) => {
+    render(<StageDurationChart events={events} />);
     expect(screen.getByText('No stage data available yet')).toBeInTheDocument();
   });
 
@@ -212,5 +206,37 @@ describe('StageDurationChart', () => {
 
     // Average APPLIED time should be (4 + 6) / 2 = 5 days
     expect(screen.getByText('5d')).toBeInTheDocument();
+  });
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const events = [
+        createEvent({
+          id: 1,
+          applicationId: 1,
+          eventType: 'CREATED',
+          createdAt: '2025-01-01T10:00:00Z',
+        }),
+        createEvent({
+          id: 2,
+          applicationId: 1,
+          eventType: 'STATUS_CHANGED',
+          oldValue: 'APPLIED',
+          newValue: 'RECRUITER_SCREEN',
+          createdAt: '2025-01-06T10:00:00Z',
+        }),
+      ];
+
+      const { container } = render(<StageDurationChart events={events} />);
+
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have accessible chart heading', () => {
+      render(<StageDurationChart events={[]} />);
+
+      expect(screen.getByText('Avg. Time Per Stage (days)')).toBeInTheDocument();
+    });
   });
 });
