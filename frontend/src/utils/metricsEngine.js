@@ -6,66 +6,15 @@
  */
 
 import { parseBackendDate } from './dataAdapter';
+import {
+  RESPONSE_STATUSES,
+  INTERVIEW_STATUSES,
+  OFFER_STATUSES,
+  TECHNICAL_STATUSES,
+} from '../constants/statuses';
 
-/**
- * Response statuses - indicates the company responded to the application.
- * Excludes WITHDRAWN (user-initiated) and GHOSTED (no response).
- * @type {string[]}
- */
-export const RESPONSE_STATUSES = [
-  'RECRUITER_SCREEN',
-  'TECH_SCREEN',
-  'TAKE_HOME',
-  'SYSTEM_DESIGN',
-  'TECHNICAL_I',
-  'TECHNICAL_II',
-  'REFERENCE_CHECK',
-  'OFFER_RECEIVED',
-  'NEGOTIATING',
-  'OFFER_ACCEPTED',
-  'OFFER_DECLINED',
-  'OFFER_RESCINDED',
-  'REJECTED',
-];
-
-/**
- * Interview statuses - any stage involving interviews or assessments.
- * @type {string[]}
- */
-export const INTERVIEW_STATUSES = [
-  'RECRUITER_SCREEN',
-  'TECH_SCREEN',
-  'TAKE_HOME',
-  'SYSTEM_DESIGN',
-  'TECHNICAL_I',
-  'TECHNICAL_II',
-  'REFERENCE_CHECK',
-];
-
-/**
- * Offer statuses - any stage involving an offer.
- * @type {string[]}
- */
-export const OFFER_STATUSES = [
-  'OFFER_RECEIVED',
-  'NEGOTIATING',
-  'OFFER_ACCEPTED',
-  'OFFER_DECLINED',
-  'OFFER_RESCINDED',
-];
-
-/**
- * Technical interview statuses - stages involving technical assessment.
- * Does not include RECRUITER_SCREEN as it's typically non-technical.
- * @type {string[]}
- */
-export const TECHNICAL_STATUSES = [
-  'TECH_SCREEN',
-  'TAKE_HOME',
-  'SYSTEM_DESIGN',
-  'TECHNICAL_I',
-  'TECHNICAL_II',
-];
+// Re-export status arrays for consumers that import from metricsEngine
+export { RESPONSE_STATUSES, INTERVIEW_STATUSES, OFFER_STATUSES, TECHNICAL_STATUSES };
 
 /**
  * @typedef {Object} AuditEvent
