@@ -170,7 +170,7 @@ export default function JobTracker() {
     { key: 'k', handler: handleNavigateUp },
     { key: 'ArrowUp', handler: handleNavigateUp },
     { key: 'Enter', handler: handleViewSelected },
-    { key: 'e', handler: handleEditSelected },
+    { key: 'e', handler: handleEditSelected, preventDefault: true },
     { key: 'Delete', handler: handleDeleteSelected },
     { key: 'Backspace', handler: handleDeleteSelected },
   ], { enabled: !editing && !viewing && !loading });
