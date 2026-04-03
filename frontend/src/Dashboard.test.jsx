@@ -557,6 +557,34 @@ describe('JobTracker (Dashboard)', () => {
       expect(editShortcut).toBeDefined();
       expect(editShortcut.handler).toBeDefined();
     });
+
+    it('should register "e" key with preventDefault to avoid typing into focused input', async () => {
+      // This test ensures the fix for the bug where pressing 'e' to open the modal
+      // would cause the 'e' character to be typed into the company name input field
+      // because the modal auto-focuses that input on open
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Find the shortcuts registration call
+      const shortcutsCall = mockUseKeyboardShortcuts.mock.calls.find(
+        call => call[0] && Array.isArray(call[0])
+      );
+      expect(shortcutsCall).toBeDefined();
+
+      const shortcuts = shortcutsCall[0];
+
+      // 'e' key should have preventDefault: true to stop the character from being typed
+      const editShortcut = shortcuts.find(s => s.key === 'e');
+      expect(editShortcut).toBeDefined();
+      expect(editShortcut.preventDefault).toBe(true);
+    });
   });
 
   describe('Accessibility', () => {
