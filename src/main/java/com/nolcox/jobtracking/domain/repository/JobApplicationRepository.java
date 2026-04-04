@@ -60,7 +60,18 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
                                                         Pageable pageable);
 
     default List<JobApplication> findRecentApplicationsByUserId(Long userId, int limit) {
-        return findRecentApplicationsByUserId(userId, 
+        return findRecentApplicationsByUserId(userId,
                 org.springframework.data.domain.PageRequest.of(0, limit));
     }
+
+    /**
+     * Retrieves all job applications for a user.
+     *
+     * <p>Used for analytics calculations where we need to process
+     * all applications for aggregation.</p>
+     *
+     * @param userId the user's ID
+     * @return list of all applications for the user
+     */
+    List<JobApplication> findAllByUserId(Long userId);
 }

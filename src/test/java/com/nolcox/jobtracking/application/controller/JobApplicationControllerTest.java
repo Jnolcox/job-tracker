@@ -2,8 +2,16 @@ package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
+import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
+import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
+import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
+import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
+import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse.BottleneckStage;
+import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
+import com.nolcox.jobtracking.application.service.AnalyticsService;
 import com.nolcox.jobtracking.application.service.ApplicationEventService;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
@@ -31,8 +39,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,6 +61,9 @@ class JobApplicationControllerTest {
 
     @Mock
     private ApplicationEventService eventService;
+
+    @Mock
+    private AnalyticsService analyticsService;
 
     @InjectMocks
     private JobApplicationController jobApplicationController;
@@ -411,6 +426,202 @@ class JobApplicationControllerTest {
             assertThatThrownBy(() -> jobApplicationController.getApplicationEvents(applicationId, authentication))
                     .isInstanceOf(UnauthorizedException.class)
                     .hasMessage("Access denied");
+        }
+    }
+
+    // ==================== Analytics Endpoint Tests ====================
+
+    @Nested
+    @DisplayName("Get Metrics Tests")
+    class GetMetricsTests {
+
+        @Test
+        @DisplayName("Should return metrics with 200 OK")
+        void shouldReturnMetricsWith200() {
+            // Given
+            MetricsResponse expectedMetrics = new MetricsResponse(
+                    45.5, 30.0, 5.0, 7.5, 3.2, 100L,
+                    new StageConversions(40.0, 75.0, 20.0)
+            );
+
+            when(analyticsService.getMetrics(testUser.getId())).thenReturn(expectedMetrics);
+
+            // When
+            ResponseEntity<MetricsResponse> response = jobApplicationController.getMetrics(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().trueResponseRate()).isEqualTo(45.5);
+            assertThat(response.getBody().trueInterviewRate()).isEqualTo(30.0);
+            assertThat(response.getBody().trueOfferRate()).isEqualTo(5.0);
+            assertThat(response.getBody().totalApplications()).isEqualTo(100L);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Counts By Status Tests")
+    class GetCountsByStatusTests {
+
+        @Test
+        @DisplayName("Should return counts by status with 200 OK")
+        void shouldReturnCountsByStatusWith200() {
+            // Given
+            Map<ApplicationStatus, Long> expectedCounts = new EnumMap<>(ApplicationStatus.class);
+            expectedCounts.put(ApplicationStatus.APPLIED, 25L);
+            expectedCounts.put(ApplicationStatus.RECRUITER_SCREEN, 15L);
+            expectedCounts.put(ApplicationStatus.REJECTED, 30L);
+
+            when(analyticsService.getCountsByStatus(testUser.getId())).thenReturn(expectedCounts);
+
+            // When
+            ResponseEntity<Map<ApplicationStatus, Long>> response =
+                    jobApplicationController.getCountsByStatus(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).containsEntry(ApplicationStatus.APPLIED, 25L);
+            assertThat(response.getBody()).containsEntry(ApplicationStatus.REJECTED, 30L);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Salary Distribution Tests")
+    class GetSalaryDistributionTests {
+
+        @Test
+        @DisplayName("Should return salary distribution with 200 OK")
+        void shouldReturnSalaryDistributionWith200() {
+            // Given
+            SalaryDistributionResponse expectedDistribution = new SalaryDistributionResponse(
+                    80000.0, 250000.0, 120000.0, 180000.0, 150000.0, 45L
+            );
+
+            when(analyticsService.getSalaryDistribution(testUser.getId())).thenReturn(expectedDistribution);
+
+            // When
+            ResponseEntity<SalaryDistributionResponse> response =
+                    jobApplicationController.getSalaryDistribution(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().globalMin()).isEqualTo(80000.0);
+            assertThat(response.getBody().globalMax()).isEqualTo(250000.0);
+            assertThat(response.getBody().activeAppsWithSalary()).isEqualTo(45L);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Activity Heatmap Tests")
+    class GetActivityHeatmapTests {
+
+        @Test
+        @DisplayName("Should return activity heatmap for specified year")
+        void shouldReturnActivityHeatmapForSpecifiedYear() {
+            // Given
+            Map<String, Integer> data = new TreeMap<>();
+            data.put("2026-01-15", 3);
+            data.put("2026-01-16", 1);
+            ActivityHeatmapResponse expectedHeatmap = new ActivityHeatmapResponse(data, 3, 2026);
+
+            when(analyticsService.getActivityHeatmap(testUser.getId(), 2026)).thenReturn(expectedHeatmap);
+
+            // When
+            ResponseEntity<ActivityHeatmapResponse> response =
+                    jobApplicationController.getActivityHeatmap(2026, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().data()).containsEntry("2026-01-15", 3);
+            assertThat(response.getBody().maxCount()).isEqualTo(3);
+            assertThat(response.getBody().year()).isEqualTo(2026);
+        }
+
+        @Test
+        @DisplayName("Should default to current year when not specified")
+        void shouldDefaultToCurrentYearWhenNotSpecified() {
+            // Given
+            int currentYear = java.time.Year.now().getValue();
+            ActivityHeatmapResponse expectedHeatmap = new ActivityHeatmapResponse(Map.of(), 0, currentYear);
+
+            when(analyticsService.getActivityHeatmap(testUser.getId(), currentYear)).thenReturn(expectedHeatmap);
+
+            // When
+            ResponseEntity<ActivityHeatmapResponse> response =
+                    jobApplicationController.getActivityHeatmap(null, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().year()).isEqualTo(currentYear);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Time Patterns Tests")
+    class GetTimePatternsTests {
+
+        @Test
+        @DisplayName("Should return time patterns with 200 OK")
+        void shouldReturnTimePatternsWithOK() {
+            // Given
+            Map<DayOfWeek, Integer> byDayOfWeek = new EnumMap<>(DayOfWeek.class);
+            byDayOfWeek.put(DayOfWeek.MONDAY, 12);
+            byDayOfWeek.put(DayOfWeek.TUESDAY, 8);
+            Map<Integer, Integer> byHour = new TreeMap<>();
+            byHour.put(9, 15);
+            byHour.put(10, 20);
+            TimePatternsResponse expectedPatterns = new TimePatternsResponse(byDayOfWeek, byHour);
+
+            when(analyticsService.getTimePatterns(testUser.getId())).thenReturn(expectedPatterns);
+
+            // When
+            ResponseEntity<TimePatternsResponse> response =
+                    jobApplicationController.getTimePatterns(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().byDayOfWeek()).containsEntry(DayOfWeek.MONDAY, 12);
+            assertThat(response.getBody().byHour()).containsEntry(9, 15);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Stage Durations Tests")
+    class GetStageDurationsTests {
+
+        @Test
+        @DisplayName("Should return stage durations with 200 OK")
+        void shouldReturnStageDurationsWithOK() {
+            // Given
+            Map<ApplicationStatus, Double> averageTimeByStage = new EnumMap<>(ApplicationStatus.class);
+            averageTimeByStage.put(ApplicationStatus.APPLIED, 5.2);
+            averageTimeByStage.put(ApplicationStatus.TECH_SCREEN, 7.5);
+            List<BottleneckStage> bottlenecks = List.of(
+                    new BottleneckStage(ApplicationStatus.TECH_SCREEN, 7.5),
+                    new BottleneckStage(ApplicationStatus.APPLIED, 5.2)
+            );
+            StageDurationsResponse expectedDurations =
+                    new StageDurationsResponse(averageTimeByStage, bottlenecks);
+
+            when(analyticsService.getStageDurations(testUser.getId())).thenReturn(expectedDurations);
+
+            // When
+            ResponseEntity<StageDurationsResponse> response =
+                    jobApplicationController.getStageDurations(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().averageTimeByStage())
+                    .containsEntry(ApplicationStatus.TECH_SCREEN, 7.5);
+            assertThat(response.getBody().bottleneckStages()).hasSize(2);
+            assertThat(response.getBody().bottleneckStages().get(0).stage())
+                    .isEqualTo(ApplicationStatus.TECH_SCREEN);
         }
     }
 }
