@@ -14,71 +14,14 @@ import {
   RTO_LABELS,
   LEVEL_LABELS,
 } from "../../utils/dataAdapter";
+import {
+  formatDateDisplay,
+  formatDateOnly,
+  formatSalary,
+  extractDomain,
+} from "../../utils/formatters";
 import { jobApplicationsAPI } from "../../services/api";
 import AuditTrailTimeline from "./AuditTrailTimeline";
-import JourneyTimeline from "./JourneyTimeline";
-
-/**
- * Format a date string to a human-readable format.
- *
- * @param {string} dateStr - ISO date string
- * @returns {string} Formatted date string (e.g., "Jan 15, 2025 at 10:00 AM")
- */
-function formatDate(dateStr) {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return null;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-/**
- * Format a date string to just the date portion.
- *
- * @param {string} dateStr - ISO date string
- * @returns {string} Formatted date string (e.g., "Jan 15, 2025")
- */
-function formatDateOnly(dateStr) {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return null;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-/**
- * Format salary number to currency string.
- *
- * @param {number} salary - Salary amount
- * @returns {string} Formatted salary (e.g., "$150,000")
- */
-function formatSalary(salary) {
-  if (!salary) return null;
-  return `$${salary.toLocaleString()}`;
-}
-
-/**
- * Extract domain from URL for display.
- *
- * @param {string} url - Full URL
- * @returns {string} Domain name (e.g., "example.com")
- */
-function extractDomain(url) {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 /**
  * @component InfoRow
@@ -384,7 +327,7 @@ export default function ApplicationViewModal({ app, onClose }) {
           {/* Interview Date (if present) */}
           {app.interviewDate && (
             <InfoRow label="Interview Date" fullWidth>
-              {formatDate(app.interviewDate)}
+              {formatDateDisplay(app.interviewDate)}
             </InfoRow>
           )}
 
@@ -475,13 +418,6 @@ export default function ApplicationViewModal({ app, onClose }) {
               </p>
             </>
           )}
-
-          {/* Journey Timeline (Stage History) */}
-          {/*<JourneyTimeline
-            applicationId={app.id}
-            events={events}
-            loading={eventsLoading}
-          />*/}
 
           {/* Audit Trail Timeline */}
           <AuditTrailTimeline events={events} loading={eventsLoading} />

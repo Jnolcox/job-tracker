@@ -120,7 +120,7 @@ function getEventIcon(eventType) {
     case 'NOTE_ADDED':
       return '\uD83D\uDCDD'; // Memo
     case 'FIELD_UPDATED':
-      return '\u270F'; // Pencil
+      return '\u2699'; // Gear
     default:
       return '\u2022'; // Bullet
   }
@@ -202,7 +202,7 @@ function TimelineItem({ event, isLast }) {
           fontSize: 10,
           flexShrink: 0,
           zIndex: 1,
-          color: ['STATUS_CHANGED', 'APPLICATION_CREATED'].includes(event.eventType) ? '#9CA3AF' : 'inherit',
+          color: ['STATUS_CHANGED', 'APPLICATION_CREATED', 'FIELD_UPDATED'].includes(event.eventType) ? '#b6bfcf' : 'inherit',
         }}
       >
         {icon}

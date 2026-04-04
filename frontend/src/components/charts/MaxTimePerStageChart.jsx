@@ -6,6 +6,7 @@
 import { FUNNEL_GROUPS, FUNNEL_COLORS } from "../../constants/dashboard";
 import { isStatusInGroup } from "../../utils/dataAdapter";
 import { timeInStage } from "../../utils/dateHelpers";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component MaxTimePerStageChart
@@ -51,30 +52,10 @@ export default function MaxTimePerStageChart({ apps }) {
   const maxVal = Math.max(...presentGroups.map(g => groupMax[g.key]), 1);
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 4,
-      }}>
-        Max Days in Stage
-      </h3>
-      <p style={{
-        color: "#4B5563",
-        fontSize: 10,
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Longest time in current stage per pipeline group
-      </p>
+    <ChartContainer
+      title="Max Days in Stage"
+      subtitle="Longest time in current stage per pipeline group"
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {presentGroups.map(g => {
           const days = groupMax[g.key];
@@ -138,6 +119,6 @@ export default function MaxTimePerStageChart({ apps }) {
           );
         })}
       </div>
-    </div>
+    </ChartContainer>
   );
 }

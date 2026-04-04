@@ -13,12 +13,14 @@
  */
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { DAYS_SUNDAY_START } from '../constants/dashboard';
+import {
+  formatDateKey as formatDateKeyUtil,
+  formatDateOnly,
+} from '../utils/formatters';
 
-/**
- * Days of the week, starting with Sunday (matches JavaScript Date.getDay())
- * @constant {string[]}
- */
-export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Re-export DAYS_SUNDAY_START as DAYS for backwards compatibility with tests
+export const DAYS = DAYS_SUNDAY_START;
 
 /**
  * Get the start of the week (Sunday) for a given date.
@@ -33,30 +35,9 @@ function getWeekStart(date) {
   return d;
 }
 
-/**
- * Format a date as YYYY-MM-DD for use as a grid key.
- * @param {Date} date - The date to format
- * @returns {string} Formatted date string
- */
-function formatDateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Format a date for display in tooltips.
- * @param {Date} date - The date to format
- * @returns {string} Human-readable date string (e.g., "Feb 10, 2025")
- */
-function formatDateDisplay(date) {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+// Use consolidated formatters - local aliases for readability
+const formatDateKey = formatDateKeyUtil;
+const formatDateDisplay = formatDateOnly;
 
 /**
  * Get all weeks (as Sunday start dates) within a date range.

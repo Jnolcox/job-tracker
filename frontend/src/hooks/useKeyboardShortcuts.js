@@ -119,11 +119,6 @@ export function useKeyboardShortcuts(shortcuts, options = {}) {
         }
       }
 
-      // Check that modifiers match (for shortcuts requiring them)
-      if (requiresModifier(shortcut) && !modifiersMatch(event, shortcut)) {
-        continue;
-      }
-
       // Handle preventDefault
       if (shortcut.preventDefault) {
         event.preventDefault();

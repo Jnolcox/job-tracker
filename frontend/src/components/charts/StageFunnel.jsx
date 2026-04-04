@@ -4,6 +4,7 @@
  */
 
 import { FUNNEL_GROUPS, FUNNEL_COLORS } from "../../constants/dashboard";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component StageFunnel
@@ -30,22 +31,7 @@ export default function StageFunnel({ apps }) {
   const max = Math.max(...Object.values(counts), 1);
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Pipeline Funnel
-      </h3>
+    <ChartContainer title="Pipeline Funnel">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {FUNNEL_GROUPS.map(g => (
           <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -87,6 +73,6 @@ export default function StageFunnel({ apps }) {
           </div>
         ))}
       </div>
-    </div>
+    </ChartContainer>
   );
 }

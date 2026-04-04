@@ -4,6 +4,7 @@
  */
 
 import { HOURS } from "../../constants/dashboard";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component HourBar
@@ -32,22 +33,7 @@ export default function HourBar({ apps }) {
   const labeled = [0, 6, 9, 12, 15, 18, 21, 23];
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Applications by Hour
-      </h3>
+    <ChartContainer title="Applications by Hour">
       <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 72 }}>
         {HOURS.map(h => {
           const v = counts[h];
@@ -83,6 +69,6 @@ export default function HourBar({ apps }) {
           );
         })}
       </div>
-    </div>
+    </ChartContainer>
   );
 }

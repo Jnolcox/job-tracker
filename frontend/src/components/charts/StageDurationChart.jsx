@@ -7,6 +7,7 @@
 import { useMemo } from 'react';
 import { STATUS_LABELS, STATUS_COLORS } from '../../utils/dataAdapter';
 import { getAverageStageTime, getBottleneckStages } from '../../utils/stageDurationUtils';
+import ChartContainer from './ChartContainer';
 
 /**
  * Ordered list of stages for consistent display order.
@@ -90,52 +91,26 @@ export default function StageDurationChart({ events, loading = false, showBottle
     return Math.max(...stagesWithData.map((s) => s.avgDays), 1);
   }, [stagesWithData]);
 
-  return (
-    <div
-      data-testid="stage-duration-chart"
+  const headerRight = showBottlenecks && stagesWithData.some((s) => s.isBottleneck) ? (
+    <span
       style={{
-        background: '#0E1117',
-        border: '1px solid #1F2937',
-        borderRadius: 12,
-        padding: '20px 24px',
+        color: '#F87171',
+        fontSize: 9,
+        fontFamily: "'DM Mono',monospace",
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 16,
-        }}
-      >
-        <h3
-          style={{
-            color: '#9CA3AF',
-            fontSize: 11,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            fontFamily: "'DM Mono',monospace",
-            margin: 0,
-          }}
-        >
-          Avg. Time Per Stage (days)
-        </h3>
-        {showBottlenecks && stagesWithData.some((s) => s.isBottleneck) && (
-          <span
-            style={{
-              color: '#F87171',
-              fontSize: 9,
-              fontFamily: "'DM Mono',monospace",
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            Bottlenecks highlighted
-          </span>
-        )}
-      </div>
+      Bottlenecks highlighted
+    </span>
+  ) : null;
 
+  return (
+    <ChartContainer
+      title="Avg. Time Per Stage (days)"
+      headerRight={headerRight}
+      testId="stage-duration-chart"
+    >
       {/* Loading state */}
       {loading && (
         <div
@@ -291,7 +266,7 @@ export default function StageDurationChart({ events, loading = false, showBottle
           <LegendItem color="#F87171" label="> 10 days" />
         </div>
       )}
-    </div>
+    </ChartContainer>
   );
 }
 

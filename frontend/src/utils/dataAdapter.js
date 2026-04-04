@@ -1,98 +1,17 @@
 // Data adapter for converting between backend and UI formats
 
-// All backend ApplicationStatus values
-export const APPLICATION_STATUSES = [
-  "APPLIED",
-  "RECRUITER_SCREEN",
-  "TECH_SCREEN",
-  "TAKE_HOME",
-  "SYSTEM_DESIGN",
-  "TECHNICAL_I",
-  "TECHNICAL_II",
-  "REFERENCE_CHECK",
-  "OFFER_RECEIVED",
-  "NEGOTIATING",
-  "OFFER_ACCEPTED",
-  "OFFER_DECLINED",
-  "OFFER_RESCINDED",
-  "REJECTED",
-  "WITHDRAWN",
-  "ON_HOLD",
-  "WAITING_FOR_RESPONSE",
-  "GHOSTED",
-];
+// Re-export status constants from consolidated location
+export {
+  APPLICATION_STATUS,
+  APPLICATION_STATUSES,
+  STATUS_LABELS,
+  STATUS_GROUPS,
+  isStatusInGroup,
+  isTerminalStatus,
+} from '../constants/statuses';
 
-// Human-readable labels for statuses
-export const STATUS_LABELS = {
-  APPLIED: "Applied",
-  RECRUITER_SCREEN: "Recruiter Screen",
-  TECH_SCREEN: "Tech Screen",
-  TAKE_HOME: "Take Home",
-  SYSTEM_DESIGN: "System Design",
-  TECHNICAL_I: "Technical I",
-  TECHNICAL_II: "Technical II",
-  REFERENCE_CHECK: "Reference Check",
-  OFFER_RECEIVED: "Offer Received",
-  NEGOTIATING: "Negotiating",
-  OFFER_ACCEPTED: "Offer Accepted",
-  OFFER_DECLINED: "Offer Declined",
-  OFFER_RESCINDED: "Offer Rescinded",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
-  ON_HOLD: "On Hold",
-  WAITING_FOR_RESPONSE: "Waiting for Response",
-  GHOSTED: "Ghosted",
-};
-
-// Colors grouped by category
-export const STATUS_COLORS = {
-  // Applied - Blue
-  APPLIED: "#4E9AF1",
-  // Recruiter - Purple
-  RECRUITER_SCREEN: "#A78BFA",
-  // Technical stages - Orange/Amber
-  TECH_SCREEN: "#F59E0B",
-  TAKE_HOME: "#F59E0B",
-  SYSTEM_DESIGN: "#F59E0B",
-  TECHNICAL_I: "#F59E0B",
-  TECHNICAL_II: "#F59E0B",
-  // Reference Check - Pink
-  REFERENCE_CHECK: "#cb37a1",
-  // Offer stages - Green
-  OFFER_RECEIVED: "#10B981",
-  NEGOTIATING: "#10B981",
-  OFFER_ACCEPTED: "#059669",
-  // Negative outcomes - Red
-  OFFER_DECLINED: "#F87171",
-  OFFER_RESCINDED: "#F87171",
-  REJECTED: "#F87171",
-  GHOSTED: "#F87171",
-  // Inactive - Gray
-  WITHDRAWN: "#6B7280",
-  // Waiting - Yellow/Amber
-  ON_HOLD: "#EAB308",
-  WAITING_FOR_RESPONSE: "#EAB308",
-};
-
-// Status groupings for filtering/stats
-export const STATUS_GROUPS = {
-  REJECTED: ["REJECTED", "OFFER_DECLINED", "OFFER_RESCINDED", "GHOSTED"],
-  WITHDRAWN: ["WITHDRAWN"],
-  WAITING: ["ON_HOLD", "WAITING_FOR_RESPONSE"],
-  OFFER: ["OFFER_RECEIVED", "NEGOTIATING", "OFFER_ACCEPTED"],
-  TECHNICAL: ["TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II"],
-  INTERVIEWING: ["RECRUITER_SCREEN", "TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II", "REFERENCE_CHECK"],
-};
-
-// Helper to check if status is in a group
-export const isStatusInGroup = (status, group) => STATUS_GROUPS[group]?.includes(status) || false;
-
-// Helper to check if status is terminal (not active)
-export const isTerminalStatus = (status) =>
-  STATUS_GROUPS.REJECTED.includes(status) ||
-  STATUS_GROUPS.WITHDRAWN.includes(status) ||
-  STATUS_GROUPS.WAITING.includes(status) ||
-  status === "OFFER_ACCEPTED";
+// Re-export STATUS_COLORS from consolidated colors
+export { STATUS_COLORS } from '../constants/colors';
 
 // RTO type constants
 export const RTO_TYPES = ["REMOTE", "HYBRID_2", "HYBRID_3", "HYBRID_4", "ONSITE"];
@@ -390,8 +309,37 @@ export function toBackendFormatForUpdate(form, originalData, statusChanged) {
 }
 
 /**
- * Convert list of backend applications to UI format
+ * Create an empty application object with default values.
+ * Use this when creating a new application to ensure all fields have proper initial values.
+ *
+ * @returns {Object} Empty application object in UI format with default values
+ *
+ * @example
+ * // Open create modal with empty application
+ * onEdit(createEmptyApplication());
+ *
+ * @example
+ * // Reset form to empty state
+ * setForm(createEmptyApplication());
  */
-export function toUIFormatList(applications) {
-  return applications.map(toUIFormat);
+export function createEmptyApplication() {
+  return {
+    id: null,
+    company: "",
+    role: "",
+    status: "APPLIED",
+    appliedAt: new Date().toISOString(),
+    notes: "",
+    jobDescription: "",
+    jobUrl: "",
+    salaryMin: null,
+    salaryMax: null,
+    location: "",
+    rtoType: null,
+    level: null,
+    contactName: "",
+    contactEmail: "",
+    contactPhone: "",
+    interviewDate: null,
+  };
 }

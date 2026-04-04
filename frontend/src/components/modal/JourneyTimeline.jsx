@@ -7,34 +7,7 @@
 import { useMemo } from 'react';
 import { STATUS_LABELS, STATUS_COLORS } from '../../utils/dataAdapter';
 import { getStageDurations } from '../../utils/stageDurationUtils';
-
-/**
- * Format a date to a short human-readable format.
- *
- * @param {string} dateStr - ISO date string
- * @returns {string} Formatted date (e.g., "Jan 15")
- */
-function formatShortDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
- * Format duration days to a human-readable string.
- *
- * @param {number} days - Number of days
- * @returns {string} Formatted duration (e.g., "5 days", "1 day", "< 1 day")
- */
-function formatDuration(days) {
-  if (days === 0) return '< 1 day';
-  if (days === 1) return '1 day';
-  return `${days} days`;
-}
+import { formatDateShort, formatDuration } from '../../utils/formatters';
 
 /**
  * @component StageBar
@@ -188,8 +161,8 @@ export default function JourneyTimeline({ applicationId, events, loading = false
     const first = stageDurations[0];
     const last = stageDurations[stageDurations.length - 1];
     return {
-      start: formatShortDate(first.startDate),
-      end: last.endDate ? formatShortDate(last.endDate) : 'Now',
+      start: formatDateShort(first.startDate),
+      end: last.endDate ? formatDateShort(last.endDate) : 'Now',
     };
   }, [stageDurations]);
 

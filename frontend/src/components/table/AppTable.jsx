@@ -8,7 +8,7 @@ import { Badge } from "../common";
 import TableHeader from "./TableHeader";
 import { FUNNEL_GROUPS, FUNNEL_COLORS, FILTER_OPTIONS } from "../../constants/dashboard";
 import { timeInStage, totalDaysActive } from "../../utils/dateHelpers";
-import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS } from "../../utils/dataAdapter";
+import { isStatusInGroup, RTO_LABELS, LEVEL_LABELS, createEmptyApplication } from "../../utils/dataAdapter";
 
 /**
  * Default number of rows before scrolling is enabled
@@ -190,23 +190,7 @@ export default function AppTable({
           })}
         </div>
         <button
-          onClick={() => onEdit({
-            id: null,
-            company: "",
-            role: "",
-            status: "APPLIED",
-            appliedAt: new Date().toISOString(),
-            notes: "",
-            jobDescription: "",
-            jobUrl: "",
-            salaryMin: null,
-            salaryMax: null,
-            location: "",
-            rtoType: null,
-            contactName: "",
-            contactEmail: "",
-            contactPhone: "",
-          })}
+          onClick={() => onEdit(createEmptyApplication())}
           style={{
             marginLeft: "auto",
             padding: "6px 14px",

@@ -3,7 +3,8 @@
  * @description Bar chart showing application distribution by day of week.
  */
 
-import { DAYS } from "../../constants/dashboard";
+import { DAYS, getDayIndex } from "../../constants/dashboard";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component DayOfWeekBar
@@ -24,28 +25,14 @@ export default function DayOfWeekBar({ apps }) {
     if (!a || !a.appliedAt) return;
     const dt = new Date(a.appliedAt);
     if (isNaN(dt.getTime())) return;
-    const d = DAYS[dt.getDay()];
+    // Use getDayIndex to convert from JS getDay() (0=Sunday) to DAYS index (0=Monday)
+    const d = DAYS[getDayIndex(dt.getDay())];
     counts[d]++;
   });
   const max = Math.max(...Object.values(counts), 1);
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Applications by Day of Week
-      </h3>
+    <ChartContainer title="Applications by Day of Week">
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 80 }}>
         {DAYS.map(d => {
           const v = counts[d];
@@ -83,6 +70,6 @@ export default function DayOfWeekBar({ apps }) {
           );
         })}
       </div>
-    </div>
+    </ChartContainer>
   );
 }
