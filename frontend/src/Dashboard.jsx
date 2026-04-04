@@ -387,17 +387,17 @@ export default function JobTracker() {
             loading={metricsLoading}
           />
           <StatCard
-            label="True Offer Rate"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
-            sub="received offers"
-            accent="#10B981"
-            loading={metricsLoading}
-          />
-          <StatCard
             label="Avg Response Time"
             value={metricsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
             sub="days to hear back"
             accent="#F59E0B"
+            loading={metricsLoading}
+          />
+          <StatCard
+            label="True Offer Rate"
+            value={metricsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
+            sub="received offers"
+            accent="#10B981"
             loading={metricsLoading}
           />
 
