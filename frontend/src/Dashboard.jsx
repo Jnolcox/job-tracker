@@ -3,7 +3,7 @@
  * @description Main dashboard component for job application tracking.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts, useApplicationMetrics } from "./hooks";
@@ -13,6 +13,7 @@ import {
   toBackendFormat,
   toBackendFormatForUpdate,
   isStatusInGroup,
+  createEmptyApplication,
 } from "./utils/dataAdapter";
 import ActivityHeatmap from "./components/ActivityHeatmap";
 import { StatCard } from "./components/common";
@@ -81,23 +82,7 @@ export default function JobTracker() {
 
   // Create new application template
   const createNewApplication = useCallback(() => {
-    setEditing({
-      id: null,
-      company: "",
-      role: "",
-      status: "APPLIED",
-      appliedAt: new Date().toISOString(),
-      notes: "",
-      jobDescription: "",
-      jobUrl: "",
-      salaryMin: null,
-      salaryMax: null,
-      location: "",
-      rtoType: null,
-      contactName: "",
-      contactEmail: "",
-      contactPhone: "",
-    });
+    setEditing(createEmptyApplication());
   }, []);
 
   // Focus search input
@@ -253,13 +238,16 @@ export default function JobTracker() {
   const activeApps = apps.filter(a => !isStatusInGroup(a.status, 'REJECTED') && !isStatusInGroup(a.status, 'WITHDRAWN'));
   const offers = apps.filter(a => isStatusInGroup(a.status, 'OFFER')).length;
   const inInterview = apps.filter(a => isStatusInGroup(a.status, 'INTERVIEWING')).length;
-  const weeklyPace = (() => {
+
+  // Memoize weekly pace calculation to avoid recalculating on every render
+  const weeklyPace = useMemo(() => {
     if (apps.length === 0) return "0.0";
     const dates = apps.map(a => new Date(a.appliedAt));
-    const minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
+    const minD = new Date(Math.min(...dates));
+    const maxD = new Date(Math.max(...dates));
     const weeks = Math.max((maxD - minD) / (7 * 86400000), 1);
     return (apps.length / weeks).toFixed(1);
-  })();
+  }, [apps]);
 
   // Loading state
   if (loading) {

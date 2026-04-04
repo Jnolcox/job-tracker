@@ -10,36 +10,8 @@ export {
   isTerminalStatus,
 } from '../constants/statuses';
 
-// Import STATUS_COLORS from consolidated colors (to be created)
-// For now, keep inline until Task 1.2 consolidates colors
-export const STATUS_COLORS = {
-  // Applied - Blue
-  APPLIED: "#4E9AF1",
-  // Recruiter - Purple
-  RECRUITER_SCREEN: "#A78BFA",
-  // Technical stages - Orange/Amber
-  TECH_SCREEN: "#F59E0B",
-  TAKE_HOME: "#F59E0B",
-  SYSTEM_DESIGN: "#F59E0B",
-  TECHNICAL_I: "#F59E0B",
-  TECHNICAL_II: "#F59E0B",
-  // Reference Check - Pink
-  REFERENCE_CHECK: "#cb37a1",
-  // Offer stages - Green
-  OFFER_RECEIVED: "#10B981",
-  NEGOTIATING: "#10B981",
-  OFFER_ACCEPTED: "#059669",
-  // Negative outcomes - Red
-  OFFER_DECLINED: "#F87171",
-  OFFER_RESCINDED: "#F87171",
-  REJECTED: "#F87171",
-  GHOSTED: "#F87171",
-  // Inactive - Gray
-  WITHDRAWN: "#6B7280",
-  // Waiting - Yellow/Amber
-  ON_HOLD: "#EAB308",
-  WAITING_FOR_RESPONSE: "#EAB308",
-};
+// Re-export STATUS_COLORS from consolidated colors
+export { STATUS_COLORS } from '../constants/colors';
 
 // RTO type constants
 export const RTO_TYPES = ["REMOTE", "HYBRID_2", "HYBRID_3", "HYBRID_4", "ONSITE"];
@@ -337,8 +309,37 @@ export function toBackendFormatForUpdate(form, originalData, statusChanged) {
 }
 
 /**
- * Convert list of backend applications to UI format
+ * Create an empty application object with default values.
+ * Use this when creating a new application to ensure all fields have proper initial values.
+ *
+ * @returns {Object} Empty application object in UI format with default values
+ *
+ * @example
+ * // Open create modal with empty application
+ * onEdit(createEmptyApplication());
+ *
+ * @example
+ * // Reset form to empty state
+ * setForm(createEmptyApplication());
  */
-export function toUIFormatList(applications) {
-  return applications.map(toUIFormat);
+export function createEmptyApplication() {
+  return {
+    id: null,
+    company: "",
+    role: "",
+    status: "APPLIED",
+    appliedAt: new Date().toISOString(),
+    notes: "",
+    jobDescription: "",
+    jobUrl: "",
+    salaryMin: null,
+    salaryMax: null,
+    location: "",
+    rtoType: null,
+    level: null,
+    contactName: "",
+    contactEmail: "",
+    contactPhone: "",
+    interviewDate: null,
+  };
 }

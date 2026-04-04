@@ -61,7 +61,3 @@ export const HTTP_STATUS = {
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500
 };
-
-// Re-export APPLICATION_STATUS from consolidated statuses
-// Note: UI_STAGES, STAGE_COLORS, STATUS_CONFIG, ERROR_MESSAGES are unused and removed
-export { APPLICATION_STATUS } from './statuses';

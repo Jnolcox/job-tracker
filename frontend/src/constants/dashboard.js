@@ -5,6 +5,10 @@
  */
 
 import { STATUS_GROUPS } from "../utils/dataAdapter";
+import { FUNNEL_COLORS } from "./colors";
+
+// Re-export FUNNEL_COLORS for backwards compatibility
+export { FUNNEL_COLORS };
 
 /**
  * Display groups for the pipeline funnel chart.
@@ -23,22 +27,6 @@ export const FUNNEL_GROUPS = [
 ];
 
 /**
- * Color mapping for funnel groups.
- * Colors are coordinated with the status colors in dataAdapter.js.
- * @constant {Object<string, string>}
- */
-export const FUNNEL_COLORS = {
-  APPLIED: "#4E9AF1",
-  RECRUITER: "#A78BFA",
-  TECHNICAL: "#F59E0B",
-  REFERENCE: "#cb37a1",
-  OFFER: "#10B981",
-  REJECTED: "#F87171",
-  WAITING: "#EAB308",
-  WITHDRAWN: "#6B7280",
-};
-
-/**
  * Filter options for the applications table.
  * "Active" shows all applications EXCEPT those in REJECTED status group.
  * @constant {string[]}
@@ -52,8 +40,32 @@ export const FILTER_OPTIONS = ["All", "Active", ...FUNNEL_GROUPS.map(g => g.key)
 export const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 /**
- * Days of the week starting with Monday for day-based charts.
- * Note: This differs from JavaScript's Date.getDay() which starts with Sunday.
+ * Days of the week starting with Monday for display in charts.
+ * Use getDayIndex() to convert from Date.getDay() to this array's index.
  * @constant {string[]}
  */
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/**
+ * Days of the week starting with Sunday (matches JavaScript Date.getDay()).
+ * Use this array when you need to index directly with Date.getDay().
+ * @constant {string[]}
+ */
+export const DAYS_SUNDAY_START = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Convert JavaScript's Date.getDay() (0=Sunday) to DAYS array index (0=Monday).
+ * This fixes the mismatch between JS getDay() and the Monday-first DAYS array.
+ *
+ * @param {number} jsDay - Day from Date.getDay() (0=Sunday, 6=Saturday)
+ * @returns {number} Index into DAYS array (0=Monday, 6=Sunday)
+ *
+ * @example
+ * const date = new Date('2025-01-05'); // Sunday
+ * const dayIndex = getDayIndex(date.getDay()); // Returns 6 (DAYS[6] = "Sun")
+ */
+export function getDayIndex(jsDay) {
+  // getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  // DAYS:    0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+  return jsDay === 0 ? 6 : jsDay - 1;
+}

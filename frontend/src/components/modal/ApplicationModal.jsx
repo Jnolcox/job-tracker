@@ -14,36 +14,7 @@ import {
   LEVEL_LABELS,
   isStatusInGroup,
 } from "../../utils/dataAdapter";
-
-/**
- * Convert date value to local datetime-local input format.
- *
- * @param {string} dateStr - ISO date string or similar
- * @returns {string} Formatted string for datetime-local input (YYYY-MM-DDTHH:mm)
- *
- * @example
- * toLocalDateTimeInput('2025-01-15T10:00:00Z') // Returns '2025-01-15T10:00'
- */
-function toLocalDateTimeInput(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-/**
- * Get current local datetime formatted for datetime-local input.
- *
- * @returns {string} Current datetime in YYYY-MM-DDTHH:mm format
- */
-function getCurrentLocalDateTime() {
-  return toLocalDateTimeInput(new Date().toISOString());
-}
+import { toDateTimeLocalInput } from "../../utils/formatters";
 
 /**
  * @component ApplicationModal
@@ -234,7 +205,7 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
               <span style={labelStyle}>DATE APPLIED *</span>
               <input
                 type="datetime-local"
-                value={toLocalDateTimeInput(form.appliedAt)}
+                value={toDateTimeLocalInput(form.appliedAt)}
                 onChange={e => set("appliedAt", e.target.value ? new Date(e.target.value).toISOString() : null)}
                 style={inputStyle}
                 disabled={saving}
@@ -249,7 +220,7 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
               <span style={labelStyle}>INTERVIEW DATE</span>
               <input
                 type="datetime-local"
-                value={toLocalDateTimeInput(form.interviewDate)}
+                value={toDateTimeLocalInput(form.interviewDate)}
                 onChange={e => set("interviewDate", e.target.value ? new Date(e.target.value).toISOString() : null)}
                 style={inputStyle}
                 disabled={saving}
@@ -399,7 +370,7 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
               <span style={labelStyle}>STATUS CHANGED DATE</span>
               <input
                 type="datetime-local"
-                value={toLocalDateTimeInput(form.lastUpdate)}
+                value={toDateTimeLocalInput(form.lastUpdate)}
                 onChange={e => set("lastUpdate", e.target.value ? new Date(e.target.value).toISOString() : null)}
                 style={inputStyle}
                 disabled={saving}

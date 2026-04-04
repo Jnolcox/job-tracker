@@ -4,6 +4,7 @@
  */
 
 import { isStatusInGroup } from "../../utils/dataAdapter";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component SalaryRangeChart
@@ -26,32 +27,18 @@ export default function SalaryRangeChart({ apps }) {
 
   if (activeWithSalary.length === 0) {
     return (
-      <div style={{
-        background: "#0E1117",
-        border: "1px solid #1F2937",
-        borderRadius: 12,
-        padding: "20px 24px",
-      }}>
-        <h3 style={{
-          color: "#9CA3AF",
-          fontSize: 11,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          fontFamily: "'DM Mono',monospace",
-          marginBottom: 16,
-        }}>
-          Salary Range Distribution
-        </h3>
+      <ChartContainer title="Salary Range Distribution">
         <p style={{
           color: "#4B5563",
           fontSize: 11,
           fontFamily: "'DM Mono',monospace",
           textAlign: "center",
           padding: 40,
+          margin: 0,
         }}>
           No active applications with salary data
         </p>
-      </div>
+      </ChartContainer>
     );
   }
 
@@ -125,31 +112,10 @@ export default function SalaryRangeChart({ apps }) {
   const avgY = getY(avgMid);
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 4,
-      }}>
-        Salary Range Distribution
-      </h3>
-      <p style={{
-        color: "#4B5563",
-        fontSize: 10,
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Min/Max spread for {activeWithSalary.length} active applications
-      </p>
-
+    <ChartContainer
+      title="Salary Range Distribution"
+      subtitle={`Min/Max spread for ${activeWithSalary.length} active applications`}
+    >
       {/* Chart container */}
       <div style={{ position: "relative", height: chartHeight, marginBottom: 8 }}>
         {/* Y-axis labels */}
@@ -251,6 +217,6 @@ export default function SalaryRangeChart({ apps }) {
           </svg>
         </div>
       </div>
-    </div>
+    </ChartContainer>
   );
 }

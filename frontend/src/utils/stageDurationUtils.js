@@ -6,6 +6,7 @@
  */
 
 import { parseBackendDate } from './dataAdapter';
+import { daysBetween, getToday } from './dateHelpers';
 
 /**
  * @typedef {Object} StageDuration
@@ -34,27 +35,20 @@ function parseEventTimestamp(timestamp) {
 }
 
 /**
- * Calculate the number of days between two dates.
+ * Calculate the number of days between two dates (non-negative).
+ * Wrapper around daysBetween that ensures non-negative results.
  *
  * @param {Date} startDate - Start date
  * @param {Date} endDate - End date
- * @returns {number} Number of days between the dates (can be fractional, floored)
+ * @returns {number} Number of days between the dates (floored, non-negative)
  */
 function daysBetweenDates(startDate, endDate) {
   if (!startDate || !endDate) return 0;
-  const diffMs = endDate.getTime() - startDate.getTime();
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  return Math.max(0, daysBetween(startDate, endDate));
 }
 
-/**
- * Get the current time as a Date object.
- * Extracted for testability.
- *
- * @returns {Date} Current date/time
- */
-function getNow() {
-  return new Date();
-}
+// Alias getToday as getNow for backwards compatibility
+const getNow = getToday;
 
 /**
  * Calculate how many days an application has been in its current status

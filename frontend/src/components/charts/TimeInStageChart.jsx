@@ -5,6 +5,7 @@
 
 import { isTerminalStatus } from "../../utils/dataAdapter";
 import { timeInStage } from "../../utils/dateHelpers";
+import ChartContainer from "./ChartContainer";
 
 /**
  * @component TimeInStageChart
@@ -27,22 +28,7 @@ export default function TimeInStageChart({ apps }) {
   const max = Math.max(...sorted.map(a => timeInStage(a)), 1);
 
   return (
-    <div style={{
-      background: "#0E1117",
-      border: "1px solid #1F2937",
-      borderRadius: 12,
-      padding: "20px 24px",
-    }}>
-      <h3 style={{
-        color: "#9CA3AF",
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 16,
-      }}>
-        Time in Current Status (days)
-      </h3>
+    <ChartContainer title="Time in Current Status (days)">
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {sorted.map(a => {
           const days = timeInStage(a);
@@ -91,6 +77,6 @@ export default function TimeInStageChart({ apps }) {
           );
         })}
       </div>
-    </div>
+    </ChartContainer>
   );
 }
