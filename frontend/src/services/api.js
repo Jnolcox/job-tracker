@@ -66,4 +66,90 @@ export const jobApplicationsAPI = {
   },
 };
 
+/**
+ * Analytics API - Backend analytics endpoints (requires auth)
+ * These endpoints provide pre-computed metrics and analytics data.
+ */
+export const analyticsAPI = {
+  /**
+   * Fetch application metrics including response rates, interview rates, and stage conversions.
+   * @returns {Promise} Axios promise resolving to metrics object
+   * @example
+   * const { data } = await analyticsAPI.getMetrics();
+   * // data: { trueResponseRate, trueInterviewRate, trueOfferRate, avgDaysToResponse, weeklyPace, totalApplications, stageConversions }
+   */
+  getMetrics: () => api.get('/job-applications/metrics'),
+
+  /**
+   * Fetch counts of applications by status.
+   * @returns {Promise} Axios promise resolving to counts object keyed by status
+   * @example
+   * const { data } = await analyticsAPI.getCountsByStatus();
+   * // data: { APPLIED: 20, RECRUITER_SCREEN: 10, ... }
+   */
+  getCountsByStatus: () => api.get('/job-applications/counts-by-status'),
+
+  /**
+   * Fetch salary distribution analytics for active applications.
+   * @returns {Promise} Axios promise resolving to salary stats
+   * @example
+   * const { data } = await analyticsAPI.getSalaryDistribution();
+   * // data: { globalMin, globalMax, avgMin, avgMax, avgMid, activeAppsWithSalary }
+   */
+  getSalaryDistribution: () => api.get('/job-applications/analytics/salary-distribution'),
+
+  /**
+   * Fetch activity heatmap data for a specific year.
+   * @param {number} [year] - Year to fetch data for (defaults to current year)
+   * @returns {Promise} Axios promise resolving to heatmap data
+   * @example
+   * const { data } = await analyticsAPI.getActivityHeatmap(2025);
+   * // data: { data: { '2025-01-15': 3, ... }, maxCount: 5, year: 2025 }
+   */
+  getActivityHeatmap: (year = new Date().getFullYear()) =>
+    api.get('/job-applications/analytics/activity-heatmap', { params: { year } }),
+
+  /**
+   * Fetch time patterns (applications by day of week and hour).
+   * @returns {Promise} Axios promise resolving to time pattern data
+   * @example
+   * const { data } = await analyticsAPI.getTimePatterns();
+   * // data: { byDayOfWeek: { Monday: 10, ... }, byHour: { 9: 5, 10: 8, ... } }
+   */
+  getTimePatterns: () => api.get('/job-applications/analytics/time-patterns'),
+
+  /**
+   * Fetch stage duration analytics (average time in each stage).
+   * @returns {Promise} Axios promise resolving to stage duration data
+   * @example
+   * const { data } = await analyticsAPI.getStageDurations();
+   * // data: { averageTimeByStage: { APPLIED: 5.2, ... }, bottleneckStages: [...] }
+   */
+  getStageDurations: () => api.get('/job-applications/analytics/stage-durations'),
+};
+
+/**
+ * Config API - Backend configuration endpoints (public, no auth required)
+ * These endpoints provide configuration data for statuses, options, etc.
+ */
+export const configAPI = {
+  /**
+   * Fetch status configuration including labels, colors, and groups.
+   * @returns {Promise} Axios promise resolving to status config
+   * @example
+   * const { data } = await configAPI.getStatuses();
+   * // data: { statuses: [{ key, label, color, group }], groups: { INTERVIEWING: [...] } }
+   */
+  getStatuses: () => api.get('/config/statuses'),
+
+  /**
+   * Fetch options configuration (RTO types, levels, etc.).
+   * @returns {Promise} Axios promise resolving to options config
+   * @example
+   * const { data } = await configAPI.getOptions();
+   * // data: { rtoTypes: [{ key, label }], levels: [{ key, label }] }
+   */
+  getOptions: () => api.get('/config/options'),
+};
+
 export default api;

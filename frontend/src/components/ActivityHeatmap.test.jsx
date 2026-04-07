@@ -3,7 +3,7 @@
  * @description Tests for the GitHub-style ActivityHeatmap component
  *
  * Tests cover:
- * - Building GitHub-style weekly grid from applications
+ * - Building GitHub-style weekly grid from backend data
  * - Month label generation
  * - Date range calculations (January 1st of current year through December 31st)
  * - Cell color calculations based on activity count
@@ -23,6 +23,20 @@ import ActivityHeatmap, {
 } from './ActivityHeatmap';
 
 expect.extend(toHaveNoViolations);
+
+/**
+ * Helper to create mock backend heatmap data
+ * @param {Object} overrides - Override default values
+ * @returns {Object} Mock activityHeatmap data
+ */
+function createMockHeatmapData(overrides = {}) {
+  return {
+    data: {},
+    maxCount: 0,
+    year: new Date().getFullYear(),
+    ...overrides,
+  };
+}
 
 describe('ActivityHeatmap', () => {
   describe('buildGitHubHeatmapData', () => {
@@ -189,13 +203,13 @@ describe('ActivityHeatmap', () => {
 
   describe('ActivityHeatmap component rendering', () => {
     it('should render the component with title', () => {
-      render(<ActivityHeatmap apps={[]} />);
+      render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       expect(screen.getByText(/Application Activity/i)).toBeInTheDocument();
     });
 
     it('should render day labels (Sun-Sat)', () => {
-      render(<ActivityHeatmap apps={[]} />);
+      render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // At minimum, should show abbreviated day labels
       expect(screen.getByText('Mon')).toBeInTheDocument();
@@ -204,7 +218,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should render month labels', () => {
-      render(<ActivityHeatmap apps={[]} />);
+      render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Should have at least one month label visible
       // The exact months depend on current date, so we check for any 3-letter month
@@ -214,23 +228,26 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should render legend with 0 and max values', () => {
-      const apps = [
-        { id: '1', appliedAt: '2025-02-10T10:00:00Z' },
-        { id: '2', appliedAt: '2025-02-10T15:00:00Z' },
-      ];
+      const heatmapData = createMockHeatmapData({
+        data: { '2025-02-10': 2 },
+        maxCount: 2,
+        year: 2025,
+      });
 
-      render(<ActivityHeatmap apps={apps} />);
+      render(<ActivityHeatmap activityHeatmap={heatmapData} />);
 
       // Legend should show 0
       expect(screen.getByText('0')).toBeInTheDocument();
     });
 
     it('should render cells with hover handlers for tooltips', () => {
-      const apps = [
-        { id: '1', appliedAt: '2025-02-10T10:00:00Z' },
-      ];
+      const heatmapData = createMockHeatmapData({
+        data: { '2025-02-10': 1 },
+        maxCount: 1,
+        year: 2025,
+      });
 
-      const { container } = render(<ActivityHeatmap apps={apps} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={heatmapData} />);
 
       // Find cells with data-testid (they have onMouseEnter/onMouseLeave for tooltips)
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
@@ -238,7 +255,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should render 7 rows for days of the week', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Find the grid container and check for 7 day rows
       // Each row represents a day of the week
@@ -246,19 +263,18 @@ describe('ActivityHeatmap', () => {
       expect(dayRows.length).toBe(7);
     });
 
-    it('should handle empty apps array gracefully', () => {
-      expect(() => render(<ActivityHeatmap apps={[]} />)).not.toThrow();
+    it('should handle missing activityHeatmap gracefully', () => {
+      expect(() => render(<ActivityHeatmap />)).not.toThrow();
     });
 
-    it('should handle null/undefined apps gracefully', () => {
-      expect(() => render(<ActivityHeatmap apps={null} />)).not.toThrow();
-      expect(() => render(<ActivityHeatmap apps={undefined} />)).not.toThrow();
+    it('should handle empty activityHeatmap data gracefully', () => {
+      expect(() => render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />)).not.toThrow();
     });
   });
 
   describe('Color gradient', () => {
     it('should use deep blue for empty cells', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Find a cell - empty cells should have the empty color
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
@@ -275,11 +291,15 @@ describe('ActivityHeatmap', () => {
       // Use a date that's definitely in the past
       const pastDate = new Date();
       pastDate.setMonth(pastDate.getMonth() - 1);
-      const apps = [
-        { id: '1', appliedAt: pastDate.toISOString() },
-      ];
+      const dateKey = pastDate.toISOString().split('T')[0];
 
-      const { container } = render(<ActivityHeatmap apps={apps} />);
+      const heatmapData = createMockHeatmapData({
+        data: { [dateKey]: 1 },
+        maxCount: 1,
+        year: pastDate.getFullYear(),
+      });
+
+      const { container } = render(<ActivityHeatmap activityHeatmap={heatmapData} />);
 
       // Find cells - we need to find one that's not a future date (not opacity 0.3)
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
@@ -306,7 +326,7 @@ describe('ActivityHeatmap', () => {
 
   describe('Day label alignment', () => {
     it('should use same layout system for day labels as grid rows to ensure alignment', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
@@ -322,7 +342,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should use same gap for day labels as grid rows', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
 
@@ -331,7 +351,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should render 7 day label elements matching the 7 grid rows', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
       const dayLabels = dayLabelsContainer.querySelectorAll('span');
@@ -340,7 +360,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should NOT use aspectRatio for label sizing (causes misalignment)', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       const dayLabelsContainer = container.querySelector('[data-testid="heatmap-day-labels"]');
       const dayLabels = dayLabelsContainer.querySelectorAll('span');
@@ -355,7 +375,7 @@ describe('ActivityHeatmap', () => {
 
   describe('Responsive cell sizing', () => {
     it('should use CSS Grid layout for week rows', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // The day rows should use CSS Grid with 1fr columns
       const dayRows = container.querySelectorAll('[data-testid="heatmap-day-row"]');
@@ -366,7 +386,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should have grid container that fills available width', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // The grid container should have flex: 1 to fill available space
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
@@ -375,7 +395,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should use aspect-ratio to maintain square cells', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Find cells with data-testid
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
@@ -387,7 +407,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should NOT use fixed pixel width on cells', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Find cells
       const cells = container.querySelectorAll('[data-testid^="heatmap-cell-"]');
@@ -399,7 +419,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should display all weeks from Jan 1 through Dec 31 (52-53 weeks)', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // Count the number of cells in a single row
       const firstDayRow = container.querySelector('[data-testid="heatmap-day-row"]');
@@ -411,7 +431,7 @@ describe('ActivityHeatmap', () => {
     });
 
     it('should use CSS Grid layout for the grid container structure', () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       // The grid container should be present for proper column layout
       const gridContainer = container.querySelector('[data-testid="heatmap-grid-container"]');
@@ -421,26 +441,27 @@ describe('ActivityHeatmap', () => {
 
   describe('Accessibility', () => {
     it('should have no accessibility violations', async () => {
-      const { container } = render(<ActivityHeatmap apps={[]} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });
 
-    it('should have no accessibility violations with applications', async () => {
-      const apps = [
-        { id: '1', appliedAt: '2025-02-10T10:00:00Z' },
-        { id: '2', appliedAt: '2025-02-11T10:00:00Z' },
-      ];
+    it('should have no accessibility violations with data', async () => {
+      const heatmapData = createMockHeatmapData({
+        data: { '2025-02-10': 1, '2025-02-11': 2 },
+        maxCount: 2,
+        year: 2025,
+      });
 
-      const { container } = render(<ActivityHeatmap apps={apps} />);
+      const { container } = render(<ActivityHeatmap activityHeatmap={heatmapData} />);
 
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });
 
     it('should have accessible title', () => {
-      render(<ActivityHeatmap apps={[]} />);
+      render(<ActivityHeatmap activityHeatmap={createMockHeatmapData()} />);
 
       expect(screen.getByText(/Application Activity/i)).toBeInTheDocument();
     });

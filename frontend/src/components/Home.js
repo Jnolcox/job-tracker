@@ -42,17 +42,17 @@ const Home = () => {
 
         <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', maxWidth: '800px', margin: '4rem auto 0' }}>
           <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: '#3498db', marginBottom: '1rem' }}>📝 Track Applications</h3>
+            <h3 style={{ color: '#3498db', marginBottom: '1rem' }}>Track Applications</h3>
             <p>Keep a detailed record of every job application with company info, dates, and status updates.</p>
           </div>
           
           <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: '#e67e22', marginBottom: '1rem' }}>📅 Manage Interviews</h3>
+            <h3 style={{ color: '#e67e22', marginBottom: '1rem' }}>Manage Interviews</h3>
             <p>Schedule and track your interviews, never miss an important meeting again.</p>
           </div>
           
           <div className="card" style={{ textAlign: 'center' }}>
-            <h3 style={{ color: '#27ae60', marginBottom: '1rem' }}>💰 Track Offers</h3>
+            <h3 style={{ color: '#27ae60', marginBottom: '1rem' }}>Track Offers</h3>
             <p>Monitor salary expectations and job offers to make informed career decisions.</p>
           </div>
         </div>

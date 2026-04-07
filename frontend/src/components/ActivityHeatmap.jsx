@@ -193,20 +193,52 @@ function getCellColor(count, maxCount) {
  * - Month labels appear at the top
  * - Includes a legend showing the color scale
  *
+ * Uses pre-computed backend data for activity heatmap.
+ *
  * @param {Object} props - Component props
- * @param {Array} props.apps - Array of application objects with appliedAt property
+ * @param {Object} props.activityHeatmap - Backend heatmap data
+ * @param {Object<string, number>} props.activityHeatmap.data - Map of date to count
+ * @param {number} props.activityHeatmap.maxCount - Maximum count on any day
+ * @param {number} props.activityHeatmap.year - Year of the data
+ * @param {boolean} [props.loading] - Loading state
  *
  * @example
- * <ActivityHeatmap apps={applications} />
+ * <ActivityHeatmap activityHeatmap={{ data: { '2025-01-15': 3 }, maxCount: 3, year: 2025 }} />
  *
  * @returns {JSX.Element} Heatmap visualization component
  */
-export default function ActivityHeatmap({ apps }) {
-  // Build heatmap data
-  const { grid, maxCount, weeks } = useMemo(
-    () => buildGitHubHeatmapData(apps || []),
-    [apps]
-  );
+export default function ActivityHeatmap({ activityHeatmap, loading }) {
+  // Build heatmap data from backend
+  const { grid, maxCount, weeks } = useMemo(() => {
+    if (activityHeatmap && activityHeatmap.data) {
+      const year = activityHeatmap.year || new Date().getFullYear();
+      const jan1 = new Date(year, 0, 1);
+      jan1.setHours(0, 0, 0, 0);
+      const startDate = getWeekStart(jan1);
+      const endDate = new Date(year, 11, 31);
+      endDate.setHours(23, 59, 59, 999);
+
+      return {
+        grid: activityHeatmap.data,
+        maxCount: activityHeatmap.maxCount || 0,
+        weeks: getWeeksInRange(startDate, endDate),
+      };
+    }
+
+    // Return empty data if no backend data provided
+    const year = new Date().getFullYear();
+    const jan1 = new Date(year, 0, 1);
+    jan1.setHours(0, 0, 0, 0);
+    const startDate = getWeekStart(jan1);
+    const endDate = new Date(year, 11, 31);
+    endDate.setHours(23, 59, 59, 999);
+
+    return {
+      grid: {},
+      maxCount: 0,
+      weeks: getWeeksInRange(startDate, endDate),
+    };
+  }, [activityHeatmap]);
 
   // Generate month labels
   const monthLabels = useMemo(() => getMonthLabels(weeks), [weeks]);
