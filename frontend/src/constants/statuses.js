@@ -3,6 +3,10 @@
  * @description Single source of truth for all application status constants.
  * This module consolidates status definitions previously scattered across
  * api.js, dataAdapter.js, and metricsEngine.js.
+ *
+ * NOTE: For new code, consider using ConfigContext which fetches status
+ * configuration from the backend `/v1/config/statuses` endpoint.
+ * This provides dynamic status configuration without code changes.
  */
 
 /**
@@ -185,3 +189,61 @@ export function isTerminalStatus(status) {
     status === 'OFFER_ACCEPTED'
   );
 }
+
+/**
+ * Experience level types for job positions.
+ * @constant {string[]}
+ */
+export const LEVEL_TYPES = [
+  'INTERN',
+  'JUNIOR',
+  'MID',
+  'SENIOR',
+  'STAFF',
+  'PRINCIPAL',
+  'DIRECTOR',
+  'VP',
+  'C_LEVEL',
+];
+
+/**
+ * Human-readable labels for experience levels.
+ * @constant {Object<string, string>}
+ */
+export const LEVEL_LABELS = {
+  INTERN: 'Intern',
+  JUNIOR: 'Junior',
+  MID: 'Mid-Level',
+  SENIOR: 'Senior',
+  STAFF: 'Staff',
+  PRINCIPAL: 'Principal',
+  DIRECTOR: 'Director',
+  VP: 'VP',
+  C_LEVEL: 'C-Level',
+};
+
+/**
+ * Remote/office work arrangement types.
+ * @constant {string[]}
+ */
+export const RTO_TYPES = [
+  'REMOTE',
+  'HYBRID_1',
+  'HYBRID_2',
+  'HYBRID_3',
+  'HYBRID_4',
+  'ONSITE',
+];
+
+/**
+ * Human-readable labels for RTO types.
+ * @constant {Object<string, string>}
+ */
+export const RTO_LABELS = {
+  REMOTE: 'Remote',
+  HYBRID_1: 'Hybrid 1 day',
+  HYBRID_2: 'Hybrid 2 days',
+  HYBRID_3: 'Hybrid 3 days',
+  HYBRID_4: 'Hybrid 4 days',
+  ONSITE: 'Onsite',
+};

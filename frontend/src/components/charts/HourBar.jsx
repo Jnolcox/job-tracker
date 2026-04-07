@@ -3,6 +3,7 @@
  * @description Bar chart showing application distribution by hour of day.
  */
 
+import { useMemo } from "react";
 import { HOURS } from "../../constants/dashboard";
 import ChartContainer from "./ChartContainer";
 
@@ -11,29 +12,40 @@ import ChartContainer from "./ChartContainer";
  * @description Displays a vertical bar chart showing how many applications were
  * submitted during each hour of the day (0-23), based on the appliedAt time.
  *
+ * Uses pre-computed backend data for time patterns.
+ *
  * @param {Object} props - Component props
- * @param {Array} props.apps - Array of application objects with appliedAt property
+ * @param {Object} props.timePatterns - Backend time pattern data
+ * @param {Object<number, number>} props.timePatterns.byHour - Map of hour (0-23) to count
+ * @param {boolean} [props.loading] - Loading state
  *
  * @example
- * <HourBar apps={applications} />
+ * <HourBar timePatterns={{ byHour: { 9: 5, 10: 8, 14: 6 } }} />
  *
  * @returns {JSX.Element} Hour bar chart component
  */
-export default function HourBar({ apps }) {
-  const counts = HOURS.reduce((a, h) => { a[h] = 0; return a; }, {});
-  (apps || []).forEach(a => {
-    if (!a || !a.appliedAt) return;
-    const dt = new Date(a.appliedAt);
-    if (isNaN(dt.getTime())) return;
-    const h = dt.getHours();
-    counts[h]++;
-  });
+export default function HourBar({ timePatterns, loading }) {
+  const counts = useMemo(() => {
+    const result = HOURS.reduce((a, h) => { a[h] = 0; return a; }, {});
+
+    if (timePatterns?.byHour) {
+      Object.entries(timePatterns.byHour).forEach(([hour, count]) => {
+        const hourNum = parseInt(hour, 10);
+        if (!isNaN(hourNum) && hourNum >= 0 && hourNum < 24) {
+          result[hourNum] = count;
+        }
+      });
+    }
+
+    return result;
+  }, [timePatterns]);
+
   const max = Math.max(...Object.values(counts), 1);
   const AM_PM = h => h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h - 12}p`;
   const labeled = [0, 6, 9, 12, 15, 18, 21, 23];
 
   return (
-    <ChartContainer title="Applications by Hour">
+    <ChartContainer title="Applications by Hour" loading={loading}>
       <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 72 }}>
         {HOURS.map(h => {
           const v = counts[h];

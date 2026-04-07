@@ -50,15 +50,24 @@ jest.mock('./context/KeyboardShortcutContext', () => ({
 const mockUseKeyboardShortcuts = jest.fn();
 jest.mock('./hooks', () => ({
   useKeyboardShortcuts: (...args) => mockUseKeyboardShortcuts(...args),
-  useApplicationMetrics: () => ({
+  useAnalytics: () => ({
     metrics: {
       trueResponseRate: 0,
       trueInterviewRate: 0,
       trueOfferRate: 0,
       avgDaysToResponse: null,
-      stageConversions: { appliedToScreen: 0, screenToTech: 0 },
+      weeklyPace: 0,
+      totalApplications: 0,
+      stageConversions: { appliedToScreen: 0, screenToTech: 0, techToOffer: 0 },
     },
+    countsByStatus: {},
+    salaryDistribution: null,
+    activityHeatmap: null,
+    timePatterns: null,
+    stageDurations: null,
     loading: false,
+    error: null,
+    refetch: jest.fn(),
   }),
 }));
 

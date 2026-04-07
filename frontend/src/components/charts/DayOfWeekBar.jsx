@@ -3,36 +3,62 @@
  * @description Bar chart showing application distribution by day of week.
  */
 
-import { DAYS, getDayIndex } from "../../constants/dashboard";
+import { useMemo } from "react";
+import { DAYS } from "../../constants/dashboard";
 import ChartContainer from "./ChartContainer";
+
+/**
+ * Map from full day names (backend) to DAYS array index.
+ * Defined outside component to avoid recreation on each render.
+ * @constant {Object<string, number>}
+ */
+const DAY_NAME_TO_INDEX = {
+  'MONDAY': 0,    // DAYS[0] = 'Mon'
+  'TUESDAY': 1,   // DAYS[1] = 'Tue'
+  'WEDNESDAY': 2, // DAYS[2] = 'Wed'
+  'THURSDAY': 3,  // DAYS[3] = 'Thu'
+  'FRIDAY': 4,    // DAYS[4] = 'Fri'
+  'SATURDAY': 5,  // DAYS[5] = 'Sat'
+  'SUNDAY': 6,    // DAYS[6] = 'Sun'
+};
 
 /**
  * @component DayOfWeekBar
  * @description Displays a vertical bar chart showing how many applications were
  * submitted on each day of the week, based on the appliedAt date.
  *
+ * Uses pre-computed backend data for time patterns.
+ *
  * @param {Object} props - Component props
- * @param {Array} props.apps - Array of application objects with appliedAt property
+ * @param {Object} props.timePatterns - Backend time pattern data
+ * @param {Object<string, number>} props.timePatterns.byDayOfWeek - Map of day name to count
+ * @param {boolean} [props.loading] - Loading state
  *
  * @example
- * <DayOfWeekBar apps={applications} />
+ * <DayOfWeekBar timePatterns={{ byDayOfWeek: { Monday: 10, Tuesday: 8 } }} />
  *
  * @returns {JSX.Element} Day of week bar chart component
  */
-export default function DayOfWeekBar({ apps }) {
-  const counts = DAYS.reduce((a, d) => { a[d] = 0; return a; }, {});
-  (apps || []).forEach(a => {
-    if (!a || !a.appliedAt) return;
-    const dt = new Date(a.appliedAt);
-    if (isNaN(dt.getTime())) return;
-    // Use getDayIndex to convert from JS getDay() (0=Sunday) to DAYS index (0=Monday)
-    const d = DAYS[getDayIndex(dt.getDay())];
-    counts[d]++;
-  });
+export default function DayOfWeekBar({ timePatterns, loading }) {
+  const counts = useMemo(() => {
+    const result = DAYS.reduce((a, d) => { a[d] = 0; return a; }, {});
+
+    if (timePatterns?.byDayOfWeek) {
+      Object.entries(timePatterns.byDayOfWeek).forEach(([dayName, count]) => {
+        const index = DAY_NAME_TO_INDEX[dayName];
+        if (index !== undefined) {
+          result[DAYS[index]] = count;
+        }
+      });
+    }
+
+    return result;
+  }, [timePatterns]);
+
   const max = Math.max(...Object.values(counts), 1);
 
   return (
-    <ChartContainer title="Applications by Day of Week">
+    <ChartContainer title="Applications by Day of Week" loading={loading}>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 80 }}>
         {DAYS.map(d => {
           const v = counts[d];
@@ -50,7 +76,7 @@ export default function DayOfWeekBar({ apps }) {
                 fontSize: 10,
                 fontFamily: "'DM Mono',monospace",
               }}>
-                {v || ""}
+                {/* {v || ""} */}
               </span>
               <div style={{
                 width: "100%",

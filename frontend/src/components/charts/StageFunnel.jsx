@@ -3,6 +3,7 @@
  * @description Pipeline funnel chart showing application distribution across stages.
  */
 
+import { useMemo } from "react";
 import { FUNNEL_GROUPS, FUNNEL_COLORS } from "../../constants/dashboard";
 import ChartContainer from "./ChartContainer";
 
@@ -11,27 +12,40 @@ import ChartContainer from "./ChartContainer";
  * @description Displays a horizontal bar chart showing the count of applications
  * in each pipeline stage (Applied, Recruiter, Technical, etc.).
  *
+ * Uses pre-computed backend data for counts by status.
+ *
  * @param {Object} props - Component props
- * @param {Array} props.apps - Array of application objects with status property
+ * @param {Object<string, number>} props.countsByStatus - Backend counts per status
+ * @param {boolean} [props.loading] - Loading state
  *
  * @example
- * <StageFunnel apps={applications} />
+ * <StageFunnel countsByStatus={{ APPLIED: 20, RECRUITER_SCREEN: 10 }} />
  *
  * @returns {JSX.Element} Funnel chart component
  */
-export default function StageFunnel({ apps }) {
-  // Count apps by funnel group
-  const counts = {};
-  FUNNEL_GROUPS.forEach(g => { counts[g.key] = 0; });
-  (apps || []).forEach(a => {
-    if (!a || !a.status) return;
-    const group = FUNNEL_GROUPS.find(g => g.statuses.includes(a.status));
-    if (group) counts[group.key]++;
-  });
+export default function StageFunnel({ countsByStatus, loading }) {
+  // Compute funnel group counts from backend status counts
+  const counts = useMemo(() => {
+    const result = {};
+    FUNNEL_GROUPS.forEach(g => { result[g.key] = 0; });
+
+    if (countsByStatus) {
+      FUNNEL_GROUPS.forEach(group => {
+        group.statuses.forEach(status => {
+          if (countsByStatus[status]) {
+            result[group.key] += countsByStatus[status];
+          }
+        });
+      });
+    }
+
+    return result;
+  }, [countsByStatus]);
+
   const max = Math.max(...Object.values(counts), 1);
 
   return (
-    <ChartContainer title="Pipeline Funnel">
+    <ChartContainer title="Pipeline Funnel" loading={loading}>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {FUNNEL_GROUPS.map(g => (
           <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>

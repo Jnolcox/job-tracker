@@ -8,36 +8,14 @@ export {
   STATUS_GROUPS,
   isStatusInGroup,
   isTerminalStatus,
+  LEVEL_TYPES,
+  LEVEL_LABELS,
+  RTO_TYPES,
+  RTO_LABELS,
 } from '../constants/statuses';
 
 // Re-export STATUS_COLORS from consolidated colors
 export { STATUS_COLORS } from '../constants/colors';
-
-// RTO type constants
-export const RTO_TYPES = ["REMOTE", "HYBRID_2", "HYBRID_3", "HYBRID_4", "ONSITE"];
-
-export const RTO_LABELS = {
-  REMOTE: "Remote",
-  HYBRID_2: "Hybrid (2 days)",
-  HYBRID_3: "Hybrid (3 days)",
-  HYBRID_4: "Hybrid (4 days)",
-  ONSITE: "On-site",
-};
-
-// Level constants
-export const LEVEL_TYPES = ["JUNIOR", "MID", "SENIOR", "STAFF", "PRINCIPAL", "LEAD", "MANAGER", "DIRECTOR", "VP"];
-
-export const LEVEL_LABELS = {
-  JUNIOR: "Junior",
-  MID: "Mid",
-  SENIOR: "Senior",
-  STAFF: "Staff",
-  PRINCIPAL: "Principal",
-  LEAD: "Lead",
-  MANAGER: "Manager",
-  DIRECTOR: "Director",
-  VP: "VP",
-};
 
 /**
  * Convert date values from backend to ISO string format.

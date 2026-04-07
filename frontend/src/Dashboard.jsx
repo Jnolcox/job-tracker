@@ -3,10 +3,10 @@
  * @description Main dashboard component for job application tracking.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
-import { useKeyboardShortcuts, useApplicationMetrics } from "./hooks";
+import { useKeyboardShortcuts, useAnalytics } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
 import {
   toUIFormat,
@@ -23,7 +23,6 @@ import {
   SalaryRangeChart,
   DayOfWeekBar,
   HourBar,
-  StageDurationChart,
 } from "./components/charts";
 import { AppTable } from "./components/table";
 import { ApplicationModal, ApplicationViewModal } from "./components/modal";
@@ -68,8 +67,15 @@ export default function JobTracker() {
     setSortedItems(items);
   }, []);
 
-  // Fetch and compute metrics from audit trail events
-  const { metrics, events, loading: metricsLoading } = useApplicationMetrics(apps);
+  // Fetch analytics from backend
+  const {
+    metrics,
+    countsByStatus,
+    salaryDistribution,
+    activityHeatmap,
+    timePatterns,
+    loading: analyticsLoading,
+  } = useAnalytics();
 
   // Sync selectedIndex when items change (clamp to valid range)
   useEffect(() => {
@@ -239,15 +245,8 @@ export default function JobTracker() {
   const offers = apps.filter(a => isStatusInGroup(a.status, 'OFFER')).length;
   const inInterview = apps.filter(a => isStatusInGroup(a.status, 'INTERVIEWING')).length;
 
-  // Memoize weekly pace calculation to avoid recalculating on every render
-  const weeklyPace = useMemo(() => {
-    if (apps.length === 0) return "0.0";
-    const dates = apps.map(a => new Date(a.appliedAt));
-    const minD = new Date(Math.min(...dates));
-    const maxD = new Date(Math.max(...dates));
-    const weeks = Math.max((maxD - minD) / (7 * 86400000), 1);
-    return (apps.length / weeks).toFixed(1);
-  }, [apps]);
+  // Weekly pace from backend analytics
+  const weeklyPace = metrics?.weeklyPace?.toFixed(1) || "0.0";
 
   // Loading state
   if (loading) {
@@ -374,48 +373,48 @@ export default function JobTracker() {
           <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" />
           <StatCard
             label="True Response Rate"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
+            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
             sub="got any response"
             accent="#A78BFA"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
           <StatCard
             label="True Interview Rate"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.trueInterviewRate || 0)}%`}
+            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueInterviewRate || 0)}%`}
             sub="reached interviews"
             accent="#38BDF8"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
           <StatCard
             label="Avg Response Time"
-            value={metricsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
+            value={analyticsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
             sub="days to hear back"
             accent="#F59E0B"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
           <StatCard
             label="True Offer Rate"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
+            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
             sub="received offers"
             accent="#10B981"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
 
           {/* Row 2 - Funnel and current state */}
           <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`} accent="#34D399" />
           <StatCard
             label="Applied → Screen"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}
+            value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}
             sub="recruiter conversion"
             accent="#A78BFA"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
           <StatCard
             label="Screen → Tech"
-            value={metricsLoading ? "—" : `${Math.round(metrics?.stageConversions?.screenToTech || 0)}%`}
+            value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.screenToTech || 0)}%`}
             sub="technical conversion"
             accent="#38BDF8"
-            loading={metricsLoading}
+            loading={analyticsLoading}
           />
           <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" />
           <StatCard label="Current Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" />
@@ -423,25 +422,40 @@ export default function JobTracker() {
 
         {/* Charts row 1 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-          <StageFunnel apps={apps} />
-          <SalaryRangeChart apps={apps} />
+          <StageFunnel
+            countsByStatus={countsByStatus}
+            loading={analyticsLoading}
+          />
+          <SalaryRangeChart
+            salaryDistribution={salaryDistribution}
+            loading={analyticsLoading}
+          />
           <MaxTimePerStageChart apps={apps} />
         </div>
 
         {/* Charts row 2 - Stage insights */}
        {/* <div style={{ marginBottom: 12 }}>
-          <StageDurationChart events={events || []} loading={metricsLoading} />
+          <StageDurationChart events={events || []} loading={analyticsLoading} />
         </div>*/}
 
         {/* Charts row 3 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-          <DayOfWeekBar apps={apps} />
-          <HourBar apps={apps} />
+          <DayOfWeekBar
+            timePatterns={timePatterns}
+            loading={analyticsLoading}
+          />
+          <HourBar
+            timePatterns={timePatterns}
+            loading={analyticsLoading}
+          />
         </div>
 
         {/* Charts row 2 */}
         <div style={{ marginBottom: 12 }}>
-          <ActivityHeatmap apps={apps} />
+          <ActivityHeatmap
+            activityHeatmap={activityHeatmap}
+            loading={analyticsLoading}
+          />
         </div>
 
         {/* Divider */}
