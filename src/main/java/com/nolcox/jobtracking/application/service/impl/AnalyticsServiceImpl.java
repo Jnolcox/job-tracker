@@ -4,6 +4,7 @@ import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
+import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse.ApplicationSalaryEntry;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse.BottleneckStage;
 import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
@@ -134,18 +135,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         RESPONSE_STATUSES.add(ApplicationStatus.ON_HOLD);
         RESPONSE_STATUSES.add(ApplicationStatus.WAITING_FOR_RESPONSE);
     }
-
-    /**
-     * Terminal statuses where applications are no longer active.
-     * These are excluded from salary distribution calculations.
-     */
-    private static final Set<ApplicationStatus> TERMINAL_STATUSES = EnumSet.of(
-            ApplicationStatus.REJECTED,
-            ApplicationStatus.WITHDRAWN,
-            ApplicationStatus.GHOSTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED
-    );
 
     /**
      * Maximum number of bottleneck stages to return in analytics.
@@ -308,46 +297,44 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         List<JobApplication> applications = repository.findAllByUserId(userId);
 
-        // Filter to active applications with salary data
-        List<JobApplication> activeWithSalary = applications.stream()
-                .filter(app -> !TERMINAL_STATUSES.contains(app.getStatus()))
+        // Include any application with at least one salary value
+        List<JobApplication> withSalary = applications.stream()
                 .filter(app -> app.getSalaryMin() != null || app.getSalaryMax() != null)
                 .collect(Collectors.toList());
 
-        if (activeWithSalary.isEmpty()) {
-            return new SalaryDistributionResponse(null, null, null, null, null, 0L);
+        if (withSalary.isEmpty()) {
+            return new SalaryDistributionResponse(null, null, null, null, null, 0L, List.of());
         }
 
-        // Calculate global min/max
-        Double globalMin = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMin)
-                .filter(salary -> salary != null)
-                .min(Double::compareTo)
-                .orElse(null);
+        // For scatter entries, coalesce missing value to the available one so every
+        // point has valid (x, y) coordinates. Apps with only one value appear on the diagonal.
+        List<ApplicationSalaryEntry> entries = withSalary.stream()
+                .map(app -> {
+                    double min = app.getSalaryMin() != null ? app.getSalaryMin() : app.getSalaryMax();
+                    double max = app.getSalaryMax() != null ? app.getSalaryMax() : app.getSalaryMin();
+                    return new ApplicationSalaryEntry(app.getCompanyName(), min, max);
+                })
+                .collect(Collectors.toList());
 
-        Double globalMax = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMax)
-                .filter(salary -> salary != null)
-                .max(Double::compareTo)
-                .orElse(null);
+        // Axis bounds derived from coalesced entry values
+        Double globalMin = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMin)
+                .min().orElse(0);
 
-        // Calculate averages
-        Double avgMin = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMin)
-                .filter(salary -> salary != null)
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
+        Double globalMax = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMax)
+                .max().orElse(0);
 
-        Double avgMax = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMax)
-                .filter(salary -> salary != null)
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
+        // Average reference lines
+        Double avgMin = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMin)
+                .average().orElse(0.0);
 
-        // Calculate midpoint average
-        Double avgMid = (avgMin > 0 || avgMax > 0) ? (avgMin + avgMax) / 2 : null;
+        Double avgMax = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMax)
+                .average().orElse(0.0);
+
+        Double avgMid = (avgMin + avgMax) / 2.0;
 
         return new SalaryDistributionResponse(
                 globalMin,
@@ -355,7 +342,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 avgMin > 0 ? avgMin : null,
                 avgMax > 0 ? avgMax : null,
                 avgMid,
-                (long) activeWithSalary.size()
+                (long) withSalary.size(),
+                entries
         );
     }
 

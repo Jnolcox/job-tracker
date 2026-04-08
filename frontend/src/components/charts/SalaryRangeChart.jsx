@@ -1,161 +1,203 @@
 /**
  * @file SalaryRangeChart.jsx
- * @description SVG chart showing salary range distribution across active applications.
+ * @description Scatter plot of salary ranges: X = salaryMin, Y = salaryMax, one dot per application.
  */
 
 import { useMemo } from "react";
 import ChartContainer from "./ChartContainer";
 
+// SVG coordinate space
+const VB_W = 320;
+const VB_H = 260;
+const PAD = { top: 12, right: 12, bottom: 32, left: 46 };
+const CW = VB_W - PAD.left - PAD.right; // chart width  (262)
+const CH = VB_H - PAD.top - PAD.bottom; // chart height (216)
+
+const TICK_COUNT = 5;
+
+const formatSalary = (val) => {
+  if (val == null) return "";
+  if (val >= 1000) return `$${Math.round(val / 1000)}k`;
+  return `$${val}`;
+};
+
+const niceTicks = (min, max, count) => {
+  const step = (max - min) / (count - 1);
+  return Array.from({ length: count }, (_, i) => min + step * i);
+};
+
 /**
  * @component SalaryRangeChart
- * @description Displays salary range distribution as a chart with min/max bands.
- * Shows only active applications (excludes rejected/withdrawn). Includes average line.
+ * @description Scatter plot where each application with both salaryMin and salaryMax is plotted
+ * as a dot. X-axis = Min salary, Y-axis = Max salary. Dashed crosshairs mark the averages.
  *
- * Uses pre-computed backend data for salary analytics.
- *
- * @param {Object} props - Component props
- * @param {Object} props.salaryDistribution - Backend salary analytics
- * @param {number} props.salaryDistribution.globalMin - Minimum salary
- * @param {number} props.salaryDistribution.globalMax - Maximum salary
- * @param {number} props.salaryDistribution.avgMin - Average minimum salary
- * @param {number} props.salaryDistribution.avgMax - Average maximum salary
- * @param {number} props.salaryDistribution.avgMid - Average midpoint
- * @param {number} props.salaryDistribution.activeAppsWithSalary - Count of apps with salary
- * @param {boolean} [props.loading] - Loading state
- *
- * @example
- * <SalaryRangeChart salaryDistribution={{ globalMin: 80000, globalMax: 200000, avgMid: 140000 }} />
- *
- * @returns {JSX.Element} Salary range chart component
+ * @param {Object}  props.salaryDistribution
+ * @param {Array}   props.salaryDistribution.entries     [{company, salaryMin, salaryMax}]
+ * @param {number}  props.salaryDistribution.avgMin      average salaryMin (vertical crosshair)
+ * @param {number}  props.salaryDistribution.avgMax      average salaryMax (horizontal crosshair)
+ * @param {number}  props.salaryDistribution.activeAppsWithSalary
+ * @param {boolean} [props.loading]
  */
 export default function SalaryRangeChart({ salaryDistribution, loading }) {
-  // Compute salary data from backend
-  const salaryData = useMemo(() => {
-    if (!salaryDistribution) {
-      return null;
-    }
+  const data = useMemo(() => {
+    const entries = salaryDistribution?.entries;
+    if (!entries?.length) return null;
+
+    const xVals = entries.map((e) => e.salaryMin);
+    const yVals = entries.map((e) => e.salaryMax);
+
+    const xMin = Math.min(...xVals);
+    const xMax = Math.max(...xVals);
+    const yMin = Math.min(...yVals);
+    const yMax = Math.max(...yVals);
+
+    // Add 5% padding to each axis so dots aren't clipped at the edges
+    const xPad = (xMax - xMin) * 0.05 || 1;
+    const yPad = (yMax - yMin) * 0.05 || 1;
 
     return {
-      globalMin: salaryDistribution.globalMin || 0,
-      globalMax: salaryDistribution.globalMax || 0,
-      avgMin: salaryDistribution.avgMin || 0,
-      avgMax: salaryDistribution.avgMax || 0,
-      avgMid: salaryDistribution.avgMid || 0,
-      count: salaryDistribution.activeAppsWithSalary || 0,
+      entries,
+      xMin: xMin - xPad,
+      xMax: xMax + xPad,
+      yMin: yMin - yPad,
+      yMax: yMax + yPad,
+      avgMin: salaryDistribution.avgMin,
+      avgMax: salaryDistribution.avgMax,
+      count: salaryDistribution.activeAppsWithSalary,
     };
   }, [salaryDistribution]);
 
-  if (!salaryData || salaryData.count === 0) {
+  if (!data) {
     return (
       <ChartContainer title="Salary Range Distribution" loading={loading}>
-        <p style={{
-          color: "#4B5563",
-          fontSize: 11,
-          fontFamily: "'DM Mono',monospace",
-          textAlign: "center",
-          padding: 40,
-          margin: 0,
-        }}>
-          No active applications with salary data
+        <p style={{ color: "#4B5563", fontSize: 11, fontFamily: "'DM Mono',monospace", textAlign: "center", padding: 40, margin: 0 }}>
+          No applications with salary data
         </p>
       </ChartContainer>
     );
   }
 
-  const { globalMin, globalMax, avgMid, count } = salaryData;
-  const range = globalMax - globalMin || 1;
+  const { entries, xMin, xMax, yMin, yMax, avgMin, avgMax, count } = data;
+  const xRange = xMax - xMin || 1;
+  const yRange = yMax - yMin || 1;
 
-  const formatSalary = (val) => {
-    if (val >= 1000) return `$${Math.round(val / 1000)}k`;
-    return `$${val}`;
-  };
+  const sx = (val) => PAD.left + ((val - xMin) / xRange) * CW;
+  const sy = (val) => PAD.top + CH - ((val - yMin) / yRange) * CH;
 
-  const chartHeight = 200;
-  const padding = 5;
+  const xTicks = niceTicks(xMin, xMax, TICK_COUNT);
+  const yTicks = niceTicks(yMin, yMax, TICK_COUNT);
 
-  // Calculate Y coordinate for a value
-  const getY = (val) => padding + ((globalMax - val) / range) * (100 - 2 * padding);
-  const avgY = getY(avgMid);
   return (
     <ChartContainer
       title="Salary Range Distribution"
-      subtitle={`${count} active applications with salary data`}
+      // subtitle={`${count} application${count !== 1 ? "s" : ""} — min salary (x) vs max salary (y)`}
       loading={loading}
     >
-      <div style={{ position: "relative", height: chartHeight, marginBottom: 8 }}>
-        <div style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 50,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}>
-          <span style={{ color: "#6B7280", fontSize: 9, fontFamily: "'DM Mono',monospace" }}>
-            {formatSalary(globalMax)}
-          </span>
-          <span style={{ color: "#F59E0B", fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>
-            {formatSalary(avgMid)}
-          </span>
-          <span style={{ color: "#6B7280", fontSize: 9, fontFamily: "'DM Mono',monospace" }}>
-            {formatSalary(globalMin)}
-          </span>
-        </div>
+      <svg
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        style={{ width: "100%", height: "auto", display: "block" }}
+      >
+        {/* Grid lines */}
+        {yTicks.map((v, i) => (
+          <line key={`gy${i}`}
+            x1={PAD.left} y1={sy(v)}
+            x2={PAD.left + CW} y2={sy(v)}
+            stroke="#1F2937" strokeWidth="0.5"
+          />
+        ))}
+        {xTicks.map((v, i) => (
+          <line key={`gx${i}`}
+            x1={sx(v)} y1={PAD.top}
+            x2={sx(v)} y2={PAD.top + CH}
+            stroke="#1F2937" strokeWidth="0.5"
+          />
+        ))}
 
-        <div style={{
-          position: "absolute",
-          left: 55,
-          right: 0,
-          top: 0,
-          bottom: 0,
-          background: "#111827",
-          borderRadius: 6,
-          overflow: "hidden",
-        }}>
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            padding: "0 8px",
-          }}>
-            {[0, 1, 2, 3, 4].map(i => (
-              <div key={i} style={{ borderBottom: "1px solid #1F2937", width: "100%" }}/>
-            ))}
-          </div>
+        {/* Axes */}
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + CH} stroke="#374151" strokeWidth="0.75" />
+        <line x1={PAD.left} y1={PAD.top + CH} x2={PAD.left + CW} y2={PAD.top + CH} stroke="#374151" strokeWidth="0.75" />
 
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
+        {/* Average crosshairs */}
+        {avgMin != null && (
+          <line
+            x1={sx(avgMin)} y1={PAD.top}
+            x2={sx(avgMin)} y2={PAD.top + CH}
+            stroke="#4E9AF1" strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
+          />
+        )}
+        {avgMax != null && (
+          <line
+            x1={PAD.left} y1={sy(avgMax)}
+            x2={PAD.left + CW} y2={sy(avgMax)}
+            stroke="#A78BFA" strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
+          />
+        )}
+
+        {/* Dots */}
+        {entries.map((e, i) => (
+          <circle
+            key={i}
+            cx={sx(e.salaryMin)}
+            cy={sy(e.salaryMax)}
+            r="3"
+            fill="#7C3AED"
+            fillOpacity="0.75"
+            stroke="#A78BFA"
+            strokeWidth="0.75"
+          />
+        ))}
+
+        {/* Y-axis tick labels */}
+        {yTicks.map((v, i) => (
+          <text key={`yt${i}`}
+            x={PAD.left - 4} y={sy(v) + 3}
+            textAnchor="end"
+            fill="#4B5563" fontSize="7" fontFamily="'DM Mono',monospace"
           >
-            <defs>
-              <linearGradient id="salaryGradientSimple" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.5"/>
-                <stop offset="100%" stopColor="#4E9AF1" stopOpacity="0.5"/>
-              </linearGradient>
-            </defs>
-            {/* Show range as a filled rectangle */}
-            <rect
-              x="10"
-              y={getY(salaryData.avgMax)}
-              width="80"
-              height={getY(salaryData.avgMin) - getY(salaryData.avgMax)}
-              fill="url(#salaryGradientSimple)"
-              rx="4"
-            />
-            {/* Max line */}
-            <line x1="10" y1={getY(salaryData.avgMax)} x2="90" y2={getY(salaryData.avgMax)} stroke="#A78BFA" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-            {/* Min line */}
-            <line x1="10" y1={getY(salaryData.avgMin)} x2="90" y2={getY(salaryData.avgMin)} stroke="#4E9AF1" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-            {/* Average line */}
-            <line x1="0" y1={avgY} x2="100" y2={avgY} stroke="#F59E0B" strokeWidth="1.5" strokeDasharray="4,3" vectorEffect="non-scaling-stroke" />
-          </svg>
-        </div>
-      </div>
+            {formatSalary(v)}
+          </text>
+        ))}
+
+        {/* X-axis tick labels */}
+        {xTicks.map((v, i) => (
+          <text key={`xt${i}`}
+            x={sx(v)} y={PAD.top + CH + 10}
+            textAnchor="middle"
+            fill="#4B5563" fontSize="7" fontFamily="'DM Mono',monospace"
+          >
+            {formatSalary(v)}
+          </text>
+        ))}
+
+        {/* Axis labels */}
+        <text
+          x={PAD.left + CW / 2} y={VB_H - 2}
+          textAnchor="middle"
+          fill="#6B7280" fontSize="7.5" fontFamily="'DM Mono',monospace"
+        >
+          MIN SALARY
+        </text>
+        <text
+          x={0} y={0}
+          textAnchor="middle"
+          fill="#6B7280" fontSize="7.5" fontFamily="'DM Mono',monospace"
+          transform={`translate(8, ${PAD.top + CH / 2}) rotate(-90)`}
+        >
+          MAX SALARY
+        </text>
+
+        {/* Average crosshair legend */}
+        {avgMin != null && (
+          <text x={sx(avgMin) + 3} y={PAD.top + 8} fill="#4E9AF1" fontSize="6" fontFamily="'DM Mono',monospace">
+            avg min
+          </text>
+        )}
+        {avgMax != null && (
+          <text x={PAD.left + 3} y={sy(avgMax) - 3} fill="#A78BFA" fontSize="6" fontFamily="'DM Mono',monospace">
+            avg max
+          </text>
+        )}
+      </svg>
     </ChartContainer>
   );
 }

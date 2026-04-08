@@ -266,7 +266,7 @@ export default function AppTable({
                       style={{
                         color: "#F9FAFB",
                         fontFamily: "'DM Mono',monospace",
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: 600,
                         cursor: "pointer",
                         textDecoration: "none",
@@ -281,12 +281,12 @@ export default function AppTable({
                   <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10 }}>{a.level ? LEVEL_LABELS[a.level] : "\u2014"}</td>
                   <td style={{ padding: "10px 14px" }}><Badge status={a.status}/></td>
                   <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.location || "\u2014"}</td>
-                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10 }}>{a.rtoType ? RTO_LABELS[a.rtoType]?.replace(" days", "d")?.replace("Hybrid ", "H")?.replace("Remote", "Remote") : "\u2014"}</td>
-                  <td style={{ padding: "10px 14px", color: "#D1D5DB", fontFamily: "'DM Mono',monospace", fontSize: 10, whiteSpace: "nowrap" }}>{a.salaryMin || a.salaryMax ? `$${Math.round((a.salaryMin || 0) / 1000)}k-${Math.round((a.salaryMax || 0) / 1000)}k` : "\u2014"}</td>
-                  <td style={{ padding: "10px 14px", color: "#6B7280", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{new Date(a.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
-                  <td style={{ padding: "10px 14px", fontFamily: "'DM Mono',monospace", fontSize: 12, textAlign: "center", color: timeInStage(a) > 7 ? "#F87171" : timeInStage(a) > 3 ? "#F59E0B" : "#34D399" }}>{timeInStage(a)}d</td>
-                  <td style={{ padding: "10px 14px", color: "#D1D5DB", fontFamily: "'DM Mono',monospace", fontSize: 12, textAlign: "center" }}>{totalDaysActive(a)}d</td>
-                  <td style={{ padding: "10px 14px", color: "#6B7280", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{new Date(a.lastUpdate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10 }}>{a.rtoType ? RTO_LABELS[a.rtoType]?.replace("Hybrid ", "")?.replace("Remote", "Remote") : "\u2014"}</td>
+                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, whiteSpace: "nowrap" }}>{a.salaryMin || a.salaryMax ? `$${Math.round((a.salaryMin || 0) / 1000)}k-${Math.round((a.salaryMax || 0) / 1000)}k` : "\u2014"}</td>
+                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, textAlign: "center" }}>{new Date(a.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                  <td style={{ padding: "10px 14px", fontFamily: "'DM Mono',monospace", fontSize: 10, textAlign: "center", color: timeInStage(a) > 14 ? "#F87171" : timeInStage(a) > 7 ? "#F59E0B" : "#34D399" }}>{timeInStage(a)}d</td>
+                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, textAlign: "center" }}>{totalDaysActive(a)}d</td>
+                  <td style={{ padding: "10px 14px", color: "#9CA3AF", fontFamily: "'DM Mono',monospace", fontSize: 10, textAlign: "center" }}>{new Date(a.lastUpdate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
                   <td style={{ padding: "10px 14px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
