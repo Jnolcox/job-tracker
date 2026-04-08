@@ -183,6 +183,22 @@ describe('KeyboardShortcutHelp', () => {
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
+
+    it('should close modal when Escape key is pressed', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <HelpWrapper defaultOpen={true}>
+          <KeyboardShortcutHelp />
+        </HelpWrapper>
+      );
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   describe('accessibility', () => {
