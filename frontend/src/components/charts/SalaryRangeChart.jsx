@@ -77,7 +77,7 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
     );
   }
 
-  const { entries, xMin, xMax, yMin, yMax, avgMin, avgMax, count } = data;
+  const { entries, xMin, xMax, yMin, yMax, avgMin, avgMax } = data;
   const xRange = xMax - xMin || 1;
   const yRange = yMax - yMin || 1;
 
