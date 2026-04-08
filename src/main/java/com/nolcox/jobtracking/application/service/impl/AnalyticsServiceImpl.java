@@ -137,6 +137,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     /**
+     * Terminal statuses that indicate an application is no longer active.
+     * Used to filter out inactive applications from salary distribution calculations,
+     * as these represent closed opportunities that shouldn't influence expected salary ranges.
+     */
+    private static final Set<ApplicationStatus> TERMINAL_STATUSES = EnumSet.of(
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.GHOSTED
+    );
+
+    /**
      * Maximum number of bottleneck stages to return in analytics.
      * Limits the response size while showing the most significant bottlenecks.
      */
@@ -297,8 +308,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         List<JobApplication> applications = repository.findAllByUserId(userId);
 
-        // Include any application with at least one salary value
+        // Include only active applications (non-terminal) with at least one salary value.
+        // Terminal statuses (REJECTED, WITHDRAWN, GHOSTED) are excluded because they
+        // represent closed opportunities that shouldn't influence expected salary ranges.
         List<JobApplication> withSalary = applications.stream()
+                .filter(app -> !TERMINAL_STATUSES.contains(app.getStatus()))
                 .filter(app -> app.getSalaryMin() != null || app.getSalaryMax() != null)
                 .collect(Collectors.toList());
 
