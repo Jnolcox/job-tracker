@@ -1,5 +1,33 @@
 package com.nolcox.jobtracking.application.controller;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+
 import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateRequest;
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
@@ -24,33 +52,6 @@ import com.nolcox.jobtracking.fixtures.UserFixture;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-
-import java.time.DayOfWeek;
-import java.time.Instant;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JobApplicationController Tests")
@@ -495,7 +496,8 @@ class JobApplicationControllerTest {
         void shouldReturnSalaryDistributionWith200() {
             // Given
             SalaryDistributionResponse expectedDistribution = new SalaryDistributionResponse(
-                    80000.0, 250000.0, 120000.0, 180000.0, 150000.0, 45L
+                    80000.0, 250000.0, 120000.0, 180000.0, 150000.0, 45L,
+                    List.of()
             );
 
             when(analyticsService.getSalaryDistribution(testUser.getId())).thenReturn(expectedDistribution);
