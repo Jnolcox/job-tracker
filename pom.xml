@@ -20,7 +20,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>17</java.version>
         <mysql.version>8.3.0</mysql.version>
-        <springdoc.version>2.3.0</springdoc.version>
+        <springdoc.version>2.8.6</springdoc.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.version>1.18.38</lombok.version>
         <mockito.version>5.17.0</mockito.version>

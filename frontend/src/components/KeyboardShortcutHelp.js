@@ -22,8 +22,9 @@
  * @returns {JSX.Element|null} Modal component or null if closed
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useKeyboardShortcutContext } from '../context/KeyboardShortcutContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 /**
  * @component KeyBadge
@@ -152,6 +153,20 @@ function ShortcutGroup({ group, shortcuts }) {
 
 export function KeyboardShortcutHelp() {
   const { isHelpOpen, closeHelp, shortcuts } = useKeyboardShortcutContext();
+
+  /**
+   * Handle Escape key to close the modal.
+   * Uses useCallback to maintain stable reference for the hook.
+   */
+  const handleEscape = useCallback(() => {
+    closeHelp();
+  }, [closeHelp]);
+
+  // Register Escape key handler when the modal is open
+  useKeyboardShortcuts(
+    [{ key: 'Escape', handler: handleEscape, preventDefault: true }],
+    { enabled: isHelpOpen }
+  );
 
   if (!isHelpOpen) {
     return null;

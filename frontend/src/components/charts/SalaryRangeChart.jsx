@@ -3,7 +3,7 @@
  * @description Scatter plot of salary ranges: X = salaryMin, Y = salaryMax, one dot per application.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ChartContainer from "./ChartContainer";
 
 // SVG coordinate space
@@ -37,8 +37,15 @@ const niceTicks = (min, max, count) => {
  * @param {number}  props.salaryDistribution.avgMax      average salaryMax (horizontal crosshair)
  * @param {number}  props.salaryDistribution.activeAppsWithSalary
  * @param {boolean} [props.loading]
+ *
+ * @example
+ * <SalaryRangeChart salaryDistribution={salaryDistribution} loading={false} />
+ *
+ * @returns {JSX.Element} Scatter plot chart with hover tooltips
  */
 export default function SalaryRangeChart({ salaryDistribution, loading }) {
+  // Track the currently hovered entry for tooltip display
+  const [hoveredEntry, setHoveredEntry] = useState(null);
   const data = useMemo(() => {
     const entries = salaryDistribution?.entries;
     if (!entries?.length) return null;
@@ -77,7 +84,7 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
     );
   }
 
-  const { entries, xMin, xMax, yMin, yMax, avgMin, avgMax, count } = data;
+  const { entries, xMin, xMax, yMin, yMax, avgMin, avgMax } = data;
   const xRange = xMax - xMin || 1;
   const yRange = yMax - yMin || 1;
 
@@ -137,6 +144,7 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
         {entries.map((e, i) => (
           <circle
             key={i}
+            data-testid="salary-dot"
             cx={sx(e.salaryMin)}
             cy={sy(e.salaryMax)}
             r="3"
@@ -144,6 +152,9 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
             fillOpacity="0.75"
             stroke="#A78BFA"
             strokeWidth="0.75"
+            style={{ cursor: "pointer" }}
+            onMouseEnter={() => setHoveredEntry({ ...e, x: sx(e.salaryMin), y: sy(e.salaryMax) })}
+            onMouseLeave={() => setHoveredEntry(null)}
           />
         ))}
 
@@ -197,6 +208,66 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
             avg max
           </text>
         )}
+
+        {/* Tooltip - positioned to avoid edge clipping */}
+        {hoveredEntry && (() => {
+          const tooltipWidth = 75;
+          const tooltipHeight = 38;
+          // Position tooltip to the right by default, flip left if near right edge
+          const flipX = hoveredEntry.x + tooltipWidth + 12 > VB_W;
+          // Position tooltip above by default, flip below if near top edge
+          const flipY = hoveredEntry.y - tooltipHeight - 5 < 0;
+
+          const tooltipX = flipX
+            ? hoveredEntry.x - tooltipWidth - 8
+            : hoveredEntry.x + 8;
+          const tooltipY = flipY
+            ? hoveredEntry.y + 8
+            : hoveredEntry.y - tooltipHeight - 2;
+
+          return (
+            <g data-testid="salary-tooltip">
+              <rect
+                x={tooltipX}
+                y={tooltipY}
+                width={tooltipWidth}
+                height={tooltipHeight}
+                fill="#1F2937"
+                stroke="#374151"
+                strokeWidth="1"
+                rx="4"
+              />
+              <text
+                x={tooltipX + 6}
+                y={tooltipY + 13}
+                fill="#F9FAFB"
+                fontSize="7"
+                fontWeight="600"
+                fontFamily="'DM Mono',monospace"
+              >
+                {hoveredEntry.company}
+              </text>
+              <text
+                x={tooltipX + 6}
+                y={tooltipY + 24}
+                fill="#9CA3AF"
+                fontSize="6"
+                fontFamily="'DM Mono',monospace"
+              >
+                Min: {formatSalary(hoveredEntry.salaryMin)}
+              </text>
+              <text
+                x={tooltipX + 6}
+                y={tooltipY + 33}
+                fill="#9CA3AF"
+                fontSize="6"
+                fontFamily="'DM Mono',monospace"
+              >
+                Max: {formatSalary(hoveredEntry.salaryMax)}
+              </text>
+            </g>
+          );
+        })()}
       </svg>
     </ChartContainer>
   );

@@ -370,7 +370,12 @@ export default function JobTracker() {
         {/* Stat Cards -- 5 x 2 grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}>
           {/* Row 1 - Overview metrics */}
-          <StatCard label="Total Applied" value={apps.length} sub={`${activeApps.length} still active`} accent="#4E9AF1" />
+          <StatCard 
+            label="Total Applied" 
+            value={apps.length} 
+            sub={`${activeApps.length} still active`} 
+            accent="#4E9AF1" 
+          />
           <StatCard
             label="True Response Rate"
             value={analyticsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
@@ -401,7 +406,12 @@ export default function JobTracker() {
           />
 
           {/* Row 2 - Funnel and current state */}
-          <StatCard label="In Interviews" value={inInterview} sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`} accent="#34D399" />
+          <StatCard 
+            label="In Interviews" 
+            value={inInterview} 
+            sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`} 
+            accent="#4E9AF1" 
+          />
           <StatCard
             label="Applied → Screen"
             value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}

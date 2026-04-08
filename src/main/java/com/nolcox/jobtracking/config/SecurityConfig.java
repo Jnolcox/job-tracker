@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/v1/auth/**").permitAll()
                         // Config endpoints are public - they only contain enum definitions
                         .requestMatchers("/v1/config/**").permitAll()
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**").permitAll()
+                        .requestMatchers("/api-docs", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
