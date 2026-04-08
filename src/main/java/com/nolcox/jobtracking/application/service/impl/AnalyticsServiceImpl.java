@@ -442,10 +442,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             }
 
             // Calculate days in current stage
-            Instant endDate = app.getStatusChangedAt() != null
-                    ? app.getStatusChangedAt()
-                    : now;
-
             // For applications still in APPLIED, use time since applied
             // For others, this is time until status changed
             long days;

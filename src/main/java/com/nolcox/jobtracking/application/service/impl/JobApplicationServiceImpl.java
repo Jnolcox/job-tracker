@@ -22,7 +22,6 @@ import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
-import com.nolcox.jobtracking.shared.exception.ErrorMessages;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
