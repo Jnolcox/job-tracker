@@ -10,7 +10,10 @@ import com.nolcox.jobtracking.fixtures.AuthRequestFixture;
 import com.nolcox.jobtracking.fixtures.RegisterRequestFixture;
 import com.nolcox.jobtracking.fixtures.UserFixture;
 import com.nolcox.jobtracking.infrastructure.security.JwtService;
+import com.nolcox.jobtracking.shared.exception.AuthenticationFailureException;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
+
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.INVALID_CREDENTIALS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -205,7 +208,7 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw exception for invalid credentials")
+        @DisplayName("Should throw AuthenticationFailureException for invalid credentials")
         void shouldThrowExceptionForInvalidCredentials() {
             // Given
             AuthRequest request = AuthRequestFixture.anAuthRequest()
@@ -216,15 +219,17 @@ class AuthServiceImplTest {
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
             // When & Then
+            // REFACTOR: Now using dedicated AuthenticationFailureException instead of generic BusinessException
+            // This allows the exception handler to return HTTP 401 without fragile string matching
             assertThatThrownBy(() -> authService.authenticate(request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Invalid email or password");
+                .isInstanceOf(AuthenticationFailureException.class)
+                .hasMessage(INVALID_CREDENTIALS);
 
             verify(jwtService, never()).generateToken(anyMap(), any());
         }
 
         @Test
-        @DisplayName("Should throw exception for non-existent user")
+        @DisplayName("Should throw AuthenticationFailureException for non-existent user")
         void shouldThrowExceptionForNonExistentUser() {
             // Given
             AuthRequest request = AuthRequestFixture.anAuthRequest()
@@ -235,9 +240,10 @@ class AuthServiceImplTest {
                 .thenThrow(new BadCredentialsException("User not found"));
 
             // When & Then
+            // REFACTOR: AuthenticationFailureException provides type-safe handling of auth failures
             assertThatThrownBy(() -> authService.authenticate(request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Invalid email or password");
+                .isInstanceOf(AuthenticationFailureException.class)
+                .hasMessage(INVALID_CREDENTIALS);
         }
 
         @Test

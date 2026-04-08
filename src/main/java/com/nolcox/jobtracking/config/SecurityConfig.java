@@ -31,6 +31,13 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * BCrypt password encoder strength (work factor).
+     * 12 provides a good balance between security and performance.
+     * Each increment doubles the computation time.
+     */
+    private static final int BCRYPT_STRENGTH = 12;
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
@@ -39,7 +46,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 
     @Bean
@@ -79,7 +86,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList(corsAllowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

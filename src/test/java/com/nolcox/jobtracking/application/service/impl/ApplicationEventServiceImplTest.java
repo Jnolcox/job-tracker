@@ -719,5 +719,157 @@ class ApplicationEventServiceImplTest {
                     "salaryMax".equals(event.getFieldName())
             );
         }
+
+        @Test
+        @DisplayName("Should detect contact name change and generate FIELD_UPDATED event")
+        void shouldDetectContactNameChangeAndGenerateEvent() {
+            // Given
+            JobApplication oldApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactName("John Recruiter")
+                    .build();
+
+            JobApplication newApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactName("Jane HR Manager")
+                    .build();
+
+            when(eventRepository.save(any(ApplicationEvent.class)))
+                    .thenAnswer(invocation -> {
+                        ApplicationEvent event = invocation.getArgument(0);
+                        event.setId(1L);
+                        return event;
+                    });
+
+            // When
+            eventService.compareAndLogChanges(oldApplication, newApplication);
+
+            // Then
+            verify(eventRepository, atLeastOnce()).save(eventCaptor.capture());
+            List<ApplicationEvent> savedEvents = eventCaptor.getAllValues();
+
+            assertThat(savedEvents).anyMatch(event ->
+                    event.getEventType() == EventType.FIELD_UPDATED &&
+                    "contactName".equals(event.getFieldName()) &&
+                    "John Recruiter".equals(event.getOldValue()) &&
+                    "Jane HR Manager".equals(event.getNewValue())
+            );
+        }
+
+        @Test
+        @DisplayName("Should detect contact email change and generate FIELD_UPDATED event")
+        void shouldDetectContactEmailChangeAndGenerateEvent() {
+            // Given
+            JobApplication oldApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactEmail("old@company.com")
+                    .build();
+
+            JobApplication newApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactEmail("new@company.com")
+                    .build();
+
+            when(eventRepository.save(any(ApplicationEvent.class)))
+                    .thenAnswer(invocation -> {
+                        ApplicationEvent event = invocation.getArgument(0);
+                        event.setId(1L);
+                        return event;
+                    });
+
+            // When
+            eventService.compareAndLogChanges(oldApplication, newApplication);
+
+            // Then
+            verify(eventRepository, atLeastOnce()).save(eventCaptor.capture());
+            List<ApplicationEvent> savedEvents = eventCaptor.getAllValues();
+
+            assertThat(savedEvents).anyMatch(event ->
+                    event.getEventType() == EventType.FIELD_UPDATED &&
+                    "contactEmail".equals(event.getFieldName()) &&
+                    "old@company.com".equals(event.getOldValue()) &&
+                    "new@company.com".equals(event.getNewValue())
+            );
+        }
+
+        @Test
+        @DisplayName("Should detect contact phone change and generate FIELD_UPDATED event")
+        void shouldDetectContactPhoneChangeAndGenerateEvent() {
+            // Given
+            JobApplication oldApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactPhone("+1-555-1234")
+                    .build();
+
+            JobApplication newApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withContactPhone("+1-555-5678")
+                    .build();
+
+            when(eventRepository.save(any(ApplicationEvent.class)))
+                    .thenAnswer(invocation -> {
+                        ApplicationEvent event = invocation.getArgument(0);
+                        event.setId(1L);
+                        return event;
+                    });
+
+            // When
+            eventService.compareAndLogChanges(oldApplication, newApplication);
+
+            // Then
+            verify(eventRepository, atLeastOnce()).save(eventCaptor.capture());
+            List<ApplicationEvent> savedEvents = eventCaptor.getAllValues();
+
+            assertThat(savedEvents).anyMatch(event ->
+                    event.getEventType() == EventType.FIELD_UPDATED &&
+                    "contactPhone".equals(event.getFieldName()) &&
+                    "+1-555-1234".equals(event.getOldValue()) &&
+                    "+1-555-5678".equals(event.getNewValue())
+            );
+        }
+
+        @Test
+        @DisplayName("Should detect job description change and generate FIELD_UPDATED event")
+        void shouldDetectJobDescriptionChangeAndGenerateEvent() {
+            // Given
+            JobApplication oldApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withJobDescription("Original job description")
+                    .build();
+
+            JobApplication newApplication = JobApplicationFixture.aJobApplication()
+                    .withId(1L)
+                    .withUser(testUser)
+                    .withJobDescription("Updated job description with more details")
+                    .build();
+
+            when(eventRepository.save(any(ApplicationEvent.class)))
+                    .thenAnswer(invocation -> {
+                        ApplicationEvent event = invocation.getArgument(0);
+                        event.setId(1L);
+                        return event;
+                    });
+
+            // When
+            eventService.compareAndLogChanges(oldApplication, newApplication);
+
+            // Then
+            verify(eventRepository, atLeastOnce()).save(eventCaptor.capture());
+            List<ApplicationEvent> savedEvents = eventCaptor.getAllValues();
+
+            assertThat(savedEvents).anyMatch(event ->
+                    event.getEventType() == EventType.FIELD_UPDATED &&
+                    "jobDescription".equals(event.getFieldName()) &&
+                    "Original job description".equals(event.getOldValue()) &&
+                    "Updated job description with more details".equals(event.getNewValue())
+            );
+        }
     }
 }

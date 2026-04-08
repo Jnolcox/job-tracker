@@ -9,7 +9,10 @@ import com.nolcox.jobtracking.domain.entity.Role;
 import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
 import com.nolcox.jobtracking.infrastructure.security.JwtService;
+import com.nolcox.jobtracking.shared.exception.AuthenticationFailureException;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
+
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Check if user already exists
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException("Email is already registered");
+            throw new BusinessException(EMAIL_ALREADY_REGISTERED);
         }
 
         // Create new user
@@ -58,12 +61,8 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with ID: {}", savedUser.getId());
 
-        // Generate JWT token
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("userId", savedUser.getId());
-        extraClaims.put("role", savedUser.getRole().name());
-
-        String jwtToken = jwtService.generateToken(extraClaims, savedUser);
+        // Generate JWT token with standard claims
+        String jwtToken = jwtService.generateToken(buildExtraClaims(savedUser), savedUser);
 
         // Build response
         return buildAuthResponse(jwtToken, savedUser);
@@ -85,12 +84,8 @@ public class AuthServiceImpl implements AuthService {
             // Get authenticated user
             User user = (User) authentication.getPrincipal();
 
-            // Generate JWT token
-            Map<String, Object> extraClaims = new HashMap<>();
-            extraClaims.put("userId", user.getId());
-            extraClaims.put("role", user.getRole().name());
-
-            String jwtToken = jwtService.generateToken(extraClaims, user);
+            // Generate JWT token with standard claims
+            String jwtToken = jwtService.generateToken(buildExtraClaims(user), user);
 
             log.info("User authenticated successfully: {}", user.getEmail());
 
@@ -99,7 +94,9 @@ public class AuthServiceImpl implements AuthService {
 
         } catch (BadCredentialsException e) {
             log.warn("Authentication failed for email: {}", request.email());
-            throw new BusinessException("Invalid email or password");
+            // SECURITY: Use dedicated exception type for authentication failures
+            // This allows the exception handler to return HTTP 401 without fragile string matching
+            throw new AuthenticationFailureException(INVALID_CREDENTIALS);
         }
     }
 
@@ -113,19 +110,15 @@ public class AuthServiceImpl implements AuthService {
 
             // Load user
             User user = userRepository.findByEmail(username)
-                    .orElseThrow(() -> new BusinessException("User not found"));
+                    .orElseThrow(() -> new BusinessException(USER_NOT_FOUND));
 
             // Validate refresh token
             if (!jwtService.isTokenValid(refreshToken, user)) {
-                throw new BusinessException("Invalid refresh token");
+                throw new BusinessException(INVALID_REFRESH_TOKEN);
             }
 
-            // Generate new access token
-            Map<String, Object> extraClaims = new HashMap<>();
-            extraClaims.put("userId", user.getId());
-            extraClaims.put("role", user.getRole().name());
-
-            String newAccessToken = jwtService.generateToken(extraClaims, user);
+            // Generate new access token with standard claims
+            String newAccessToken = jwtService.generateToken(buildExtraClaims(user), user);
 
             log.info("Token refreshed successfully for user: {}", user.getEmail());
 
@@ -133,7 +126,7 @@ public class AuthServiceImpl implements AuthService {
 
         } catch (Exception e) {
             log.error("Error refreshing token", e);
-            throw new BusinessException("Failed to refresh token");
+            throw new BusinessException(TOKEN_REFRESH_FAILED);
         }
     }
 
@@ -155,7 +148,27 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * Build authentication response
+     * Builds the extra claims map for JWT tokens.
+     *
+     * <p>These claims are embedded in the JWT payload and used for authorization
+     * decisions without requiring database lookups.</p>
+     *
+     * @param user the authenticated user
+     * @return map containing userId and role claims
+     */
+    private Map<String, Object> buildExtraClaims(User user) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", user.getId());
+        extraClaims.put("role", user.getRole().name());
+        return extraClaims;
+    }
+
+    /**
+     * Builds the authentication response DTO.
+     *
+     * @param token the JWT access token
+     * @param user the authenticated user
+     * @return the auth response containing token and user info
      */
     private AuthResponse buildAuthResponse(String token, User user) {
         UserInfo userInfo = new UserInfo(

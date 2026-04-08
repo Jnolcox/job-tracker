@@ -2,19 +2,19 @@ package com.nolcox.jobtracking.application.controller;
 
 import com.nolcox.jobtracking.application.dto.response.ApiErrorResponse;
 import com.nolcox.jobtracking.application.dto.response.ValidationErrorResponse;
+import com.nolcox.jobtracking.shared.exception.AuthenticationFailureException;
 import com.nolcox.jobtracking.shared.exception.BusinessException;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     public ValidationErrorResponse handleValidationErrors(
             MethodArgumentNotValidException ex) {
 
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage())
         );
@@ -54,6 +54,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiErrorResponse handleUnauthorized(UnauthorizedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
         return new ApiErrorResponse(
                 HttpStatus.FORBIDDEN,
                 "Access Denied",
@@ -62,31 +63,48 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handles authentication failures with HTTP 401 UNAUTHORIZED.
+     *
+     * <p>This handler is specifically for authentication-related failures such as
+     * invalid credentials. It uses a dedicated exception type rather than string
+     * matching, making the code more robust and maintainable.</p>
+     *
+     * @param ex the authentication failure exception
+     * @return an API error response with 401 status
+     */
+    @ExceptionHandler(AuthenticationFailureException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiErrorResponse handleAuthenticationFailure(AuthenticationFailureException ex) {
+        log.warn("Authentication failure: {}", ex.getMessage());
+        return new ApiErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Authentication Failed",
+                ex.getMessage(),
+                Instant.now()
+        );
+    }
+
+    /**
+     * Handles generic business logic exceptions with HTTP 400 BAD REQUEST.
+     *
+     * <p>This is a catch-all for business rule violations that don't fit into
+     * more specific exception categories. The error message is passed through
+     * to help the client understand what went wrong.</p>
+     *
+     * @param ex the business exception
+     * @return an API error response with 400 status
+     */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiErrorResponse> handleBusinessException(BusinessException ex) {
-        // Check if this is an authentication-related business exception
-        String message = ex.getMessage().toLowerCase();
-        if (message.contains("invalid email or password") || 
-            message.contains("authentication failed")) {
-            log.warn("Authentication failure: {}", ex.getMessage());
-            ApiErrorResponse errorResponse = new ApiErrorResponse(
-                    HttpStatus.UNAUTHORIZED,
-                    "Authentication Failed",
-                    ex.getMessage(),
-                    Instant.now()
-            );
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-        }
-        
-        // For other business exceptions, return 400 Bad Request
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleBusinessException(BusinessException ex) {
         log.warn("Business logic error: {}", ex.getMessage());
-        ApiErrorResponse errorResponse = new ApiErrorResponse(
+        return new ApiErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 "Business Logic Error",
                 ex.getMessage(),
                 Instant.now()
         );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

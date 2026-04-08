@@ -25,6 +25,21 @@ public record MetricsResponse(
         StageConversions stageConversions
 ) {
     /**
+     * Creates an empty MetricsResponse with all values zeroed out.
+     *
+     * <p>Use this factory method when the user has no applications,
+     * rather than creating a new instance with all zeros inline.</p>
+     *
+     * @return a MetricsResponse with all zero/empty values
+     */
+    public static MetricsResponse empty() {
+        return new MetricsResponse(
+                0.0, 0.0, 0.0, 0.0, 0.0, 0L,
+                StageConversions.empty()
+        );
+    }
+
+    /**
      * Conversion rates between major pipeline stages.
      *
      * <p>Each value represents the percentage of applications that successfully
@@ -38,5 +53,14 @@ public record MetricsResponse(
             Double appliedToScreen,
             Double screenToTech,
             Double techToOffer
-    ) {}
+    ) {
+        /**
+         * Creates an empty StageConversions with all zero values.
+         *
+         * @return a StageConversions with all zero conversion rates
+         */
+        public static StageConversions empty() {
+            return new StageConversions(0.0, 0.0, 0.0);
+        }
+    }
 }

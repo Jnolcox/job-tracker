@@ -95,7 +95,7 @@ public class JobApplicationController {
                     .buildAndExpand(created.id())
                     .toUri();
             return ResponseEntity.created(location).body(created);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException ignored) {
             // For unit tests or when no servlet context is available
             return ResponseEntity.status(201).body(created);
         }

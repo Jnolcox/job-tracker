@@ -54,7 +54,7 @@ export default function MaxTimePerStageChart({ apps }) {
   return (
     <ChartContainer
       title="Max Days in Stage"
-      subtitle="Longest time in current stage per pipeline group"
+      // subtitle="Longest time in current stage per pipeline group"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {presentGroups.map(g => {

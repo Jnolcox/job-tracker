@@ -4,6 +4,7 @@ import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
+import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse.ApplicationSalaryEntry;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse.BottleneckStage;
 import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
@@ -40,6 +41,16 @@ import java.util.stream.Collectors;
  *
  * <p>All calculations filter data by the authenticated user to ensure
  * data isolation between users.</p>
+ *
+ * <p><strong>Status Set Hierarchy:</strong></p>
+ * <p>The status sets are organized hierarchically to avoid duplication.
+ * More specific sets are derived from broader ones using set operations:</p>
+ * <ul>
+ *   <li>OFFER_STATUSES: Base set for all offer-related stages</li>
+ *   <li>TECH_STATUSES: Technical stages + OFFER_STATUSES</li>
+ *   <li>INTERVIEW_STATUSES: Screen stages + TECH_STATUSES (same as SCREEN_STATUSES)</li>
+ *   <li>RESPONSE_STATUSES: INTERVIEW_STATUSES + response-only statuses</li>
+ * </ul>
  */
 @Service
 @Transactional(readOnly = true)
@@ -49,48 +60,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final JobApplicationRepository repository;
 
-    /**
-     * Status values that indicate the application received a response.
-     * GHOSTED is intentionally excluded as it represents no response.
-     */
-    private static final Set<ApplicationStatus> RESPONSE_STATUSES = EnumSet.of(
-            ApplicationStatus.RECRUITER_SCREEN,
-            ApplicationStatus.TECH_SCREEN,
-            ApplicationStatus.TAKE_HOME,
-            ApplicationStatus.SYSTEM_DESIGN,
-            ApplicationStatus.TECHNICAL_I,
-            ApplicationStatus.TECHNICAL_II,
-            ApplicationStatus.REFERENCE_CHECK,
-            ApplicationStatus.OFFER_RECEIVED,
-            ApplicationStatus.NEGOTIATING,
-            ApplicationStatus.OFFER_ACCEPTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED,
-            ApplicationStatus.REJECTED,
-            ApplicationStatus.ON_HOLD,
-            ApplicationStatus.WAITING_FOR_RESPONSE
-    );
-
-    /**
-     * Status values that indicate the application reached an interview stage.
-     */
-    private static final Set<ApplicationStatus> INTERVIEW_STATUSES = EnumSet.of(
-            ApplicationStatus.RECRUITER_SCREEN,
-            ApplicationStatus.TECH_SCREEN,
-            ApplicationStatus.TAKE_HOME,
-            ApplicationStatus.SYSTEM_DESIGN,
-            ApplicationStatus.TECHNICAL_I,
-            ApplicationStatus.TECHNICAL_II,
-            ApplicationStatus.REFERENCE_CHECK,
-            ApplicationStatus.OFFER_RECEIVED,
-            ApplicationStatus.NEGOTIATING,
-            ApplicationStatus.OFFER_ACCEPTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED
-    );
+    // ============================================================================
+    // STATUS SET HIERARCHY
+    // Built bottom-up: specific sets first, broader sets derive from them.
+    // This eliminates duplication and makes the relationships clear.
+    // ============================================================================
 
     /**
      * Status values that indicate the application received an offer.
+     * This is the most specific set - forms the base of the hierarchy.
      */
     private static final Set<ApplicationStatus> OFFER_STATUSES = EnumSet.of(
             ApplicationStatus.OFFER_RECEIVED,
@@ -101,51 +79,68 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     );
 
     /**
-     * Status values that indicate the application reached a screening stage.
-     */
-    private static final Set<ApplicationStatus> SCREEN_STATUSES = EnumSet.of(
-            ApplicationStatus.RECRUITER_SCREEN,
-            ApplicationStatus.TECH_SCREEN,
-            ApplicationStatus.TAKE_HOME,
-            ApplicationStatus.SYSTEM_DESIGN,
-            ApplicationStatus.TECHNICAL_I,
-            ApplicationStatus.TECHNICAL_II,
-            ApplicationStatus.REFERENCE_CHECK,
-            ApplicationStatus.OFFER_RECEIVED,
-            ApplicationStatus.NEGOTIATING,
-            ApplicationStatus.OFFER_ACCEPTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED
-    );
-
-    /**
      * Status values that indicate the application reached a technical interview stage.
+     * Includes all technical stages plus OFFER_STATUSES (since offers imply passing tech).
      */
-    private static final Set<ApplicationStatus> TECH_STATUSES = EnumSet.of(
-            ApplicationStatus.TECH_SCREEN,
-            ApplicationStatus.TAKE_HOME,
-            ApplicationStatus.SYSTEM_DESIGN,
-            ApplicationStatus.TECHNICAL_I,
-            ApplicationStatus.TECHNICAL_II,
-            ApplicationStatus.REFERENCE_CHECK,
-            ApplicationStatus.OFFER_RECEIVED,
-            ApplicationStatus.NEGOTIATING,
-            ApplicationStatus.OFFER_ACCEPTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED
-    );
+    private static final Set<ApplicationStatus> TECH_STATUSES;
+
+    static {
+        // TECH_STATUSES = technical interview stages + reference check + all offer stages
+        TECH_STATUSES = EnumSet.of(
+                ApplicationStatus.TECH_SCREEN,
+                ApplicationStatus.TAKE_HOME,
+                ApplicationStatus.SYSTEM_DESIGN,
+                ApplicationStatus.TECHNICAL_I,
+                ApplicationStatus.TECHNICAL_II,
+                ApplicationStatus.REFERENCE_CHECK
+        );
+        TECH_STATUSES.addAll(OFFER_STATUSES);
+    }
 
     /**
-     * Terminal statuses where applications are no longer active.
-     * These are excluded from salary distribution calculations.
+     * Status values that indicate the application reached any interview/screening stage.
+     * INTERVIEW_STATUSES and SCREEN_STATUSES are semantically identical in this context,
+     * so we consolidate them into a single set.
+     *
+     * <p>Includes recruiter screen + all technical stages + offer stages.</p>
      */
-    private static final Set<ApplicationStatus> TERMINAL_STATUSES = EnumSet.of(
-            ApplicationStatus.REJECTED,
-            ApplicationStatus.WITHDRAWN,
-            ApplicationStatus.GHOSTED,
-            ApplicationStatus.OFFER_DECLINED,
-            ApplicationStatus.OFFER_RESCINDED
-    );
+    private static final Set<ApplicationStatus> INTERVIEW_STATUSES;
+
+    static {
+        // INTERVIEW_STATUSES = RECRUITER_SCREEN + all TECH_STATUSES
+        INTERVIEW_STATUSES = EnumSet.of(ApplicationStatus.RECRUITER_SCREEN);
+        INTERVIEW_STATUSES.addAll(TECH_STATUSES);
+    }
+
+    /**
+     * Alias for INTERVIEW_STATUSES to maintain semantic clarity in code.
+     * Applications that "reached screening" is the same set as "reached interview"
+     * in this application's context.
+     */
+    private static final Set<ApplicationStatus> SCREEN_STATUSES = INTERVIEW_STATUSES;
+
+    /**
+     * Status values that indicate the application received a response.
+     * GHOSTED is intentionally excluded as it represents no response.
+     *
+     * <p>Includes all interview stages plus response-only statuses
+     * (REJECTED, ON_HOLD, WAITING_FOR_RESPONSE).</p>
+     */
+    private static final Set<ApplicationStatus> RESPONSE_STATUSES;
+
+    static {
+        // RESPONSE_STATUSES = all interview stages + response-only statuses
+        RESPONSE_STATUSES = EnumSet.copyOf(INTERVIEW_STATUSES);
+        RESPONSE_STATUSES.add(ApplicationStatus.REJECTED);
+        RESPONSE_STATUSES.add(ApplicationStatus.ON_HOLD);
+        RESPONSE_STATUSES.add(ApplicationStatus.WAITING_FOR_RESPONSE);
+    }
+
+    /**
+     * Maximum number of bottleneck stages to return in analytics.
+     * Limits the response size while showing the most significant bottlenecks.
+     */
+    private static final int MAX_BOTTLENECK_STAGES = 5;
 
     @Override
     public MetricsResponse getMetrics(Long userId) {
@@ -154,8 +149,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<JobApplication> applications = repository.findAllByUserId(userId);
 
         if (applications.isEmpty()) {
-            return new MetricsResponse(0.0, 0.0, 0.0, 0.0, 0.0, 0L,
-                    new StageConversions(0.0, 0.0, 0.0));
+            return MetricsResponse.empty();
         }
 
         long total = applications.size();
@@ -303,46 +297,44 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         List<JobApplication> applications = repository.findAllByUserId(userId);
 
-        // Filter to active applications with salary data
-        List<JobApplication> activeWithSalary = applications.stream()
-                .filter(app -> !TERMINAL_STATUSES.contains(app.getStatus()))
+        // Include any application with at least one salary value
+        List<JobApplication> withSalary = applications.stream()
                 .filter(app -> app.getSalaryMin() != null || app.getSalaryMax() != null)
                 .collect(Collectors.toList());
 
-        if (activeWithSalary.isEmpty()) {
-            return new SalaryDistributionResponse(null, null, null, null, null, 0L);
+        if (withSalary.isEmpty()) {
+            return new SalaryDistributionResponse(null, null, null, null, null, 0L, List.of());
         }
 
-        // Calculate global min/max
-        Double globalMin = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMin)
-                .filter(salary -> salary != null)
-                .min(Double::compareTo)
-                .orElse(null);
+        // For scatter entries, coalesce missing value to the available one so every
+        // point has valid (x, y) coordinates. Apps with only one value appear on the diagonal.
+        List<ApplicationSalaryEntry> entries = withSalary.stream()
+                .map(app -> {
+                    double min = app.getSalaryMin() != null ? app.getSalaryMin() : app.getSalaryMax();
+                    double max = app.getSalaryMax() != null ? app.getSalaryMax() : app.getSalaryMin();
+                    return new ApplicationSalaryEntry(app.getCompanyName(), min, max);
+                })
+                .collect(Collectors.toList());
 
-        Double globalMax = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMax)
-                .filter(salary -> salary != null)
-                .max(Double::compareTo)
-                .orElse(null);
+        // Axis bounds derived from coalesced entry values
+        Double globalMin = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMin)
+                .min().orElse(0);
 
-        // Calculate averages
-        Double avgMin = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMin)
-                .filter(salary -> salary != null)
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
+        Double globalMax = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMax)
+                .max().orElse(0);
 
-        Double avgMax = activeWithSalary.stream()
-                .map(JobApplication::getSalaryMax)
-                .filter(salary -> salary != null)
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
+        // Average reference lines
+        Double avgMin = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMin)
+                .average().orElse(0.0);
 
-        // Calculate midpoint average
-        Double avgMid = (avgMin > 0 || avgMax > 0) ? (avgMin + avgMax) / 2 : null;
+        Double avgMax = entries.stream()
+                .mapToDouble(ApplicationSalaryEntry::salaryMax)
+                .average().orElse(0.0);
+
+        Double avgMid = (avgMin + avgMax) / 2.0;
 
         return new SalaryDistributionResponse(
                 globalMin,
@@ -350,7 +342,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 avgMin > 0 ? avgMin : null,
                 avgMax > 0 ? avgMax : null,
                 avgMid,
-                (long) activeWithSalary.size()
+                (long) withSalary.size(),
+                entries
         );
     }
 
@@ -437,10 +430,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             }
 
             // Calculate days in current stage
-            Instant endDate = app.getStatusChangedAt() != null
-                    ? app.getStatusChangedAt()
-                    : now;
-
             // For applications still in APPLIED, use time since applied
             // For others, this is time until status changed
             long days;
@@ -473,7 +462,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<BottleneckStage> bottleneckStages = averageTimeByStage.entrySet().stream()
                 .map(e -> new BottleneckStage(e.getKey(), e.getValue()))
                 .sorted(Comparator.comparingDouble(BottleneckStage::avgDays).reversed())
-                .limit(5) // Top 5 bottlenecks
+                .limit(MAX_BOTTLENECK_STAGES)
                 .collect(Collectors.toList());
 
         return new StageDurationsResponse(averageTimeByStage, bottleneckStages);
