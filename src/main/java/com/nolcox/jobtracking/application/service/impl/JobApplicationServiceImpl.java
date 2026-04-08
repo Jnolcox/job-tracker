@@ -22,8 +22,11 @@ import com.nolcox.jobtracking.domain.entity.User;
 import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.domain.repository.UserRepository;
+import com.nolcox.jobtracking.shared.exception.ErrorMessages;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
+
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.APPLICATION_NOT_FOUND;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -86,11 +89,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     @Override
     public JobApplicationResponse getApplication(Long id, Long userId) {
         JobApplication application = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(APPLICATION_NOT_FOUND));
 
-        if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
+        assertUserOwnsApplication(application, userId);
 
         return mapToResponse(application);
     }
@@ -163,11 +164,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             Long id, JobApplicationUpdateRequest request, Long userId) {
 
         JobApplication application = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(APPLICATION_NOT_FOUND));
 
-        if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
+        assertUserOwnsApplication(application, userId);
 
         // AUDIT TRAIL: Capture the old state before any modifications
         // This snapshot is used to detect what changed for event logging
@@ -211,15 +210,23 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     }
 
     /**
-     * Creates a deep copy of the application state for change comparison.
+     * Creates a shallow copy of the application state for change comparison.
      *
      * <p>This method captures the current field values before they are modified,
      * allowing the event service to detect what changed during an update.</p>
+     *
+     * <p><strong>Design Note:</strong> Uses manual builder pattern instead of ModelMapper
+     * to avoid circular reference issues. The User and JobApplication entities have a
+     * bidirectional relationship that causes infinite recursion with ModelMapper.</p>
+     *
+     * <p>When adding new fields to JobApplication, remember to add them here too.</p>
      *
      * @param application the application to capture
      * @return a new JobApplication instance with the same field values
      */
     private JobApplication captureApplicationState(JobApplication application) {
+        // DESIGN: Manual builder used to avoid circular reference issues with ModelMapper
+        // The User <-> JobApplication bidirectional relationship causes stack overflow
         return JobApplication.builder()
                 .id(application.getId())
                 .user(application.getUser())
@@ -249,11 +256,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     @Transactional
     public void deleteApplication(Long id, Long userId) {
         JobApplication application = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(APPLICATION_NOT_FOUND));
 
-        if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
+        assertUserOwnsApplication(application, userId);
 
         // IMPORTANT: Delete associated events before deleting the application.
         // This ensures the Hibernate persistence context is consistent and avoids
@@ -301,11 +306,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             ApplicationStatus status,
             Long userId) {
         JobApplication application = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(APPLICATION_NOT_FOUND));
 
-        if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
+        assertUserOwnsApplication(application, userId);
 
         // AUDIT TRAIL: Capture old status for event logging
         ApplicationStatus oldStatus = application.getStatus();
@@ -331,6 +334,22 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         return applications.stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    /**
+     * Verifies that the specified user owns the application.
+     *
+     * <p>This authorization check is performed before any operation that reads or
+     * modifies an application. It ensures users can only access their own data.</p>
+     *
+     * @param application the application to check ownership of
+     * @param userId the ID of the user claiming ownership
+     * @throws UnauthorizedException if the user does not own the application
+     */
+    private void assertUserOwnsApplication(JobApplication application, Long userId) {
+        if (!application.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("Access denied");
+        }
     }
 
     private JobApplicationResponse mapToResponse(JobApplication application) {

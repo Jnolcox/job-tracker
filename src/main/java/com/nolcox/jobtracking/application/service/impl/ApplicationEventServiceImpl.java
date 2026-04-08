@@ -10,6 +10,8 @@ import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
+
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.APPLICATION_NOT_FOUND;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Implementation of {@link ApplicationEventService} for managing application audit trail events.
@@ -214,11 +217,9 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
 
         // AUTHORIZATION: Verify the user owns this application before returning events
         JobApplication application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(APPLICATION_NOT_FOUND));
 
-        if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
-        }
+        assertUserOwnsApplication(application, userId);
 
         List<ApplicationEvent> events = eventRepository.findByApplicationIdOrderByCreatedAtDesc(applicationId);
 
@@ -240,11 +241,17 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
      *   <li>Other significant field changes are logged as FIELD_UPDATED</li>
      * </ul>
      *
-     * <p>DESIGN NOTE: We use Objects.equals() for null-safe comparison throughout.</p>
+     * <p>DESIGN NOTE: The generic helper method {@link #compareField} is used to reduce
+     * boilerplate for standard field comparisons. Special cases (status, interview date,
+     * notes) have their own dedicated event types and are handled separately.</p>
      */
     @Override
     public void compareAndLogChanges(JobApplication oldApplication, JobApplication newApplication) {
         log.debug("Comparing changes for application ID: {}", newApplication.getId());
+
+        // ============================================================
+        // SPECIAL CASES: These fields have dedicated event types
+        // ============================================================
 
         // STATUS CHANGE: Most significant change type - logged first
         if (!Objects.equals(oldApplication.getStatus(), newApplication.getStatus())) {
@@ -263,61 +270,83 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
             // If new interview date is null (cleared), we could log a different event type if needed
         }
 
-        // NOTES: Track when notes are added or modified
+        // NOTES: Track when notes are added or modified (has its own event type)
         if (!Objects.equals(oldApplication.getNotes(), newApplication.getNotes())) {
             logNoteAdded(newApplication, oldApplication.getNotes(), newApplication.getNotes());
         }
 
-        // COMPANY NAME: Track changes to company information
-        if (!Objects.equals(oldApplication.getCompanyName(), newApplication.getCompanyName())) {
-            logFieldUpdated(newApplication, "companyName",
-                    oldApplication.getCompanyName(), newApplication.getCompanyName());
-        }
+        // ============================================================
+        // STANDARD FIELDS: Use generic comparison helper
+        // ============================================================
 
-        // POSITION TITLE: Track changes to position information
-        if (!Objects.equals(oldApplication.getPositionTitle(), newApplication.getPositionTitle())) {
-            logFieldUpdated(newApplication, "positionTitle",
-                    oldApplication.getPositionTitle(), newApplication.getPositionTitle());
-        }
+        // String fields - use identity converter
+        compareField(newApplication, "companyName",
+                oldApplication.getCompanyName(), newApplication.getCompanyName(), Function.identity());
+        compareField(newApplication, "positionTitle",
+                oldApplication.getPositionTitle(), newApplication.getPositionTitle(), Function.identity());
+        compareField(newApplication, "location",
+                oldApplication.getLocation(), newApplication.getLocation(), Function.identity());
+        compareField(newApplication, "jobUrl",
+                oldApplication.getJobUrl(), newApplication.getJobUrl(), Function.identity());
+        compareField(newApplication, "contactName",
+                oldApplication.getContactName(), newApplication.getContactName(), Function.identity());
+        compareField(newApplication, "contactEmail",
+                oldApplication.getContactEmail(), newApplication.getContactEmail(), Function.identity());
+        compareField(newApplication, "contactPhone",
+                oldApplication.getContactPhone(), newApplication.getContactPhone(), Function.identity());
+        compareField(newApplication, "jobDescription",
+                oldApplication.getJobDescription(), newApplication.getJobDescription(), Function.identity());
 
-        // SALARY MIN: Track salary range changes
-        if (!Objects.equals(oldApplication.getSalaryMin(), newApplication.getSalaryMin())) {
-            logFieldUpdated(newApplication, "salaryMin",
-                    oldApplication.getSalaryMin() != null ? oldApplication.getSalaryMin().toString() : null,
-                    newApplication.getSalaryMin() != null ? newApplication.getSalaryMin().toString() : null);
-        }
+        // Numeric fields - convert to string
+        compareField(newApplication, "salaryMin",
+                oldApplication.getSalaryMin(), newApplication.getSalaryMin(), Object::toString);
+        compareField(newApplication, "salaryMax",
+                oldApplication.getSalaryMax(), newApplication.getSalaryMax(), Object::toString);
 
-        // SALARY MAX: Track salary range changes
-        if (!Objects.equals(oldApplication.getSalaryMax(), newApplication.getSalaryMax())) {
-            logFieldUpdated(newApplication, "salaryMax",
-                    oldApplication.getSalaryMax() != null ? oldApplication.getSalaryMax().toString() : null,
-                    newApplication.getSalaryMax() != null ? newApplication.getSalaryMax().toString() : null);
-        }
+        // Enum fields - use name() method
+        compareField(newApplication, "rtoType",
+                oldApplication.getRtoType(), newApplication.getRtoType(), Enum::name);
+        compareField(newApplication, "level",
+                oldApplication.getLevel(), newApplication.getLevel(), Enum::name);
+    }
 
-        // LOCATION: Track location changes
-        if (!Objects.equals(oldApplication.getLocation(), newApplication.getLocation())) {
-            logFieldUpdated(newApplication, "location",
-                    oldApplication.getLocation(), newApplication.getLocation());
-        }
+    /**
+     * Generic helper method for comparing and logging field changes.
+     *
+     * <p>This method eliminates the repetitive comparison pattern by accepting a field name,
+     * old and new values, and a converter function to transform the values to strings
+     * for event logging.</p>
+     *
+     * <p>Example usage:</p>
+     * <pre>{@code
+     * // String field - use identity
+     * compareField(app, "companyName", oldName, newName, Function.identity());
+     *
+     * // Numeric field - convert to string
+     * compareField(app, "salaryMin", oldSalary, newSalary, Object::toString);
+     *
+     * // Enum field - use name()
+     * compareField(app, "rtoType", oldRto, newRto, Enum::name);
+     * }</pre>
+     *
+     * @param <T> the type of the field being compared
+     * @param application the application entity (for event association)
+     * @param fieldName the name of the field being tracked
+     * @param oldValue the previous value (may be null)
+     * @param newValue the current value (may be null)
+     * @param toStringConverter function to convert non-null values to strings
+     */
+    private <T> void compareField(
+            JobApplication application,
+            String fieldName,
+            T oldValue,
+            T newValue,
+            Function<T, String> toStringConverter) {
 
-        // RTO TYPE: Track remote/hybrid/onsite changes
-        if (!Objects.equals(oldApplication.getRtoType(), newApplication.getRtoType())) {
-            logFieldUpdated(newApplication, "rtoType",
-                    oldApplication.getRtoType() != null ? oldApplication.getRtoType().name() : null,
-                    newApplication.getRtoType() != null ? newApplication.getRtoType().name() : null);
-        }
-
-        // LEVEL: Track level/seniority changes
-        if (!Objects.equals(oldApplication.getLevel(), newApplication.getLevel())) {
-            logFieldUpdated(newApplication, "level",
-                    oldApplication.getLevel() != null ? oldApplication.getLevel().name() : null,
-                    newApplication.getLevel() != null ? newApplication.getLevel().name() : null);
-        }
-
-        // JOB URL: Track job posting URL changes
-        if (!Objects.equals(oldApplication.getJobUrl(), newApplication.getJobUrl())) {
-            logFieldUpdated(newApplication, "jobUrl",
-                    oldApplication.getJobUrl(), newApplication.getJobUrl());
+        if (!Objects.equals(oldValue, newValue)) {
+            String oldString = oldValue != null ? toStringConverter.apply(oldValue) : null;
+            String newString = newValue != null ? toStringConverter.apply(newValue) : null;
+            logFieldUpdated(application, fieldName, oldString, newString);
         }
     }
 
@@ -330,6 +359,19 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
      * @param event the entity to map
      * @return the mapped DTO
      */
+    /**
+     * Verifies that the specified user owns the application.
+     *
+     * @param application the application to check ownership of
+     * @param userId the ID of the user claiming ownership
+     * @throws UnauthorizedException if the user does not own the application
+     */
+    private void assertUserOwnsApplication(JobApplication application, Long userId) {
+        if (!application.getUser().getId().equals(userId)) {
+            throw new UnauthorizedException("Access denied");
+        }
+    }
+
     private ApplicationEventResponse mapToResponse(ApplicationEvent event) {
         return new ApplicationEventResponse(
                 event.getId(),
