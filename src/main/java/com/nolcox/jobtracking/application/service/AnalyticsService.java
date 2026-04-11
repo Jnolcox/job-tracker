@@ -1,10 +1,13 @@
 package com.nolcox.jobtracking.application.service;
 
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
+import com.nolcox.jobtracking.application.dto.response.TransitionMatrixResponse;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 
 import java.util.Map;
@@ -83,4 +86,48 @@ public interface AnalyticsService {
      * @return StageDurationsResponse with duration statistics and bottlenecks
      */
     StageDurationsResponse getStageDurations(Long userId);
+
+    // ==================== Event-Based Analytics ====================
+
+    /**
+     * Retrieves the status transition matrix for heatmap visualization.
+     *
+     * <p>Analyzes all status change events to count transitions between
+     * different application statuses. This data is suitable for rendering
+     * as a heatmap where rows are "from" statuses, columns are "to" statuses,
+     * and cell values represent transition counts.</p>
+     *
+     * @param userId the ID of the user whose transitions to analyze
+     * @return TransitionMatrixResponse with transition counts and unique statuses
+     */
+    TransitionMatrixResponse getTransitionMatrix(Long userId);
+
+    /**
+     * Retrieves funnel analytics showing conversion rates and drop-off points.
+     *
+     * <p>Calculates stage-by-stage conversion rates, identifies where applications
+     * most commonly terminate (drop-off points), and provides success rates
+     * segmented by company and position type.</p>
+     *
+     * @param userId the ID of the user whose funnel to analyze
+     * @return FunnelAnalyticsResponse with conversion rates and success metrics
+     */
+    FunnelAnalyticsResponse getFunnelAnalytics(Long userId);
+
+    /**
+     * Retrieves application health indicators.
+     *
+     * <p>Identifies applications in various states of health:</p>
+     * <ul>
+     *   <li><b>Stale</b>: Active applications with no events in X days (default 14)</li>
+     *   <li><b>Hot</b>: Applications with 3+ events in the last 7 days</li>
+     *   <li><b>Quick Wins</b>: Applications that received offers within 7 days</li>
+     *   <li><b>Quick Losses</b>: Applications rejected/ghosted within 7 days</li>
+     * </ul>
+     *
+     * @param userId the ID of the user whose application health to analyze
+     * @param staleDays number of days without events to consider an application stale (null = 14)
+     * @return ApplicationHealthResponse with categorized applications and summary
+     */
+    ApplicationHealthResponse getApplicationHealth(Long userId, Integer staleDays);
 }

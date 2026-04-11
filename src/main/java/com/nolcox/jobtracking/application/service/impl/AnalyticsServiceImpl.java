@@ -1,6 +1,15 @@
 package com.nolcox.jobtracking.application.service.impl;
 
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.HealthSummary;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.HotApplication;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.QuickOutcome;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.StaleApplication;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.CompanySuccessRate;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.DropOffPoint;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.PositionTypeSuccessRate;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
@@ -8,9 +17,13 @@ import com.nolcox.jobtracking.application.dto.response.SalaryDistributionRespons
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse.BottleneckStage;
 import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
+import com.nolcox.jobtracking.application.dto.response.TransitionMatrixResponse;
+import com.nolcox.jobtracking.application.dto.response.TransitionMatrixResponse.StatusTransition;
 import com.nolcox.jobtracking.application.service.AnalyticsService;
+import com.nolcox.jobtracking.domain.entity.ApplicationEvent;
 import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.JobApplication;
+import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +36,17 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +76,7 @@ import java.util.stream.Collectors;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final JobApplicationRepository repository;
+    private final ApplicationEventRepository eventRepository;
 
     // ============================================================================
     // STATUS SET HIERARCHY
@@ -146,6 +164,51 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             ApplicationStatus.WITHDRAWN,
             ApplicationStatus.GHOSTED
     );
+
+    /**
+     * All terminal statuses including offer outcomes.
+     * Used for funnel analytics and health indicator calculations.
+     */
+    private static final Set<ApplicationStatus> ALL_TERMINAL_STATUSES = EnumSet.of(
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.GHOSTED,
+            ApplicationStatus.OFFER_ACCEPTED,
+            ApplicationStatus.OFFER_DECLINED,
+            ApplicationStatus.OFFER_RESCINDED
+    );
+
+    /**
+     * Negative terminal statuses (rejection/failure outcomes).
+     * Used for identifying quick losses in health indicators.
+     */
+    private static final Set<ApplicationStatus> NEGATIVE_TERMINAL_STATUSES = EnumSet.of(
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.GHOSTED,
+            ApplicationStatus.OFFER_DECLINED,
+            ApplicationStatus.OFFER_RESCINDED
+    );
+
+    /**
+     * Default number of days to consider an application stale.
+     */
+    private static final int DEFAULT_STALE_DAYS = 14;
+
+    /**
+     * Number of days to look back for "hot" application activity.
+     */
+    private static final int HOT_ACTIVITY_WINDOW_DAYS = 7;
+
+    /**
+     * Minimum events in the hot activity window to be considered "hot".
+     */
+    private static final int HOT_EVENT_THRESHOLD = 3;
+
+    /**
+     * Maximum days from application to resolution to be a "quick" outcome.
+     */
+    private static final int QUICK_OUTCOME_DAYS = 7;
 
     /**
      * Maximum number of bottleneck stages to return in analytics.
@@ -487,5 +550,405 @@ public class AnalyticsServiceImpl implements AnalyticsService {
      */
     private double roundToOneDecimal(double value) {
         return Math.round(value * 10.0) / 10.0;
+    }
+
+    // ==================== Event-Based Analytics Methods ====================
+
+    @Override
+    public TransitionMatrixResponse getTransitionMatrix(Long userId) {
+        log.debug("Calculating transition matrix for user ID: {}", userId);
+
+        List<ApplicationEvent> statusEvents = eventRepository.findStatusTransitionsByUserId(userId);
+
+        if (statusEvents.isEmpty()) {
+            return TransitionMatrixResponse.empty();
+        }
+
+        // Group by (from, to) pairs and count occurrences
+        // KEY: "FROM_STATUS->TO_STATUS"
+        Map<String, Long> transitionCounts = new HashMap<>();
+        Set<ApplicationStatus> allStatuses = new HashSet<>();
+
+        for (ApplicationEvent event : statusEvents) {
+            String oldValue = event.getOldValue();
+            String newValue = event.getNewValue();
+
+            if (oldValue == null || newValue == null) {
+                continue;
+            }
+
+            try {
+                ApplicationStatus fromStatus = ApplicationStatus.valueOf(oldValue);
+                ApplicationStatus toStatus = ApplicationStatus.valueOf(newValue);
+
+                String key = fromStatus.name() + "->" + toStatus.name();
+                transitionCounts.merge(key, 1L, Long::sum);
+
+                allStatuses.add(fromStatus);
+                allStatuses.add(toStatus);
+            } catch (IllegalArgumentException e) {
+                // Skip invalid status values that may exist from legacy data
+                log.warn("Skipping invalid status value in transition: {} -> {}", oldValue, newValue);
+            }
+        }
+
+        // Convert to StatusTransition list
+        List<StatusTransition> transitions = transitionCounts.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("->");
+                    ApplicationStatus from = ApplicationStatus.valueOf(parts[0]);
+                    ApplicationStatus to = ApplicationStatus.valueOf(parts[1]);
+                    return new StatusTransition(from, to, entry.getValue());
+                })
+                .sorted(Comparator.comparingLong(StatusTransition::count).reversed())
+                .collect(Collectors.toList());
+
+        long totalTransitions = transitions.stream()
+                .mapToLong(StatusTransition::count)
+                .sum();
+
+        return new TransitionMatrixResponse(transitions, allStatuses, totalTransitions);
+    }
+
+    @Override
+    public FunnelAnalyticsResponse getFunnelAnalytics(Long userId) {
+        log.debug("Calculating funnel analytics for user ID: {}", userId);
+
+        List<JobApplication> applications = repository.findAllByUserId(userId);
+
+        if (applications.isEmpty()) {
+            return FunnelAnalyticsResponse.empty();
+        }
+
+        long total = applications.size();
+
+        // Calculate stage conversion rates - percentage advancing from each status
+        Map<ApplicationStatus, Double> stageConversionRates = calculateStageConversionRates(applications, total);
+
+        // Identify drop-off points (terminal statuses)
+        List<DropOffPoint> dropOffPoints = calculateDropOffPoints(applications, total);
+
+        // Calculate success rate by company
+        List<CompanySuccessRate> successByCompany = calculateSuccessRateByCompany(applications);
+
+        // Calculate success rate by position type
+        List<PositionTypeSuccessRate> successByPosition = calculateSuccessRateByPositionType(applications);
+
+        // Calculate overall success rate
+        long offers = applications.stream()
+                .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                .count();
+        double overallSuccessRate = total > 0 ? roundToOneDecimal((offers * 100.0) / total) : 0.0;
+
+        return new FunnelAnalyticsResponse(
+                stageConversionRates,
+                dropOffPoints,
+                successByCompany,
+                successByPosition,
+                overallSuccessRate,
+                total
+        );
+    }
+
+    /**
+     * Calculates the percentage of applications that advanced past each status.
+     *
+     * <p>For APPLIED status, this is the percentage of applications that moved
+     * to any status other than APPLIED (i.e., received some response).</p>
+     */
+    private Map<ApplicationStatus, Double> calculateStageConversionRates(List<JobApplication> applications,
+                                                                          long total) {
+        Map<ApplicationStatus, Double> rates = new EnumMap<>(ApplicationStatus.class);
+
+        if (total == 0) {
+            return rates;
+        }
+
+        // Count applications NOT in APPLIED status (i.e., those that advanced)
+        long advanced = applications.stream()
+                .filter(app -> app.getStatus() != ApplicationStatus.APPLIED)
+                .count();
+        rates.put(ApplicationStatus.APPLIED, roundToOneDecimal((advanced * 100.0) / total));
+
+        return rates;
+    }
+
+    /**
+     * Identifies terminal statuses where applications commonly end.
+     */
+    private List<DropOffPoint> calculateDropOffPoints(List<JobApplication> applications, long total) {
+        if (total == 0) {
+            return List.of();
+        }
+
+        // Count applications in each terminal status
+        Map<ApplicationStatus, Long> terminalCounts = applications.stream()
+                .filter(app -> ALL_TERMINAL_STATUSES.contains(app.getStatus()))
+                .collect(Collectors.groupingBy(JobApplication::getStatus, Collectors.counting()));
+
+        return terminalCounts.entrySet().stream()
+                .map(entry -> new DropOffPoint(
+                        entry.getKey(),
+                        entry.getValue(),
+                        roundToOneDecimal((entry.getValue() * 100.0) / total)
+                ))
+                .sorted(Comparator.comparingLong(DropOffPoint::count).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculates offer success rate grouped by company name.
+     */
+    private List<CompanySuccessRate> calculateSuccessRateByCompany(List<JobApplication> applications) {
+        // Group by company
+        Map<String, List<JobApplication>> byCompany = applications.stream()
+                .collect(Collectors.groupingBy(JobApplication::getCompanyName));
+
+        return byCompany.entrySet().stream()
+                .map(entry -> {
+                    String company = entry.getKey();
+                    List<JobApplication> companyApps = entry.getValue();
+                    long companyTotal = companyApps.size();
+                    long companyOffers = companyApps.stream()
+                            .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                            .count();
+                    double rate = companyTotal > 0 ? roundToOneDecimal((companyOffers * 100.0) / companyTotal) : 0.0;
+                    return new CompanySuccessRate(company, companyTotal, companyOffers, rate);
+                })
+                .sorted(Comparator.comparingLong(CompanySuccessRate::totalApplications).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculates offer success rate grouped by position type (extracted from title).
+     *
+     * <p>Position types are extracted from common keywords in job titles:
+     * Senior, Staff, Principal, Junior, Mid, Lead, etc.</p>
+     */
+    private List<PositionTypeSuccessRate> calculateSuccessRateByPositionType(List<JobApplication> applications) {
+        // Extract position type from title using keywords
+        Map<String, List<JobApplication>> byPositionType = applications.stream()
+                .collect(Collectors.groupingBy(app -> extractPositionType(app.getPositionTitle())));
+
+        return byPositionType.entrySet().stream()
+                .filter(entry -> !entry.getKey().equals("Other")) // Optionally exclude uncategorized
+                .map(entry -> {
+                    String positionType = entry.getKey();
+                    List<JobApplication> typeApps = entry.getValue();
+                    long typeTotal = typeApps.size();
+                    long typeOffers = typeApps.stream()
+                            .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                            .count();
+                    double rate = typeTotal > 0 ? roundToOneDecimal((typeOffers * 100.0) / typeTotal) : 0.0;
+                    return new PositionTypeSuccessRate(positionType, typeTotal, typeOffers, rate);
+                })
+                .sorted(Comparator.comparingLong(PositionTypeSuccessRate::totalApplications).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extracts seniority/position type from a job title.
+     *
+     * <p>Looks for common keywords like Senior, Staff, Junior, etc.
+     * Returns "Other" if no recognizable keyword is found.</p>
+     */
+    private String extractPositionType(String title) {
+        if (title == null) {
+            return "Other";
+        }
+        String lowerTitle = title.toLowerCase();
+
+        // Order matters: check more specific terms first
+        if (lowerTitle.contains("principal")) return "Principal";
+        if (lowerTitle.contains("staff")) return "Staff";
+        if (lowerTitle.contains("senior") || lowerTitle.contains("sr.") || lowerTitle.contains("sr ")) return "Senior";
+        if (lowerTitle.contains("lead")) return "Lead";
+        if (lowerTitle.contains("junior") || lowerTitle.contains("jr.") || lowerTitle.contains("jr ")) return "Junior";
+        if (lowerTitle.contains("mid-level") || lowerTitle.contains("mid level")) return "Mid-Level";
+        if (lowerTitle.contains("intern")) return "Intern";
+        if (lowerTitle.contains("entry")) return "Entry Level";
+
+        return "Other";
+    }
+
+    @Override
+    public ApplicationHealthResponse getApplicationHealth(Long userId, Integer staleDays) {
+        log.debug("Calculating application health for user ID: {} with stale threshold: {} days",
+                userId, staleDays);
+
+        int effectiveStaleDays = staleDays != null ? staleDays : DEFAULT_STALE_DAYS;
+        Instant now = Instant.now();
+
+        List<JobApplication> applications = repository.findAllByUserId(userId);
+
+        if (applications.isEmpty()) {
+            return ApplicationHealthResponse.empty(effectiveStaleDays);
+        }
+
+        // Build lookup maps for applications
+        Map<Long, JobApplication> appById = applications.stream()
+                .collect(Collectors.toMap(JobApplication::getId, Function.identity()));
+
+        // Get last event timestamps for all applications
+        List<Object[]> lastEventData = eventRepository.findLastEventTimestampByApplicationForUser(userId);
+        Map<Long, Instant> lastEventByAppId = lastEventData.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Instant) row[1]
+                ));
+
+        // Get recent event counts (last 7 days)
+        Instant hotWindowStart = now.minus(HOT_ACTIVITY_WINDOW_DAYS, ChronoUnit.DAYS);
+        List<Object[]> recentEventData = eventRepository.countRecentEventsByApplicationForUser(userId, hotWindowStart);
+        Map<Long, Long> recentEventCountByAppId = recentEventData.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
+
+        // Identify stale applications
+        List<StaleApplication> staleApplications = findStaleApplications(
+                applications, lastEventByAppId, now, effectiveStaleDays);
+
+        // Identify hot applications
+        List<HotApplication> hotApplications = findHotApplications(
+                applications, recentEventCountByAppId, lastEventByAppId);
+
+        // Identify quick wins and losses
+        List<QuickOutcome> quickWins = findQuickOutcomes(applications, true);
+        List<QuickOutcome> quickLosses = findQuickOutcomes(applications, false);
+
+        // Calculate active count (non-terminal statuses)
+        int activeCount = (int) applications.stream()
+                .filter(app -> !ALL_TERMINAL_STATUSES.contains(app.getStatus()))
+                .count();
+
+        HealthSummary summary = new HealthSummary(
+                staleApplications.size(),
+                hotApplications.size(),
+                quickWins.size(),
+                quickLosses.size(),
+                activeCount
+        );
+
+        return new ApplicationHealthResponse(
+                staleApplications,
+                hotApplications,
+                quickWins,
+                quickLosses,
+                effectiveStaleDays,
+                summary
+        );
+    }
+
+    /**
+     * Finds applications that are stale (no activity for X days while still active).
+     */
+    private List<StaleApplication> findStaleApplications(List<JobApplication> applications,
+                                                          Map<Long, Instant> lastEventByAppId,
+                                                          Instant now,
+                                                          int staleDays) {
+        Instant staleThreshold = now.minus(staleDays, ChronoUnit.DAYS);
+        List<StaleApplication> stale = new ArrayList<>();
+
+        for (JobApplication app : applications) {
+            // Skip terminal status applications
+            if (ALL_TERMINAL_STATUSES.contains(app.getStatus())) {
+                continue;
+            }
+
+            Instant lastEvent = lastEventByAppId.get(app.getId());
+            if (lastEvent == null) {
+                // No events found - use applied date as fallback
+                lastEvent = app.getAppliedDate();
+            }
+
+            if (lastEvent != null && lastEvent.isBefore(staleThreshold)) {
+                long daysSinceLastEvent = ChronoUnit.DAYS.between(lastEvent, now);
+                stale.add(new StaleApplication(
+                        app.getId(),
+                        app.getCompanyName(),
+                        app.getPositionTitle(),
+                        app.getStatus(),
+                        lastEvent,
+                        daysSinceLastEvent
+                ));
+            }
+        }
+
+        // Sort by days since last event (most stale first)
+        stale.sort(Comparator.comparingLong(StaleApplication::daysSinceLastEvent).reversed());
+        return stale;
+    }
+
+    /**
+     * Finds applications with high recent activity (3+ events in last 7 days).
+     */
+    private List<HotApplication> findHotApplications(List<JobApplication> applications,
+                                                      Map<Long, Long> recentEventCountByAppId,
+                                                      Map<Long, Instant> lastEventByAppId) {
+        List<HotApplication> hot = new ArrayList<>();
+
+        for (JobApplication app : applications) {
+            Long recentCount = recentEventCountByAppId.get(app.getId());
+            if (recentCount != null && recentCount >= HOT_EVENT_THRESHOLD) {
+                Instant lastEvent = lastEventByAppId.getOrDefault(app.getId(), app.getStatusChangedAt());
+                hot.add(new HotApplication(
+                        app.getId(),
+                        app.getCompanyName(),
+                        app.getPositionTitle(),
+                        app.getStatus(),
+                        recentCount.intValue(),
+                        lastEvent
+                ));
+            }
+        }
+
+        // Sort by recent event count (hottest first)
+        hot.sort(Comparator.comparingInt(HotApplication::recentEventCount).reversed());
+        return hot;
+    }
+
+    /**
+     * Finds applications that resolved quickly (within 7 days).
+     *
+     * @param applications all applications
+     * @param wins if true, find quick wins (offers); if false, find quick losses (rejections)
+     * @return list of quick outcomes
+     */
+    private List<QuickOutcome> findQuickOutcomes(List<JobApplication> applications, boolean wins) {
+        Set<ApplicationStatus> targetStatuses = wins ? OFFER_STATUSES : NEGATIVE_TERMINAL_STATUSES;
+        List<QuickOutcome> outcomes = new ArrayList<>();
+
+        for (JobApplication app : applications) {
+            if (!targetStatuses.contains(app.getStatus())) {
+                continue;
+            }
+
+            Instant appliedDate = app.getAppliedDate();
+            Instant resolvedAt = app.getStatusChangedAt();
+
+            if (appliedDate == null || resolvedAt == null) {
+                continue;
+            }
+
+            long daysToResolution = ChronoUnit.DAYS.between(appliedDate, resolvedAt);
+
+            if (daysToResolution <= QUICK_OUTCOME_DAYS && daysToResolution >= 0) {
+                outcomes.add(new QuickOutcome(
+                        app.getId(),
+                        app.getCompanyName(),
+                        app.getPositionTitle(),
+                        app.getStatus(),
+                        appliedDate,
+                        resolvedAt,
+                        daysToResolution
+                ));
+            }
+        }
+
+        // Sort by days to resolution (fastest first)
+        outcomes.sort(Comparator.comparingLong(QuickOutcome::daysToResolution));
+        return outcomes;
     }
 }

@@ -4,11 +4,14 @@ import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateReques
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
+import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse;
+import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.TimePatternsResponse;
+import com.nolcox.jobtracking.application.dto.response.TransitionMatrixResponse;
 import com.nolcox.jobtracking.application.service.AnalyticsService;
 import com.nolcox.jobtracking.application.service.ApplicationEventService;
 import com.nolcox.jobtracking.application.service.JobApplicationService;
@@ -288,6 +291,89 @@ public class JobApplicationController {
         Long userId = getUserIdFromAuthentication(authentication);
         StageDurationsResponse durations = analyticsService.getStageDurations(userId);
         return ResponseEntity.ok(durations);
+    }
+
+    // ==================== Event-Based Analytics Endpoints ====================
+
+    /**
+     * Retrieves the status transition matrix for heatmap visualization.
+     *
+     * <p>Analyzes all status change events to count transitions between different
+     * application statuses. The response data is suitable for rendering as a heatmap
+     * where rows represent "from" statuses, columns represent "to" statuses, and
+     * cell values represent the count of that specific transition.</p>
+     *
+     * <p>Example use case: Understanding common application flow patterns, such as
+     * how many applications went from APPLIED to RECRUITER_SCREEN vs. straight to REJECTED.</p>
+     *
+     * @param authentication the current user's authentication
+     * @return transition matrix with status transitions and counts
+     */
+    @GetMapping("/analytics/transition-matrix")
+    @Operation(summary = "Get status transition matrix",
+            description = "Returns counts of status transitions for heatmap visualization. " +
+                    "Shows how applications flow between different statuses.")
+    public ResponseEntity<TransitionMatrixResponse> getTransitionMatrix(
+            Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        TransitionMatrixResponse matrix = analyticsService.getTransitionMatrix(userId);
+        return ResponseEntity.ok(matrix);
+    }
+
+    /**
+     * Retrieves funnel analytics showing conversion rates and drop-off points.
+     *
+     * <p>Provides comprehensive funnel analysis including:</p>
+     * <ul>
+     *   <li>Stage conversion rates - percentage of applications advancing from each status</li>
+     *   <li>Drop-off points - terminal statuses where applications commonly end</li>
+     *   <li>Success rate by company - offer rates grouped by company name</li>
+     *   <li>Success rate by position type - offer rates grouped by seniority/role keywords</li>
+     *   <li>Overall success rate - total percentage of applications resulting in offers</li>
+     * </ul>
+     *
+     * @param authentication the current user's authentication
+     * @return funnel analytics with conversion rates and success metrics
+     */
+    @GetMapping("/analytics/funnel")
+    @Operation(summary = "Get funnel analytics",
+            description = "Returns stage conversion rates, drop-off points, and success rates " +
+                    "by company and position type for pipeline analysis.")
+    public ResponseEntity<FunnelAnalyticsResponse> getFunnelAnalytics(
+            Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        FunnelAnalyticsResponse funnel = analyticsService.getFunnelAnalytics(userId);
+        return ResponseEntity.ok(funnel);
+    }
+
+    /**
+     * Retrieves application health indicators.
+     *
+     * <p>Categorizes applications into health-based groups:</p>
+     * <ul>
+     *   <li><b>Stale</b>: Active applications with no events in X days (needs follow-up)</li>
+     *   <li><b>Hot</b>: Applications with 3+ events in last 7 days (high activity)</li>
+     *   <li><b>Quick Wins</b>: Applications that received offers within 7 days</li>
+     *   <li><b>Quick Losses</b>: Applications rejected/ghosted within 7 days</li>
+     * </ul>
+     *
+     * <p>The staleDays parameter is configurable to adjust what "stale" means
+     * for the user's job search velocity. Default is 14 days.</p>
+     *
+     * @param staleDays number of days without events to consider an application stale (default: 14)
+     * @param authentication the current user's authentication
+     * @return application health indicators with categorized applications
+     */
+    @GetMapping("/analytics/health")
+    @Operation(summary = "Get application health indicators",
+            description = "Returns stale applications, hot applications (high activity), " +
+                    "quick wins, and quick losses for pipeline health monitoring.")
+    public ResponseEntity<ApplicationHealthResponse> getApplicationHealth(
+            @RequestParam(required = false, defaultValue = "14") Integer staleDays,
+            Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        ApplicationHealthResponse health = analyticsService.getApplicationHealth(userId, staleDays);
+        return ResponseEntity.ok(health);
     }
 
     private Long getUserIdFromAuthentication(Authentication authentication) {

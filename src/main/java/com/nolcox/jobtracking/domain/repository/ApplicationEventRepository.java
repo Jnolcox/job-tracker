@@ -120,4 +120,92 @@ public interface ApplicationEventRepository extends JpaRepository<ApplicationEve
      */
     @Query("SELECT e FROM ApplicationEvent e WHERE e.application.user.id = :userId ORDER BY e.createdAt DESC")
     List<ApplicationEvent> findAllByUserId(@Param("userId") Long userId);
+
+    // ==================== Analytics Query Methods ====================
+
+    /**
+     * Retrieves all status change events for a user's applications.
+     *
+     * <p>Filters events where eventType is STATUS_CHANGED and fieldName is 'status'.
+     * This data is used for transition matrix analytics to show how applications
+     * flow between different statuses.</p>
+     *
+     * @param userId the ID of the user whose status transitions to retrieve
+     * @return list of status change events with oldValue and newValue populated
+     */
+    @Query("SELECT e FROM ApplicationEvent e " +
+           "WHERE e.application.user.id = :userId " +
+           "AND e.eventType = 'STATUS_CHANGED' " +
+           "AND e.fieldName = 'status' " +
+           "ORDER BY e.createdAt DESC")
+    List<ApplicationEvent> findStatusTransitionsByUserId(@Param("userId") Long userId);
+
+    /**
+     * Retrieves events for a specific application within a time range.
+     *
+     * <p>Used for health indicator calculations to determine application activity
+     * within specific periods (e.g., last 7 days for "hot" applications).</p>
+     *
+     * @param applicationId the ID of the job application
+     * @param since the start of the time range (inclusive)
+     * @return list of events created on or after the since timestamp
+     */
+    @Query("SELECT e FROM ApplicationEvent e " +
+           "WHERE e.application.id = :applicationId " +
+           "AND e.createdAt >= :since " +
+           "ORDER BY e.createdAt DESC")
+    List<ApplicationEvent> findByApplicationIdAndCreatedAtAfter(
+            @Param("applicationId") Long applicationId,
+            @Param("since") Instant since);
+
+    /**
+     * Counts recent events for each application owned by a user.
+     *
+     * <p>Returns application IDs with their event counts for events created
+     * after the specified timestamp. Used to identify "hot" applications
+     * with high recent activity.</p>
+     *
+     * @param userId the ID of the user
+     * @param since the start of the time range (inclusive)
+     * @return list of Object arrays where [0] is applicationId (Long) and [1] is count (Long)
+     */
+    @Query("SELECT e.application.id, COUNT(e) FROM ApplicationEvent e " +
+           "WHERE e.application.user.id = :userId " +
+           "AND e.createdAt >= :since " +
+           "GROUP BY e.application.id")
+    List<Object[]> countRecentEventsByApplicationForUser(
+            @Param("userId") Long userId,
+            @Param("since") Instant since);
+
+    /**
+     * Finds the most recent event timestamp for each application owned by a user.
+     *
+     * <p>Used to identify "stale" applications that haven't had any activity
+     * for an extended period.</p>
+     *
+     * @param userId the ID of the user
+     * @return list of Object arrays where [0] is applicationId (Long) and [1] is lastEventAt (Instant)
+     */
+    @Query("SELECT e.application.id, MAX(e.createdAt) FROM ApplicationEvent e " +
+           "WHERE e.application.user.id = :userId " +
+           "GROUP BY e.application.id")
+    List<Object[]> findLastEventTimestampByApplicationForUser(@Param("userId") Long userId);
+
+    /**
+     * Retrieves status change events that transition to terminal statuses.
+     *
+     * <p>Terminal statuses include: REJECTED, WITHDRAWN, GHOSTED, OFFER_ACCEPTED,
+     * OFFER_DECLINED, OFFER_RESCINDED. This is used for funnel drop-off analysis
+     * and quick win/loss calculations.</p>
+     *
+     * @param userId the ID of the user
+     * @return list of status change events where newValue is a terminal status
+     */
+    @Query("SELECT e FROM ApplicationEvent e " +
+           "WHERE e.application.user.id = :userId " +
+           "AND e.eventType = 'STATUS_CHANGED' " +
+           "AND e.fieldName = 'status' " +
+           "AND e.newValue IN ('REJECTED', 'WITHDRAWN', 'GHOSTED', 'OFFER_ACCEPTED', 'OFFER_DECLINED', 'OFFER_RESCINDED') " +
+           "ORDER BY e.createdAt DESC")
+    List<ApplicationEvent> findTerminalStatusTransitionsByUserId(@Param("userId") Long userId);
 }
