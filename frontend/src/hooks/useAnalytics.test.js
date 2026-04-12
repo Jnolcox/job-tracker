@@ -16,6 +16,9 @@ jest.mock('../services/api', () => ({
     getActivityHeatmap: jest.fn(),
     getTimePatterns: jest.fn(),
     getStageDurations: jest.fn(),
+    getTransitionMatrix: jest.fn(),
+    getFunnel: jest.fn(),
+    getHealth: jest.fn(),
   },
 }));
 
@@ -85,6 +88,80 @@ describe('useAnalytics', () => {
     },
   };
 
+  const mockTransitionMatrixResponse = {
+    data: {
+      transitions: [
+        { fromStatus: 'APPLIED', toStatus: 'RECRUITER_SCREEN', count: 15 },
+        { fromStatus: 'APPLIED', toStatus: 'REJECTED', count: 8 },
+      ],
+      statuses: ['APPLIED', 'RECRUITER_SCREEN', 'REJECTED'],
+      totalTransitions: 23,
+    },
+  };
+
+  const mockFunnelResponse = {
+    data: {
+      stageConversionRates: { APPLIED: 65.5 },
+      dropOffPoints: [
+        { status: 'REJECTED', count: 12, percentage: 24.0 },
+        { status: 'GHOSTED', count: 8, percentage: 16.0 },
+      ],
+      successRateByCompany: [
+        { companyName: 'Google', totalApplications: 3, offersReceived: 1, successRate: 33.3 },
+      ],
+      successRateByPositionType: [
+        { positionType: 'Senior', totalApplications: 15, offersReceived: 2, successRate: 13.3 },
+      ],
+      overallSuccessRate: 8.5,
+      totalApplicationsAnalyzed: 50,
+    },
+  };
+
+  const mockHealthResponse = {
+    data: {
+      staleApplications: [
+        {
+          applicationId: 1,
+          companyName: 'Meta',
+          positionTitle: 'SWE',
+          currentStatus: 'APPLIED',
+          lastEventAt: '2024-01-15T10:00:00Z',
+          daysSinceLastEvent: 20,
+        },
+      ],
+      hotApplications: [
+        {
+          applicationId: 2,
+          companyName: 'Google',
+          positionTitle: 'Senior SWE',
+          currentStatus: 'TECHNICAL_I',
+          recentEventCount: 5,
+          lastEventAt: '2024-02-01T15:00:00Z',
+        },
+      ],
+      quickWins: [
+        {
+          applicationId: 3,
+          companyName: 'Startup',
+          positionTitle: 'Lead',
+          finalStatus: 'OFFER_RECEIVED',
+          appliedAt: '2024-01-01T00:00:00Z',
+          resolvedAt: '2024-01-06T00:00:00Z',
+          daysToResolution: 5,
+        },
+      ],
+      quickLosses: [],
+      staleDaysThreshold: 14,
+      summary: {
+        staleCount: 5,
+        hotCount: 2,
+        quickWinCount: 1,
+        quickLossCount: 3,
+        activeCount: 25,
+      },
+    },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -97,21 +174,35 @@ describe('useAnalytics', () => {
     analyticsAPI.getActivityHeatmap.mockImplementation(() => new Promise(() => {}));
     analyticsAPI.getTimePatterns.mockImplementation(() => new Promise(() => {}));
     analyticsAPI.getStageDurations.mockImplementation(() => new Promise(() => {}));
+    analyticsAPI.getTransitionMatrix.mockImplementation(() => new Promise(() => {}));
+    analyticsAPI.getFunnel.mockImplementation(() => new Promise(() => {}));
+    analyticsAPI.getHealth.mockImplementation(() => new Promise(() => {}));
 
     const { result } = renderHook(() => useAnalytics());
 
     expect(result.current.loading).toBe(true);
     expect(result.current.metrics).toBeNull();
     expect(result.current.countsByStatus).toBeNull();
+    expect(result.current.transitionMatrix).toBeNull();
+    expect(result.current.funnelAnalytics).toBeNull();
+    expect(result.current.healthIndicators).toBeNull();
   });
 
-  it('should fetch metrics data', async () => {
+  // Helper to setup all mocks with default responses
+  const setupAllMocks = () => {
     analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
     analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
     analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
     analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
     analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
     analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    analyticsAPI.getTransitionMatrix.mockResolvedValue(mockTransitionMatrixResponse);
+    analyticsAPI.getFunnel.mockResolvedValue(mockFunnelResponse);
+    analyticsAPI.getHealth.mockResolvedValue(mockHealthResponse);
+  };
+
+  it('should fetch metrics data', async () => {
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -125,12 +216,7 @@ describe('useAnalytics', () => {
   });
 
   it('should fetch counts by status', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -143,12 +229,7 @@ describe('useAnalytics', () => {
   });
 
   it('should fetch salary distribution', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -161,12 +242,7 @@ describe('useAnalytics', () => {
   });
 
   it('should fetch activity heatmap', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -179,12 +255,7 @@ describe('useAnalytics', () => {
   });
 
   it('should fetch time patterns', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -197,12 +268,7 @@ describe('useAnalytics', () => {
   });
 
   it('should fetch stage durations', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -214,6 +280,58 @@ describe('useAnalytics', () => {
     expect(result.current.stageDurations.bottleneckStages[0].stage).toBe('RECRUITER_SCREEN');
   });
 
+  it('should fetch transition matrix', async () => {
+    setupAllMocks();
+
+    const { result } = renderHook(() => useAnalytics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.transitionMatrix).toEqual(mockTransitionMatrixResponse.data);
+    expect(result.current.transitionMatrix.transitions[0].fromStatus).toBe('APPLIED');
+    expect(result.current.transitionMatrix.totalTransitions).toBe(23);
+  });
+
+  it('should fetch funnel analytics', async () => {
+    setupAllMocks();
+
+    const { result } = renderHook(() => useAnalytics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.funnelAnalytics).toEqual(mockFunnelResponse.data);
+    expect(result.current.funnelAnalytics.overallSuccessRate).toBe(8.5);
+    expect(result.current.funnelAnalytics.dropOffPoints[0].status).toBe('REJECTED');
+  });
+
+  it('should fetch health indicators', async () => {
+    setupAllMocks();
+
+    const { result } = renderHook(() => useAnalytics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.healthIndicators).toEqual(mockHealthResponse.data);
+    expect(result.current.healthIndicators.summary.staleCount).toBe(5);
+    expect(result.current.healthIndicators.staleApplications[0].companyName).toBe('Meta');
+  });
+
+  it('should pass staleDays parameter to health endpoint', async () => {
+    setupAllMocks();
+
+    renderHook(() => useAnalytics({ staleDays: 7 }));
+
+    await waitFor(() => {
+      expect(analyticsAPI.getHealth).toHaveBeenCalledWith(7);
+    });
+  });
+
   it('should handle API errors gracefully', async () => {
     const error = new Error('Network error');
     analyticsAPI.getMetrics.mockRejectedValue(error);
@@ -222,6 +340,9 @@ describe('useAnalytics', () => {
     analyticsAPI.getActivityHeatmap.mockRejectedValue(error);
     analyticsAPI.getTimePatterns.mockRejectedValue(error);
     analyticsAPI.getStageDurations.mockRejectedValue(error);
+    analyticsAPI.getTransitionMatrix.mockRejectedValue(error);
+    analyticsAPI.getFunnel.mockRejectedValue(error);
+    analyticsAPI.getHealth.mockRejectedValue(error);
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -231,15 +352,13 @@ describe('useAnalytics', () => {
 
     expect(result.current.error).toBe(error);
     expect(result.current.metrics).toBeNull();
+    expect(result.current.transitionMatrix).toBeNull();
+    expect(result.current.funnelAnalytics).toBeNull();
+    expect(result.current.healthIndicators).toBeNull();
   });
 
   it('should provide refetch function', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -268,12 +387,7 @@ describe('useAnalytics', () => {
   });
 
   it('should pass year parameter to activity heatmap', async () => {
-    analyticsAPI.getMetrics.mockResolvedValue(mockMetricsResponse);
-    analyticsAPI.getCountsByStatus.mockResolvedValue(mockCountsByStatusResponse);
-    analyticsAPI.getSalaryDistribution.mockResolvedValue(mockSalaryResponse);
-    analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
-    analyticsAPI.getTimePatterns.mockResolvedValue(mockTimePatternsResponse);
-    analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics({ year: 2024 }));
 
@@ -292,6 +406,9 @@ describe('useAnalytics', () => {
     analyticsAPI.getActivityHeatmap.mockResolvedValue(mockHeatmapResponse);
     analyticsAPI.getTimePatterns.mockRejectedValue(new Error('Time patterns API error'));
     analyticsAPI.getStageDurations.mockResolvedValue(mockStageDurationsResponse);
+    analyticsAPI.getTransitionMatrix.mockResolvedValue(mockTransitionMatrixResponse);
+    analyticsAPI.getFunnel.mockRejectedValue(new Error('Funnel API error'));
+    analyticsAPI.getHealth.mockResolvedValue(mockHealthResponse);
 
     const { result } = renderHook(() => useAnalytics());
 
@@ -304,9 +421,12 @@ describe('useAnalytics', () => {
     expect(result.current.countsByStatus).toEqual(mockCountsByStatusResponse.data);
     expect(result.current.activityHeatmap).toEqual(mockHeatmapResponse.data);
     expect(result.current.stageDurations).toEqual(mockStageDurationsResponse.data);
+    expect(result.current.transitionMatrix).toEqual(mockTransitionMatrixResponse.data);
+    expect(result.current.healthIndicators).toEqual(mockHealthResponse.data);
 
     // Failed endpoints should be null
     expect(result.current.salaryDistribution).toBeNull();
     expect(result.current.timePatterns).toBeNull();
+    expect(result.current.funnelAnalytics).toBeNull();
   });
 });

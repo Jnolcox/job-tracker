@@ -10,3 +10,6 @@ export { default as SalaryRangeChart } from './SalaryRangeChart';
 export { default as DayOfWeekBar } from './DayOfWeekBar';
 export { default as HourBar } from './HourBar';
 export { default as StageDurationChart } from './StageDurationChart';
+export { default as StatusTransitionHeatmap } from './StatusTransitionHeatmap';
+export { default as FunnelAnalytics } from './FunnelAnalytics';
+export { default as ApplicationHealthDashboard } from './ApplicationHealthDashboard';

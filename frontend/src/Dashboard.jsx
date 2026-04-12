@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
-import { useKeyboardShortcuts, useAnalytics } from "./hooks";
+import { useKeyboardShortcuts, useAnalytics, useDashboardSettings } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
 import {
   toUIFormat,
@@ -23,9 +23,13 @@ import {
   SalaryRangeChart,
   DayOfWeekBar,
   HourBar,
+  StatusTransitionHeatmap,
+  FunnelAnalytics,
+  ApplicationHealthDashboard,
 } from "./components/charts";
 import { AppTable } from "./components/table";
 import { ApplicationModal, ApplicationViewModal } from "./components/modal";
+import { DashboardSettingsModal } from "./components/settings";
 
 /**
  * @component JobTracker
@@ -54,6 +58,16 @@ export default function JobTracker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Dashboard settings for component visibility
+  const {
+    settings: dashboardSettings,
+    isComponentVisible,
+    toggleComponent,
+    resetSettings,
+    componentDisplayNames,
+  } = useDashboardSettings();
 
   // Refs for keyboard shortcut targets
   const searchInputRef = useRef(null);
@@ -74,6 +88,9 @@ export default function JobTracker() {
     salaryDistribution,
     activityHeatmap,
     timePatterns,
+    transitionMatrix,
+    funnelAnalytics,
+    healthIndicators,
     loading: analyticsLoading,
   } = useAnalytics();
 
@@ -321,6 +338,22 @@ export default function JobTracker() {
               </span>
             )}
             <button
+              onClick={() => setIsSettingsOpen(true)}
+              aria-label="Dashboard settings"
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                border: "1px solid #374151",
+                background: "transparent",
+                color: "#9CA3AF",
+                cursor: "pointer",
+                fontSize: 10,
+                fontFamily: "'DM Mono',monospace",
+              }}
+            >
+              Settings
+            </button>
+            <button
               onClick={logout}
               style={{
                 padding: "6px 12px",
@@ -368,105 +401,149 @@ export default function JobTracker() {
         )}
 
         {/* Stat Cards -- 5 x 2 grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}>
-          {/* Row 1 - Overview metrics */}
-          <StatCard 
-            label="Total Applied" 
-            value={apps.length} 
-            sub={`${activeApps.length} still active`} 
-            accent="#4E9AF1" 
-          />
-          <StatCard
-            label="True Response Rate"
-            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
-            sub="got any response"
-            accent="#A78BFA"
-            loading={analyticsLoading}
-          />
-          <StatCard
-            label="True Interview Rate"
-            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueInterviewRate || 0)}%`}
-            sub="reached interviews"
-            accent="#38BDF8"
-            loading={analyticsLoading}
-          />
-          <StatCard
-            label="Avg Response Time"
-            value={analyticsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
-            sub="days to hear back"
-            accent="#F59E0B"
-            loading={analyticsLoading}
-          />
-          <StatCard
-            label="True Offer Rate"
-            value={analyticsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
-            sub="received offers"
-            accent="#10B981"
-            loading={analyticsLoading}
-          />
+        {isComponentVisible('statCards') && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 24 }}>
+            {/* Row 1 - Overview metrics */}
+            <StatCard
+              label="Total Applied"
+              value={apps.length}
+              sub={`${activeApps.length} still active`}
+              accent="#4E9AF1"
+            />
+            <StatCard
+              label="True Response Rate"
+              value={analyticsLoading ? "—" : `${Math.round(metrics?.trueResponseRate || 0)}%`}
+              sub="got any response"
+              accent="#A78BFA"
+              loading={analyticsLoading}
+            />
+            <StatCard
+              label="True Interview Rate"
+              value={analyticsLoading ? "—" : `${Math.round(metrics?.trueInterviewRate || 0)}%`}
+              sub="reached interviews"
+              accent="#38BDF8"
+              loading={analyticsLoading}
+            />
+            <StatCard
+              label="Avg Response Time"
+              value={analyticsLoading ? "—" : (metrics?.avgDaysToResponse !== null ? `${Math.round(metrics.avgDaysToResponse)}d` : "—")}
+              sub="days to hear back"
+              accent="#F59E0B"
+              loading={analyticsLoading}
+            />
+            <StatCard
+              label="True Offer Rate"
+              value={analyticsLoading ? "—" : `${Math.round(metrics?.trueOfferRate || 0)}%`}
+              sub="received offers"
+              accent="#10B981"
+              loading={analyticsLoading}
+            />
 
-          {/* Row 2 - Funnel and current state */}
-          <StatCard 
-            label="In Interviews" 
-            value={inInterview} 
-            sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`} 
-            accent="#4E9AF1" 
-          />
-          <StatCard
-            label="Applied → Screen"
-            value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}
-            sub="recruiter conversion"
-            accent="#A78BFA"
-            loading={analyticsLoading}
-          />
-          <StatCard
-            label="Screen → Tech"
-            value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.screenToTech || 0)}%`}
-            sub="technical conversion"
-            accent="#38BDF8"
-            loading={analyticsLoading}
-          />
-          <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" />
-          <StatCard label="Current Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" />
-        </div>
+            {/* Row 2 - Funnel and current state */}
+            <StatCard
+              label="In Interviews"
+              value={inInterview}
+              sub={`${apps.filter(a => a.status === "REFERENCE_CHECK").length} at reference`}
+              accent="#4E9AF1"
+            />
+            <StatCard
+              label="Applied → Screen"
+              value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.appliedToScreen || 0)}%`}
+              sub="recruiter conversion"
+              accent="#A78BFA"
+              loading={analyticsLoading}
+            />
+            <StatCard
+              label="Screen → Tech"
+              value={analyticsLoading ? "—" : `${Math.round(metrics?.stageConversions?.screenToTech || 0)}%`}
+              sub="technical conversion"
+              accent="#38BDF8"
+              loading={analyticsLoading}
+            />
+            <StatCard label="Weekly Pace" value={weeklyPace} sub="apps / week" accent="#FB923C" />
+            <StatCard label="Current Offers" value={offers} sub={offers ? "negotiate hard" : "keep pushing"} accent="#10B981" />
+          </div>
+        )}
 
         {/* Charts row 1 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-          <StageFunnel
-            countsByStatus={countsByStatus}
-            loading={analyticsLoading}
-          />
-          <SalaryRangeChart
-            salaryDistribution={salaryDistribution}
-            loading={analyticsLoading}
-          />
-          <MaxTimePerStageChart apps={apps} />
-        </div>
+        {(isComponentVisible('stageFunnel') || isComponentVisible('salaryRangeChart') || isComponentVisible('maxTimePerStageChart')) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            {isComponentVisible('stageFunnel') && (
+              <StageFunnel
+                countsByStatus={countsByStatus}
+                loading={analyticsLoading}
+                data-testid="stage-funnel"
+              />
+            )}
+            {isComponentVisible('salaryRangeChart') && (
+              <SalaryRangeChart
+                salaryDistribution={salaryDistribution}
+                loading={analyticsLoading}
+                data-testid="salary-range-chart"
+              />
+            )}
+            {isComponentVisible('maxTimePerStageChart') && (
+              <MaxTimePerStageChart apps={apps} data-testid="max-time-per-stage-chart" />
+            )}
+          </div>
+        )}
 
-        {/* Charts row 2 - Stage insights */}
-       {/* <div style={{ marginBottom: 12 }}>
-          <StageDurationChart events={events || []} loading={analyticsLoading} />
-        </div>*/}
+        {/* Charts row 2 - Advanced Analytics */}
+        {(isComponentVisible('statusTransitionHeatmap') || isComponentVisible('funnelAnalytics') || isComponentVisible('applicationHealthDashboard')) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            {isComponentVisible('statusTransitionHeatmap') && (
+              <StatusTransitionHeatmap
+                data={transitionMatrix}
+                loading={analyticsLoading}
+                data-testid="status-transition-heatmap"
+              />
+            )}
+            {isComponentVisible('funnelAnalytics') && (
+              <FunnelAnalytics
+                data={funnelAnalytics}
+                loading={analyticsLoading}
+                data-testid="funnel-analytics"
+              />
+            )}
+            {isComponentVisible('applicationHealthDashboard') && (
+              <ApplicationHealthDashboard
+                data={healthIndicators}
+                loading={analyticsLoading}
+                data-testid="application-health-dashboard"
+              />
+            )}
+          </div>
+        )}
 
-        {/* Charts row 3 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-          <DayOfWeekBar
-            timePatterns={timePatterns}
-            loading={analyticsLoading}
-          />
-          <HourBar
-            timePatterns={timePatterns}
-            loading={analyticsLoading}
-          />
-        </div>
+        {/* Charts row 3 - Time patterns */}
+        {(isComponentVisible('dayOfWeekBar') || isComponentVisible('hourBar')) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+            {isComponentVisible('dayOfWeekBar') && (
+              <DayOfWeekBar
+                timePatterns={timePatterns}
+                loading={analyticsLoading}
+                data-testid="day-of-week-bar"
+              />
+            )}
+            {isComponentVisible('hourBar') && (
+              <HourBar
+                timePatterns={timePatterns}
+                loading={analyticsLoading}
+                data-testid="hour-bar"
+              />
+            )}
+          </div>
+        )}
 
-        {/* Charts row 2 */}
-        <div style={{ marginBottom: 12 }}>
-          <ActivityHeatmap
-            activityHeatmap={activityHeatmap}
-            loading={analyticsLoading}
-          />
-        </div>
+        {/* Activity Heatmap */}
+        {isComponentVisible('activityHeatmap') && (
+          <div style={{ marginBottom: 12 }} data-testid="activity-heatmap">
+            <ActivityHeatmap
+              activityHeatmap={activityHeatmap}
+              loading={analyticsLoading}
+            />
+          </div>
+        )}
 
         {/* Divider */}
         <div style={{ borderTop: "1px solid #1F2937", marginBottom: 20, position: "relative" }}>
@@ -523,6 +600,15 @@ export default function JobTracker() {
           onClose={() => setViewing(null)}
         />
       )}
+
+      <DashboardSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={dashboardSettings}
+        onToggle={toggleComponent}
+        onReset={resetSettings}
+        componentDisplayNames={componentDisplayNames}
+      />
     </>
   );
 }

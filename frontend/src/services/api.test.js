@@ -34,6 +34,10 @@ jest.mock('./api', () => {
         mockApi.get('/job-applications/analytics/activity-heatmap', { params: { year } }),
       getTimePatterns: () => mockApi.get('/job-applications/analytics/time-patterns'),
       getStageDurations: () => mockApi.get('/job-applications/analytics/stage-durations'),
+      getTransitionMatrix: () => mockApi.get('/job-applications/analytics/transition-matrix'),
+      getFunnel: () => mockApi.get('/job-applications/analytics/funnel'),
+      getHealth: (staleDays = 14) =>
+        mockApi.get('/job-applications/analytics/health', { params: { staleDays } }),
     },
     configAPI: {
       getStatuses: () => mockApi.get('/config/statuses'),
@@ -183,6 +187,113 @@ describe('analyticsAPI', () => {
 
       expect(api.get).toHaveBeenCalledWith('/job-applications/analytics/stage-durations');
       expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('getTransitionMatrix', () => {
+    it('should call the transition-matrix endpoint', async () => {
+      const mockResponse = {
+        data: {
+          transitions: [
+            { fromStatus: 'APPLIED', toStatus: 'RECRUITER_SCREEN', count: 15 },
+            { fromStatus: 'APPLIED', toStatus: 'REJECTED', count: 8 },
+          ],
+          statuses: ['APPLIED', 'RECRUITER_SCREEN', 'REJECTED'],
+          totalTransitions: 23,
+        },
+      };
+      api.get.mockResolvedValue(mockResponse);
+
+      const result = await analyticsAPI.getTransitionMatrix();
+
+      expect(api.get).toHaveBeenCalledWith('/job-applications/analytics/transition-matrix');
+      expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('getFunnel', () => {
+    it('should call the funnel endpoint', async () => {
+      const mockResponse = {
+        data: {
+          stageConversionRates: { APPLIED: 65.5 },
+          dropOffPoints: [
+            { status: 'REJECTED', count: 12, percentage: 24.0 },
+            { status: 'GHOSTED', count: 8, percentage: 16.0 },
+          ],
+          successRateByCompany: [
+            { companyName: 'Google', totalApplications: 3, offersReceived: 1, successRate: 33.3 },
+          ],
+          successRateByPositionType: [
+            { positionType: 'Senior', totalApplications: 15, offersReceived: 2, successRate: 13.3 },
+          ],
+          overallSuccessRate: 8.5,
+          totalApplicationsAnalyzed: 50,
+        },
+      };
+      api.get.mockResolvedValue(mockResponse);
+
+      const result = await analyticsAPI.getFunnel();
+
+      expect(api.get).toHaveBeenCalledWith('/job-applications/analytics/funnel');
+      expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('getHealth', () => {
+    it('should call the health endpoint with default staleDays parameter', async () => {
+      const mockResponse = {
+        data: {
+          staleApplications: [
+            {
+              applicationId: 1,
+              companyName: 'Meta',
+              positionTitle: 'SWE',
+              currentStatus: 'APPLIED',
+              lastEventAt: '2024-01-15T10:00:00Z',
+              daysSinceLastEvent: 20,
+            },
+          ],
+          hotApplications: [
+            {
+              applicationId: 2,
+              companyName: 'Google',
+              positionTitle: 'Senior SWE',
+              currentStatus: 'TECHNICAL_I',
+              recentEventCount: 5,
+              lastEventAt: '2024-02-01T15:00:00Z',
+            },
+          ],
+          quickWins: [],
+          quickLosses: [],
+          staleDaysThreshold: 14,
+          summary: {
+            staleCount: 5,
+            hotCount: 2,
+            quickWinCount: 1,
+            quickLossCount: 3,
+            activeCount: 25,
+          },
+        },
+      };
+      api.get.mockResolvedValue(mockResponse);
+
+      const result = await analyticsAPI.getHealth();
+
+      expect(api.get).toHaveBeenCalledWith('/job-applications/analytics/health', {
+        params: { staleDays: 14 },
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should call the health endpoint with custom staleDays parameter', async () => {
+      const mockResponse = { data: {} };
+      api.get.mockResolvedValue(mockResponse);
+
+      await analyticsAPI.getHealth(7);
+
+      expect(api.get).toHaveBeenCalledWith('/job-applications/analytics/health', {
+        params: { staleDays: 7 },
+      });
     });
   });
 });

@@ -126,6 +126,36 @@ export const analyticsAPI = {
    * // data: { averageTimeByStage: { APPLIED: 5.2, ... }, bottleneckStages: [...] }
    */
   getStageDurations: () => api.get('/job-applications/analytics/stage-durations'),
+
+  /**
+   * Fetch status transition matrix for heatmap visualization.
+   * Shows how applications move between different statuses.
+   * @returns {Promise} Axios promise resolving to transition matrix data
+   * @example
+   * const { data } = await analyticsAPI.getTransitionMatrix();
+   * // data: { transitions: [{fromStatus, toStatus, count}], statuses: [...], totalTransitions: 23 }
+   */
+  getTransitionMatrix: () => api.get('/job-applications/analytics/transition-matrix'),
+
+  /**
+   * Fetch funnel/conversion analytics including drop-off points and success rates.
+   * @returns {Promise} Axios promise resolving to funnel analytics data
+   * @example
+   * const { data } = await analyticsAPI.getFunnel();
+   * // data: { stageConversionRates, dropOffPoints, successRateByCompany, successRateByPositionType, overallSuccessRate, totalApplicationsAnalyzed }
+   */
+  getFunnel: () => api.get('/job-applications/analytics/funnel'),
+
+  /**
+   * Fetch application health indicators including stale and hot applications.
+   * @param {number} [staleDays=14] - Number of days to consider an application stale
+   * @returns {Promise} Axios promise resolving to health indicator data
+   * @example
+   * const { data } = await analyticsAPI.getHealth(14);
+   * // data: { staleApplications, hotApplications, quickWins, quickLosses, staleDaysThreshold, summary }
+   */
+  getHealth: (staleDays = 14) =>
+    api.get('/job-applications/analytics/health', { params: { staleDays } }),
 };
 
 /**

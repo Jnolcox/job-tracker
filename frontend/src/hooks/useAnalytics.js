@@ -51,8 +51,36 @@ import { analyticsAPI } from '../services/api';
  */
 
 /**
+ * @typedef {Object} TransitionMatrix
+ * @property {Array<{fromStatus: string, toStatus: string, count: number}>} transitions - Status transitions
+ * @property {string[]} statuses - All unique statuses
+ * @property {number} totalTransitions - Total count of all transitions
+ */
+
+/**
+ * @typedef {Object} FunnelAnalytics
+ * @property {Object<string, number>} stageConversionRates - Conversion rate per stage
+ * @property {Array<{status: string, count: number, percentage: number}>} dropOffPoints - Drop-off points
+ * @property {Array<{companyName: string, totalApplications: number, offersReceived: number, successRate: number}>} successRateByCompany
+ * @property {Array<{positionType: string, totalApplications: number, offersReceived: number, successRate: number}>} successRateByPositionType
+ * @property {number} overallSuccessRate - Overall success percentage
+ * @property {number} totalApplicationsAnalyzed - Total applications in analysis
+ */
+
+/**
+ * @typedef {Object} HealthIndicators
+ * @property {Array<{applicationId: number, companyName: string, positionTitle: string, currentStatus: string, lastEventAt: string, daysSinceLastEvent: number}>} staleApplications
+ * @property {Array<{applicationId: number, companyName: string, positionTitle: string, currentStatus: string, recentEventCount: number, lastEventAt: string}>} hotApplications
+ * @property {Array<{applicationId: number, companyName: string, positionTitle: string, finalStatus: string, appliedAt: string, resolvedAt: string, daysToResolution: number}>} quickWins
+ * @property {Array} quickLosses - Quick loss applications
+ * @property {number} staleDaysThreshold - Days threshold for stale classification
+ * @property {{staleCount: number, hotCount: number, quickWinCount: number, quickLossCount: number, activeCount: number}} summary
+ */
+
+/**
  * @typedef {Object} UseAnalyticsOptions
  * @property {number} [year] - Year for activity heatmap (defaults to current year)
+ * @property {number} [staleDays=14] - Days threshold for stale application classification
  */
 
 /**
@@ -63,6 +91,9 @@ import { analyticsAPI } from '../services/api';
  * @property {ActivityHeatmap|null} activityHeatmap - Heatmap data
  * @property {TimePatterns|null} timePatterns - Day/hour distribution
  * @property {StageDurations|null} stageDurations - Stage duration analytics
+ * @property {TransitionMatrix|null} transitionMatrix - Status transition matrix for heatmap
+ * @property {FunnelAnalytics|null} funnelAnalytics - Funnel/conversion analytics
+ * @property {HealthIndicators|null} healthIndicators - Application health indicators
  * @property {boolean} loading - Whether data is still loading
  * @property {Error|null} error - Error if any request failed
  * @property {function(): Promise<void>} refetch - Function to refetch all data
@@ -85,7 +116,7 @@ import { analyticsAPI } from '../services/api';
  * return <div>Response Rate: {metrics.trueResponseRate}%</div>;
  */
 export function useAnalytics(options = {}) {
-  const { year } = options;
+  const { year, staleDays = 14 } = options;
 
   const [metrics, setMetrics] = useState(null);
   const [countsByStatus, setCountsByStatus] = useState(null);
@@ -93,6 +124,9 @@ export function useAnalytics(options = {}) {
   const [activityHeatmap, setActivityHeatmap] = useState(null);
   const [timePatterns, setTimePatterns] = useState(null);
   const [stageDurations, setStageDurations] = useState(null);
+  const [transitionMatrix, setTransitionMatrix] = useState(null);
+  const [funnelAnalytics, setFunnelAnalytics] = useState(null);
+  const [healthIndicators, setHealthIndicators] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -137,6 +171,21 @@ export function useAnalytics(options = {}) {
         setter: setStageDurations,
         name: 'stageDurations',
       },
+      {
+        fetch: () => analyticsAPI.getTransitionMatrix(),
+        setter: setTransitionMatrix,
+        name: 'transitionMatrix',
+      },
+      {
+        fetch: () => analyticsAPI.getFunnel(),
+        setter: setFunnelAnalytics,
+        name: 'funnelAnalytics',
+      },
+      {
+        fetch: () => analyticsAPI.getHealth(staleDays),
+        setter: setHealthIndicators,
+        name: 'healthIndicators',
+      },
     ];
 
     // Execute all fetches in parallel, handling individual failures
@@ -169,9 +218,9 @@ export function useAnalytics(options = {}) {
     }
 
     setLoading(false);
-  }, [year]);
+  }, [year, staleDays]);
 
-  // Fetch data on mount and when year changes
+  // Fetch data on mount and when dependencies change
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
@@ -183,6 +232,9 @@ export function useAnalytics(options = {}) {
     activityHeatmap,
     timePatterns,
     stageDurations,
+    transitionMatrix,
+    funnelAnalytics,
+    healthIndicators,
     loading,
     error,
     refetch: fetchAnalytics,

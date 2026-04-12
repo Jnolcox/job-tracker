@@ -48,6 +48,42 @@ jest.mock('./context/KeyboardShortcutContext', () => ({
 
 // Mock the hooks - capture the actual shortcuts registered
 const mockUseKeyboardShortcuts = jest.fn();
+const mockUseDashboardSettings = jest.fn();
+
+// Default mock settings - all visible
+const defaultMockSettings = {
+  statCards: true,
+  stageFunnel: true,
+  salaryRangeChart: true,
+  maxTimePerStageChart: true,
+  statusTransitionHeatmap: true,
+  funnelAnalytics: true,
+  applicationHealthDashboard: true,
+  dayOfWeekBar: true,
+  hourBar: true,
+  activityHeatmap: true,
+};
+
+const defaultMockDashboardSettings = {
+  settings: defaultMockSettings,
+  isComponentVisible: (key) => defaultMockSettings[key] === true,
+  toggleComponent: jest.fn(),
+  resetSettings: jest.fn(),
+  areAllHidden: false,
+  componentDisplayNames: {
+    statCards: 'Stat Cards',
+    stageFunnel: 'Stage Funnel',
+    salaryRangeChart: 'Salary Range Chart',
+    maxTimePerStageChart: 'Max Time Per Stage',
+    statusTransitionHeatmap: 'Status Transition Heatmap',
+    funnelAnalytics: 'Funnel Analytics',
+    applicationHealthDashboard: 'Application Health Dashboard',
+    dayOfWeekBar: 'Day of Week Chart',
+    hourBar: 'Hour Distribution Chart',
+    activityHeatmap: 'Activity Heatmap',
+  },
+};
+
 jest.mock('./hooks', () => ({
   useKeyboardShortcuts: (...args) => mockUseKeyboardShortcuts(...args),
   useAnalytics: () => ({
@@ -69,6 +105,19 @@ jest.mock('./hooks', () => ({
     error: null,
     refetch: jest.fn(),
   }),
+  useDashboardSettings: () => mockUseDashboardSettings(),
+  DASHBOARD_COMPONENTS: {
+    STAT_CARDS: 'statCards',
+    STAGE_FUNNEL: 'stageFunnel',
+    SALARY_RANGE_CHART: 'salaryRangeChart',
+    MAX_TIME_PER_STAGE_CHART: 'maxTimePerStageChart',
+    STATUS_TRANSITION_HEATMAP: 'statusTransitionHeatmap',
+    FUNNEL_ANALYTICS: 'funnelAnalytics',
+    APPLICATION_HEALTH_DASHBOARD: 'applicationHealthDashboard',
+    DAY_OF_WEEK_BAR: 'dayOfWeekBar',
+    HOUR_BAR: 'hourBar',
+    ACTIVITY_HEATMAP: 'activityHeatmap',
+  },
 }));
 
 // Using shared factory from test-utils/factories
@@ -87,6 +136,8 @@ describe('JobTracker (Dashboard)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseKeyboardShortcuts.mockClear();
+    // Reset to default settings
+    mockUseDashboardSettings.mockReturnValue(defaultMockDashboardSettings);
   });
 
   describe('Default sorting by lastUpdate date', () => {
@@ -654,6 +705,195 @@ describe('JobTracker (Dashboard)', () => {
       // Should have proper table semantics
       const table = screen.getByRole('table');
       expect(table).toBeInTheDocument();
+    });
+  });
+
+  describe('Dashboard Settings', () => {
+    it('should render settings button in the header', async () => {
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      const settingsButton = screen.getByRole('button', { name: /settings/i });
+      expect(settingsButton).toBeInTheDocument();
+    });
+
+    it('should open settings modal when settings button is clicked', async () => {
+      const user = userEvent.setup();
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      const settingsButton = screen.getByRole('button', { name: /settings/i });
+      await user.click(settingsButton);
+
+      expect(screen.getByRole('dialog', { name: /dashboard settings/i })).toBeInTheDocument();
+    });
+
+    it('should close settings modal when close button is clicked', async () => {
+      const user = userEvent.setup();
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Open settings
+      await user.click(screen.getByRole('button', { name: /settings/i }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      // Close settings
+      await user.click(screen.getByRole('button', { name: /close/i }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('should hide stat cards when statCards setting is false', async () => {
+      const hiddenSettings = {
+        ...defaultMockSettings,
+        statCards: false,
+      };
+
+      mockUseDashboardSettings.mockReturnValue({
+        ...defaultMockDashboardSettings,
+        settings: hiddenSettings,
+        isComponentVisible: (key) => hiddenSettings[key] === true,
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Stat cards should not be visible - "Total Applied" is a stat card label
+      expect(screen.queryByText('Total Applied')).not.toBeInTheDocument();
+    });
+
+    it('should show stat cards when statCards setting is true', async () => {
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Stat cards should be visible
+      expect(screen.getByText('Total Applied')).toBeInTheDocument();
+    });
+
+    it('should hide activity heatmap when activityHeatmap setting is false', async () => {
+      const hiddenSettings = {
+        ...defaultMockSettings,
+        activityHeatmap: false,
+      };
+
+      mockUseDashboardSettings.mockReturnValue({
+        ...defaultMockDashboardSettings,
+        settings: hiddenSettings,
+        isComponentVisible: (key) => hiddenSettings[key] === true,
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Activity heatmap should not be visible
+      expect(screen.queryByTestId('activity-heatmap')).not.toBeInTheDocument();
+    });
+
+    it('should always show the table regardless of settings', async () => {
+      // Hide all components
+      const allHiddenSettings = {
+        statCards: false,
+        stageFunnel: false,
+        salaryRangeChart: false,
+        maxTimePerStageChart: false,
+        statusTransitionHeatmap: false,
+        funnelAnalytics: false,
+        applicationHealthDashboard: false,
+        dayOfWeekBar: false,
+        hourBar: false,
+        activityHeatmap: false,
+      };
+
+      mockUseDashboardSettings.mockReturnValue({
+        ...defaultMockDashboardSettings,
+        settings: allHiddenSettings,
+        isComponentVisible: () => false,
+        areAllHidden: true,
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Table should always be present
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('should hide individual charts based on settings', async () => {
+      const hiddenSettings = {
+        ...defaultMockSettings,
+        stageFunnel: false,
+        salaryRangeChart: false,
+      };
+
+      mockUseDashboardSettings.mockReturnValue({
+        ...defaultMockDashboardSettings,
+        settings: hiddenSettings,
+        isComponentVisible: (key) => hiddenSettings[key] === true,
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [createMockApplication()] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Hidden charts should not be visible
+      expect(screen.queryByTestId('stage-funnel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('salary-range-chart')).not.toBeInTheDocument();
     });
   });
 });
