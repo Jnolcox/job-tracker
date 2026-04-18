@@ -32,9 +32,16 @@ import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateReques
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
+import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse.CompanyMetrics;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse.LocationMetrics;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse.RtoMetrics;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
+import com.nolcox.jobtracking.application.dto.response.PositionInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.PositionInsightsResponse.LevelMetrics;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse.BottleneckStage;
@@ -624,6 +631,123 @@ class JobApplicationControllerTest {
             assertThat(response.getBody().bottleneckStages()).hasSize(2);
             assertThat(response.getBody().bottleneckStages().get(0).stage())
                     .isEqualTo(ApplicationStatus.TECH_SCREEN);
+        }
+    }
+
+    // ==================== Data Fusion Analytics Endpoint Tests ====================
+
+    @Nested
+    @DisplayName("Get Company Insights Tests")
+    class GetCompanyInsightsTests {
+
+        @Test
+        @DisplayName("Should return company insights with 200 OK")
+        void shouldReturnCompanyInsightsWith200OK() {
+            // Given
+            List<CompanyMetrics> companies = List.of(
+                    new CompanyMetrics("Google", 5L, 60.0, 20.0, 40.0, 7.5),
+                    new CompanyMetrics("Meta", 3L, 66.7, 0.0, 66.7, 5.0)
+            );
+            CompanyInsightsResponse expectedResponse = new CompanyInsightsResponse(companies, 2, 8L);
+
+            when(analyticsService.getCompanyInsights(testUser.getId(), 10)).thenReturn(expectedResponse);
+
+            // When
+            ResponseEntity<CompanyInsightsResponse> response =
+                    jobApplicationController.getCompanyInsights(10, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().totalCompaniesAnalyzed()).isEqualTo(2);
+            assertThat(response.getBody().totalApplicationsAnalyzed()).isEqualTo(8L);
+            assertThat(response.getBody().companies()).hasSize(2);
+            assertThat(response.getBody().companies().get(0).companyName()).isEqualTo("Google");
+        }
+
+        @Test
+        @DisplayName("Should accept custom topN parameter")
+        void shouldAcceptCustomTopNParameter() {
+            // Given
+            List<CompanyMetrics> companies = List.of(
+                    new CompanyMetrics("TopCompany", 10L, 70.0, 10.0, 50.0, 5.0)
+            );
+            CompanyInsightsResponse expectedResponse = new CompanyInsightsResponse(companies, 1, 10L);
+            when(analyticsService.getCompanyInsights(testUser.getId(), 5)).thenReturn(expectedResponse);
+
+            // When: Request top 5 companies
+            ResponseEntity<CompanyInsightsResponse> response =
+                    jobApplicationController.getCompanyInsights(5, authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().companies()).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Location Insights Tests")
+    class GetLocationInsightsTests {
+
+        @Test
+        @DisplayName("Should return location insights with 200 OK")
+        void shouldReturnLocationInsightsWith200OK() {
+            // Given
+            List<LocationMetrics> byLocation = List.of(
+                    new LocationMetrics("San Francisco, CA", 5L, 150000.0, 200000.0, 20.0),
+                    new LocationMetrics("New York, NY", 3L, 140000.0, 190000.0, 33.3)
+            );
+            List<RtoMetrics> byRtoType = List.of(
+                    new RtoMetrics("REMOTE", 4L, 50.0, 145000.0, 195000.0, 25.0),
+                    new RtoMetrics("HYBRID_3", 2L, 25.0, 150000.0, 200000.0, 50.0)
+            );
+            LocationInsightsResponse expectedResponse = new LocationInsightsResponse(byLocation, byRtoType, 8L);
+
+            when(analyticsService.getLocationInsights(testUser.getId())).thenReturn(expectedResponse);
+
+            // When
+            ResponseEntity<LocationInsightsResponse> response =
+                    jobApplicationController.getLocationInsights(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().totalApplicationsAnalyzed()).isEqualTo(8L);
+            assertThat(response.getBody().byLocation()).hasSize(2);
+            assertThat(response.getBody().byRtoType()).hasSize(2);
+            assertThat(response.getBody().byLocation().get(0).location()).isEqualTo("San Francisco, CA");
+        }
+    }
+
+    @Nested
+    @DisplayName("Get Position Insights Tests")
+    class GetPositionInsightsTests {
+
+        @Test
+        @DisplayName("Should return position insights with 200 OK")
+        void shouldReturnPositionInsightsWith200OK() {
+            // Given
+            List<LevelMetrics> byLevel = List.of(
+                    new LevelMetrics("SENIOR", 5L, 62.5, 20.0, 60.0, 150000.0, 200000.0),
+                    new LevelMetrics("MID", 2L, 25.0, 0.0, 50.0, 100000.0, 140000.0),
+                    new LevelMetrics("JUNIOR", 1L, 12.5, 0.0, 0.0, 80000.0, 100000.0)
+            );
+            PositionInsightsResponse expectedResponse = new PositionInsightsResponse(byLevel, 8L);
+
+            when(analyticsService.getPositionInsights(testUser.getId())).thenReturn(expectedResponse);
+
+            // When
+            ResponseEntity<PositionInsightsResponse> response =
+                    jobApplicationController.getPositionInsights(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().totalApplicationsAnalyzed()).isEqualTo(8L);
+            assertThat(response.getBody().byLevel()).hasSize(3);
+            assertThat(response.getBody().byLevel().get(0).level()).isEqualTo("SENIOR");
+            assertThat(response.getBody().byLevel().get(0).percentage()).isEqualTo(62.5);
         }
     }
 }

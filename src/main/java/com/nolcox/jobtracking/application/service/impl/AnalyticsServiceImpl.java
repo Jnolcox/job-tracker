@@ -6,12 +6,19 @@ import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse
 import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.HotApplication;
 import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.QuickOutcome;
 import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse.StaleApplication;
+import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse.CompanyMetrics;
 import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse;
 import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.CompanySuccessRate;
 import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.DropOffPoint;
 import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse.PositionTypeSuccessRate;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse.LocationMetrics;
+import com.nolcox.jobtracking.application.dto.response.LocationInsightsResponse.RtoMetrics;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse;
 import com.nolcox.jobtracking.application.dto.response.MetricsResponse.StageConversions;
+import com.nolcox.jobtracking.application.dto.response.PositionInsightsResponse;
+import com.nolcox.jobtracking.application.dto.response.PositionInsightsResponse.LevelMetrics;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse;
 import com.nolcox.jobtracking.application.dto.response.SalaryDistributionResponse.ApplicationSalaryEntry;
 import com.nolcox.jobtracking.application.dto.response.StageDurationsResponse;
@@ -950,5 +957,323 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         // Sort by days to resolution (fastest first)
         outcomes.sort(Comparator.comparingLong(QuickOutcome::daysToResolution));
         return outcomes;
+    }
+
+    // ==================== Data Fusion Analytics Methods ====================
+
+    /**
+     * Default number of companies to return in company insights.
+     */
+    private static final int DEFAULT_TOP_N_COMPANIES = 10;
+
+    @Override
+    public CompanyInsightsResponse getCompanyInsights(Long userId, Integer topN) {
+        log.debug("Calculating company insights for user ID: {} with topN: {}", userId, topN);
+
+        List<JobApplication> applications = repository.findAllByUserId(userId);
+
+        if (applications.isEmpty()) {
+            return CompanyInsightsResponse.empty();
+        }
+
+        int effectiveTopN = topN != null ? topN : DEFAULT_TOP_N_COMPANIES;
+        long totalApplications = applications.size();
+
+        // Group applications by company name
+        Map<String, List<JobApplication>> byCompany = applications.stream()
+                .collect(Collectors.groupingBy(JobApplication::getCompanyName));
+
+        int totalCompanies = byCompany.size();
+
+        // Calculate metrics for each company
+        List<CompanyMetrics> companyMetrics = byCompany.entrySet().stream()
+                .map(entry -> calculateCompanyMetrics(entry.getKey(), entry.getValue()))
+                .sorted(Comparator.comparingLong(CompanyMetrics::applicationCount).reversed())
+                .limit(effectiveTopN)
+                .collect(Collectors.toList());
+
+        return new CompanyInsightsResponse(companyMetrics, totalCompanies, totalApplications);
+    }
+
+    /**
+     * Calculates metrics for a single company.
+     *
+     * <p>Computes response rate (percentage that received any response, excluding GHOSTED),
+     * ghost rate (percentage ending in GHOSTED), interview rate (percentage reaching
+     * interview stages), and average days to first response.</p>
+     *
+     * @param companyName the name of the company
+     * @param companyApps list of applications to this company
+     * @return CompanyMetrics with calculated values
+     */
+    private CompanyMetrics calculateCompanyMetrics(String companyName, List<JobApplication> companyApps) {
+        long total = companyApps.size();
+
+        // Response rate: applications in RESPONSE_STATUSES (any response received)
+        long responded = companyApps.stream()
+                .filter(app -> RESPONSE_STATUSES.contains(app.getStatus()))
+                .count();
+        double responseRate = total > 0 ? roundToOneDecimal((responded * 100.0) / total) : 0.0;
+
+        // Ghost rate: applications ending in GHOSTED status
+        long ghosted = companyApps.stream()
+                .filter(app -> app.getStatus() == ApplicationStatus.GHOSTED)
+                .count();
+        double ghostRate = total > 0 ? roundToOneDecimal((ghosted * 100.0) / total) : 0.0;
+
+        // Interview rate: applications that reached interview stages
+        long interviewed = companyApps.stream()
+                .filter(app -> INTERVIEW_STATUSES.contains(app.getStatus()))
+                .count();
+        double interviewRate = total > 0 ? roundToOneDecimal((interviewed * 100.0) / total) : 0.0;
+
+        // Average days to response: only for applications that have responded
+        Double avgDaysToResponse = calculateAvgDaysToResponseForApps(companyApps);
+
+        return new CompanyMetrics(
+                companyName,
+                total,
+                responseRate,
+                ghostRate,
+                interviewRate,
+                avgDaysToResponse
+        );
+    }
+
+    /**
+     * Calculates the average number of days to first response for a subset of applications.
+     *
+     * <p>Only includes applications that have received a response (in RESPONSE_STATUSES)
+     * and have valid appliedDate and statusChangedAt fields.</p>
+     *
+     * @param applications the applications to analyze
+     * @return average days to response, or null if no valid data
+     */
+    private Double calculateAvgDaysToResponseForApps(List<JobApplication> applications) {
+        List<Long> responseDays = applications.stream()
+                .filter(app -> RESPONSE_STATUSES.contains(app.getStatus()))
+                .filter(app -> app.getAppliedDate() != null && app.getStatusChangedAt() != null)
+                .map(app -> ChronoUnit.DAYS.between(app.getAppliedDate(), app.getStatusChangedAt()))
+                .filter(days -> days >= 0)
+                .collect(Collectors.toList());
+
+        if (responseDays.isEmpty()) {
+            return null;
+        }
+
+        double avg = responseDays.stream()
+                .mapToLong(Long::longValue)
+                .average()
+                .orElse(0.0);
+        return roundToOneDecimal(avg);
+    }
+
+    @Override
+    public LocationInsightsResponse getLocationInsights(Long userId) {
+        log.debug("Calculating location insights for user ID: {}", userId);
+
+        List<JobApplication> applications = repository.findAllByUserId(userId);
+
+        if (applications.isEmpty()) {
+            return LocationInsightsResponse.empty();
+        }
+
+        long totalApplications = applications.size();
+
+        // Calculate location-based metrics
+        List<LocationMetrics> locationMetrics = calculateLocationMetrics(applications);
+
+        // Calculate RTO type metrics
+        List<RtoMetrics> rtoMetrics = calculateRtoMetrics(applications, totalApplications);
+
+        return new LocationInsightsResponse(locationMetrics, rtoMetrics, totalApplications);
+    }
+
+    /**
+     * Calculates metrics grouped by geographic location.
+     *
+     * <p>Null locations are grouped under "Not Specified". Metrics include
+     * application count, average salary range, and success rate.</p>
+     *
+     * @param applications all applications to analyze
+     * @return list of LocationMetrics sorted by application count
+     */
+    private List<LocationMetrics> calculateLocationMetrics(List<JobApplication> applications) {
+        // Group by location, treating null as "Not Specified"
+        Map<String, List<JobApplication>> byLocation = applications.stream()
+                .collect(Collectors.groupingBy(
+                        app -> app.getLocation() != null ? app.getLocation() : "Not Specified"
+                ));
+
+        return byLocation.entrySet().stream()
+                .map(entry -> {
+                    String location = entry.getKey();
+                    List<JobApplication> locationApps = entry.getValue();
+                    long count = locationApps.size();
+
+                    // Calculate average salaries
+                    Double avgSalaryMin = calculateAverageSalaryMin(locationApps);
+                    Double avgSalaryMax = calculateAverageSalaryMax(locationApps);
+
+                    // Calculate success rate (offers / total * 100)
+                    long offers = locationApps.stream()
+                            .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                            .count();
+                    double successRate = count > 0 ? roundToOneDecimal((offers * 100.0) / count) : 0.0;
+
+                    return new LocationMetrics(location, count, avgSalaryMin, avgSalaryMax, successRate);
+                })
+                .sorted(Comparator.comparingLong(LocationMetrics::applicationCount).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculates metrics grouped by RTO (Return-to-Office) type.
+     *
+     * <p>Null RTO types are grouped under "Not Specified". Metrics include
+     * application count, percentage of total, average salary range, and success rate.</p>
+     *
+     * @param applications all applications to analyze
+     * @param totalApplications total number of applications for percentage calculation
+     * @return list of RtoMetrics sorted by application count
+     */
+    private List<RtoMetrics> calculateRtoMetrics(List<JobApplication> applications, long totalApplications) {
+        // Group by RTO type, treating null as "Not Specified"
+        Map<String, List<JobApplication>> byRtoType = applications.stream()
+                .collect(Collectors.groupingBy(
+                        app -> app.getRtoType() != null ? app.getRtoType().name() : "Not Specified"
+                ));
+
+        return byRtoType.entrySet().stream()
+                .map(entry -> {
+                    String rtoType = entry.getKey();
+                    List<JobApplication> rtoApps = entry.getValue();
+                    long count = rtoApps.size();
+
+                    // Calculate percentage of total applications
+                    double percentage = totalApplications > 0
+                            ? roundToOneDecimal((count * 100.0) / totalApplications) : 0.0;
+
+                    // Calculate average salaries
+                    Double avgSalaryMin = calculateAverageSalaryMin(rtoApps);
+                    Double avgSalaryMax = calculateAverageSalaryMax(rtoApps);
+
+                    // Calculate success rate
+                    long offers = rtoApps.stream()
+                            .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                            .count();
+                    double successRate = count > 0 ? roundToOneDecimal((offers * 100.0) / count) : 0.0;
+
+                    return new RtoMetrics(rtoType, count, percentage, avgSalaryMin, avgSalaryMax, successRate);
+                })
+                .sorted(Comparator.comparingLong(RtoMetrics::applicationCount).reversed())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public PositionInsightsResponse getPositionInsights(Long userId) {
+        log.debug("Calculating position insights for user ID: {}", userId);
+
+        List<JobApplication> applications = repository.findAllByUserId(userId);
+
+        if (applications.isEmpty()) {
+            return PositionInsightsResponse.empty();
+        }
+
+        long totalApplications = applications.size();
+
+        // Group by Level enum, treating null as "Not Specified"
+        Map<String, List<JobApplication>> byLevel = applications.stream()
+                .collect(Collectors.groupingBy(
+                        app -> app.getLevel() != null ? app.getLevel().name() : "Not Specified"
+                ));
+
+        List<LevelMetrics> levelMetrics = byLevel.entrySet().stream()
+                .map(entry -> calculateLevelMetrics(entry.getKey(), entry.getValue(), totalApplications))
+                .sorted(Comparator.comparingLong(LevelMetrics::applicationCount).reversed())
+                .collect(Collectors.toList());
+
+        return new PositionInsightsResponse(levelMetrics, totalApplications);
+    }
+
+    /**
+     * Calculates metrics for a single position level.
+     *
+     * <p>Computes percentage of total applications, success rate (offers),
+     * interview rate, and average salary range.</p>
+     *
+     * @param level the position level name
+     * @param levelApps applications at this level
+     * @param totalApplications total applications for percentage calculation
+     * @return LevelMetrics with calculated values
+     */
+    private LevelMetrics calculateLevelMetrics(String level, List<JobApplication> levelApps, long totalApplications) {
+        long count = levelApps.size();
+
+        // Calculate percentage of total
+        double percentage = totalApplications > 0
+                ? roundToOneDecimal((count * 100.0) / totalApplications) : 0.0;
+
+        // Calculate success rate (offers / total * 100)
+        long offers = levelApps.stream()
+                .filter(app -> OFFER_STATUSES.contains(app.getStatus()))
+                .count();
+        double successRate = count > 0 ? roundToOneDecimal((offers * 100.0) / count) : 0.0;
+
+        // Calculate interview rate
+        long interviewed = levelApps.stream()
+                .filter(app -> INTERVIEW_STATUSES.contains(app.getStatus()))
+                .count();
+        double interviewRate = count > 0 ? roundToOneDecimal((interviewed * 100.0) / count) : 0.0;
+
+        // Calculate average salaries
+        Double avgSalaryMin = calculateAverageSalaryMin(levelApps);
+        Double avgSalaryMax = calculateAverageSalaryMax(levelApps);
+
+        return new LevelMetrics(level, count, percentage, successRate, interviewRate, avgSalaryMin, avgSalaryMax);
+    }
+
+    /**
+     * Calculates the average minimum salary from applications with salary data.
+     *
+     * @param applications the applications to analyze
+     * @return average salaryMin, or null if no salary data exists
+     */
+    private Double calculateAverageSalaryMin(List<JobApplication> applications) {
+        List<Double> salaries = applications.stream()
+                .filter(app -> app.getSalaryMin() != null)
+                .map(JobApplication::getSalaryMin)
+                .collect(Collectors.toList());
+
+        if (salaries.isEmpty()) {
+            return null;
+        }
+
+        return roundToOneDecimal(salaries.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0));
+    }
+
+    /**
+     * Calculates the average maximum salary from applications with salary data.
+     *
+     * @param applications the applications to analyze
+     * @return average salaryMax, or null if no salary data exists
+     */
+    private Double calculateAverageSalaryMax(List<JobApplication> applications) {
+        List<Double> salaries = applications.stream()
+                .filter(app -> app.getSalaryMax() != null)
+                .map(JobApplication::getSalaryMax)
+                .collect(Collectors.toList());
+
+        if (salaries.isEmpty()) {
+            return null;
+        }
+
+        return roundToOneDecimal(salaries.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0));
     }
 }
