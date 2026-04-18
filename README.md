@@ -1,6 +1,8 @@
-![Metrics](https://github.com/Jnolcox/job-tracker/blob/develop/img2.png)
+![Metrics](https://github.com/Jnolcox/job-tracker/blob/develop/img1.png)
 
-![Dashboard](https://github.com/Jnolcox/job-tracker/blob/develop/img.png)
+![Dashboard](https://github.com/Jnolcox/job-tracker/blob/develop/img2.png)
+
+![Table](https://github.com/Jnolcox/job-tracker/blob/develop/img3.png)
 
 A full-stack job application tracking system with React frontend and Spring Boot backend, featuring JWT-based authentication and comprehensive job application management.
 
