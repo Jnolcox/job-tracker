@@ -156,6 +156,37 @@ export const analyticsAPI = {
    */
   getHealth: (staleDays = 14) =>
     api.get('/job-applications/analytics/health', { params: { staleDays } }),
+
+  /**
+   * Fetch company-level analytics insights.
+   * @param {number} [topN=10] - Maximum number of companies to return
+   * @returns {Promise} Axios promise resolving to company insights data
+   * @example
+   * const { data } = await analyticsAPI.getCompanyInsights(10);
+   * // data: { companies: [...], totalCompaniesAnalyzed, totalApplicationsAnalyzed }
+   */
+  getCompanyInsights: (topN = 10) =>
+    api.get('/job-applications/analytics/company-insights', { params: { topN } }),
+
+  /**
+   * Fetch location and RTO type analytics insights.
+   * @returns {Promise} Axios promise resolving to location insights data
+   * @example
+   * const { data } = await analyticsAPI.getLocationInsights();
+   * // data: { byLocation: [...], byRtoType: [...], totalApplicationsAnalyzed }
+   */
+  getLocationInsights: () =>
+    api.get('/job-applications/analytics/location-insights'),
+
+  /**
+   * Fetch position level analytics insights.
+   * @returns {Promise} Axios promise resolving to position insights data
+   * @example
+   * const { data } = await analyticsAPI.getPositionInsights();
+   * // data: { byLevel: [...], totalApplicationsAnalyzed }
+   */
+  getPositionInsights: () =>
+    api.get('/job-applications/analytics/position-insights'),
 };
 
 /**

@@ -23,12 +23,15 @@ export const DASHBOARD_COMPONENTS = {
   STAGE_FUNNEL: 'stageFunnel',
   SALARY_RANGE_CHART: 'salaryRangeChart',
   MAX_TIME_PER_STAGE_CHART: 'maxTimePerStageChart',
-  STATUS_TRANSITION_HEATMAP: 'statusTransitionHeatmap',
-  FUNNEL_ANALYTICS: 'funnelAnalytics',
-  APPLICATION_HEALTH_DASHBOARD: 'applicationHealthDashboard',
   DAY_OF_WEEK_BAR: 'dayOfWeekBar',
   HOUR_BAR: 'hourBar',
   ACTIVITY_HEATMAP: 'activityHeatmap',
+  COMPANY_INSIGHTS: 'companyInsights',
+  LOCATION_INSIGHTS: 'locationInsights',
+  POSITION_INSIGHTS: 'positionInsights',
+  STATUS_TRANSITION_HEATMAP: 'statusTransitionHeatmap',
+  FUNNEL_ANALYTICS: 'funnelAnalytics',
+  APPLICATION_HEALTH_DASHBOARD: 'applicationHealthDashboard',
 };
 
 /**
@@ -42,12 +45,15 @@ const COMPONENT_DISPLAY_NAMES = {
   stageFunnel: 'Stage Funnel',
   salaryRangeChart: 'Salary Range Chart',
   maxTimePerStageChart: 'Max Time Per Stage',
-  statusTransitionHeatmap: 'Status Transition Heatmap',
-  funnelAnalytics: 'Funnel Analytics',
-  applicationHealthDashboard: 'Application Health Dashboard',
   dayOfWeekBar: 'Day of Week Chart',
   hourBar: 'Hour Distribution Chart',
   activityHeatmap: 'Activity Heatmap',
+  companyInsights: 'Company Insights',
+  locationInsights: 'Location Insights',
+  positionInsights: 'Position Insights',
+  statusTransitionHeatmap: 'Status Transition Heatmap',
+  funnelAnalytics: 'Funnel Analytics',
+  applicationHealthDashboard: 'Application Health Dashboard',
 };
 
 /**
@@ -60,12 +66,15 @@ const DEFAULT_SETTINGS = {
   stageFunnel: true,
   salaryRangeChart: true,
   maxTimePerStageChart: true,
-  statusTransitionHeatmap: true,
-  funnelAnalytics: true,
-  applicationHealthDashboard: true,
   dayOfWeekBar: true,
   hourBar: true,
   activityHeatmap: true,
+  companyInsights: true,
+  locationInsights: true,
+  positionInsights: true,
+  statusTransitionHeatmap: false,
+  funnelAnalytics: false,
+  applicationHealthDashboard: false,
 };
 
 /**

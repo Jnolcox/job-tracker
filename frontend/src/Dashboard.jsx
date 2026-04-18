@@ -26,6 +26,9 @@ import {
   StatusTransitionHeatmap,
   FunnelAnalytics,
   ApplicationHealthDashboard,
+  CompanyInsights,
+  LocationInsights,
+  PositionInsights,
 } from "./components/charts";
 import { AppTable } from "./components/table";
 import { ApplicationModal, ApplicationViewModal } from "./components/modal";
@@ -91,6 +94,9 @@ export default function JobTracker() {
     transitionMatrix,
     funnelAnalytics,
     healthIndicators,
+    companyInsights,
+    locationInsights,
+    positionInsights,
     loading: analyticsLoading,
   } = useAnalytics();
 
@@ -488,7 +494,34 @@ export default function JobTracker() {
           </div>
         )}
 
-        {/* Charts row 2 - Advanced Analytics */}
+        {/* Charts row 2 - Data Fusion Analytics */}
+        {(isComponentVisible('companyInsights') || isComponentVisible('locationInsights') || isComponentVisible('positionInsights')) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+            {isComponentVisible('companyInsights') && (
+              <CompanyInsights
+                data={companyInsights}
+                loading={analyticsLoading}
+                data-testid="company-insights"
+              />
+            )}
+            {isComponentVisible('locationInsights') && (
+              <LocationInsights
+                data={locationInsights}
+                loading={analyticsLoading}
+                data-testid="location-insights"
+              />
+            )}
+            {isComponentVisible('positionInsights') && (
+              <PositionInsights
+                data={positionInsights}
+                loading={analyticsLoading}
+                data-testid="position-insights"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Charts row 3 - Advanced Analytics */}
         {(isComponentVisible('statusTransitionHeatmap') || isComponentVisible('funnelAnalytics') || isComponentVisible('applicationHealthDashboard')) && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             {isComponentVisible('statusTransitionHeatmap') && (
@@ -515,7 +548,7 @@ export default function JobTracker() {
           </div>
         )}
 
-        {/* Charts row 3 - Time patterns */}
+        {/* Charts row 4 - Time patterns */}
         {(isComponentVisible('dayOfWeekBar') || isComponentVisible('hourBar')) && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
             {isComponentVisible('dayOfWeekBar') && (

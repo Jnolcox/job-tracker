@@ -84,6 +84,26 @@ import { analyticsAPI } from '../services/api';
  */
 
 /**
+ * @typedef {Object} CompanyInsights
+ * @property {Array<{companyName: string, applicationCount: number, responseRate: number, ghostRate: number, interviewRate: number, avgDaysToResponse: number|null}>} companies
+ * @property {number} totalCompaniesAnalyzed
+ * @property {number} totalApplicationsAnalyzed
+ */
+
+/**
+ * @typedef {Object} LocationInsights
+ * @property {Array<{location: string, applicationCount: number, avgSalaryMin: number|null, avgSalaryMax: number|null, successRate: number}>} byLocation
+ * @property {Array<{rtoType: string, applicationCount: number, percentage: number, avgSalaryMin: number|null, avgSalaryMax: number|null, successRate: number}>} byRtoType
+ * @property {number} totalApplicationsAnalyzed
+ */
+
+/**
+ * @typedef {Object} PositionInsights
+ * @property {Array<{level: string, applicationCount: number, percentage: number, successRate: number, interviewRate: number, avgSalaryMin: number|null, avgSalaryMax: number|null}>} byLevel
+ * @property {number} totalApplicationsAnalyzed
+ */
+
+/**
  * @typedef {Object} UseAnalyticsReturn
  * @property {Metrics|null} metrics - Application metrics
  * @property {Object<string, number>|null} countsByStatus - Counts per status
@@ -94,6 +114,9 @@ import { analyticsAPI } from '../services/api';
  * @property {TransitionMatrix|null} transitionMatrix - Status transition matrix for heatmap
  * @property {FunnelAnalytics|null} funnelAnalytics - Funnel/conversion analytics
  * @property {HealthIndicators|null} healthIndicators - Application health indicators
+ * @property {CompanyInsights|null} companyInsights - Company-level analytics
+ * @property {LocationInsights|null} locationInsights - Location and RTO analytics
+ * @property {PositionInsights|null} positionInsights - Position level analytics
  * @property {boolean} loading - Whether data is still loading
  * @property {Error|null} error - Error if any request failed
  * @property {function(): Promise<void>} refetch - Function to refetch all data
@@ -127,6 +150,9 @@ export function useAnalytics(options = {}) {
   const [transitionMatrix, setTransitionMatrix] = useState(null);
   const [funnelAnalytics, setFunnelAnalytics] = useState(null);
   const [healthIndicators, setHealthIndicators] = useState(null);
+  const [companyInsights, setCompanyInsights] = useState(null);
+  const [locationInsights, setLocationInsights] = useState(null);
+  const [positionInsights, setPositionInsights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -186,6 +212,21 @@ export function useAnalytics(options = {}) {
         setter: setHealthIndicators,
         name: 'healthIndicators',
       },
+      {
+        fetch: () => analyticsAPI.getCompanyInsights(),
+        setter: setCompanyInsights,
+        name: 'companyInsights',
+      },
+      {
+        fetch: () => analyticsAPI.getLocationInsights(),
+        setter: setLocationInsights,
+        name: 'locationInsights',
+      },
+      {
+        fetch: () => analyticsAPI.getPositionInsights(),
+        setter: setPositionInsights,
+        name: 'positionInsights',
+      },
     ];
 
     // Execute all fetches in parallel, handling individual failures
@@ -235,6 +276,9 @@ export function useAnalytics(options = {}) {
     transitionMatrix,
     funnelAnalytics,
     healthIndicators,
+    companyInsights,
+    locationInsights,
+    positionInsights,
     loading,
     error,
     refetch: fetchAnalytics,

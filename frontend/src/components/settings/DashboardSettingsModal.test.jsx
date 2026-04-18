@@ -34,6 +34,9 @@ describe('DashboardSettingsModal', () => {
       dayOfWeekBar: true,
       hourBar: true,
       activityHeatmap: true,
+      companyInsights: true,
+      locationInsights: true,
+      positionInsights: true,
     },
     onToggle: jest.fn(),
     onReset: jest.fn(),
@@ -48,6 +51,9 @@ describe('DashboardSettingsModal', () => {
       dayOfWeekBar: 'Day of Week Chart',
       hourBar: 'Hour Distribution Chart',
       activityHeatmap: 'Activity Heatmap',
+      companyInsights: 'Company Insights',
+      locationInsights: 'Location Insights',
+      positionInsights: 'Position Insights',
     },
   };
 

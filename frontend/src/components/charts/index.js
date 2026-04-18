@@ -13,3 +13,6 @@ export { default as StageDurationChart } from './StageDurationChart';
 export { default as StatusTransitionHeatmap } from './StatusTransitionHeatmap';
 export { default as FunnelAnalytics } from './FunnelAnalytics';
 export { default as ApplicationHealthDashboard } from './ApplicationHealthDashboard';
+export { default as CompanyInsights } from './CompanyInsights';
+export { default as LocationInsights } from './LocationInsights';
+export { default as PositionInsights } from './PositionInsights';

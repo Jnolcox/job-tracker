@@ -62,6 +62,9 @@ const defaultMockSettings = {
   dayOfWeekBar: true,
   hourBar: true,
   activityHeatmap: true,
+  companyInsights: true,
+  locationInsights: true,
+  positionInsights: true,
 };
 
 const defaultMockDashboardSettings = {
@@ -81,6 +84,9 @@ const defaultMockDashboardSettings = {
     dayOfWeekBar: 'Day of Week Chart',
     hourBar: 'Hour Distribution Chart',
     activityHeatmap: 'Activity Heatmap',
+    companyInsights: 'Company Insights',
+    locationInsights: 'Location Insights',
+    positionInsights: 'Position Insights',
   },
 };
 
@@ -101,6 +107,9 @@ jest.mock('./hooks', () => ({
     activityHeatmap: null,
     timePatterns: null,
     stageDurations: null,
+    companyInsights: null,
+    locationInsights: null,
+    positionInsights: null,
     loading: false,
     error: null,
     refetch: jest.fn(),
@@ -117,6 +126,9 @@ jest.mock('./hooks', () => ({
     DAY_OF_WEEK_BAR: 'dayOfWeekBar',
     HOUR_BAR: 'hourBar',
     ACTIVITY_HEATMAP: 'activityHeatmap',
+    COMPANY_INSIGHTS: 'companyInsights',
+    LOCATION_INSIGHTS: 'locationInsights',
+    POSITION_INSIGHTS: 'positionInsights',
   },
 }));
 
@@ -705,6 +717,313 @@ describe('JobTracker (Dashboard)', () => {
       // Should have proper table semantics
       const table = screen.getByRole('table');
       expect(table).toBeInTheDocument();
+    });
+  });
+
+  describe('Sort order after edit', () => {
+    it('should move edited application to top when lastUpdate changes', async () => {
+      const user = userEvent.setup();
+
+      // Arrange: Create applications with different lastUpdate dates
+      // The oldest app will be edited, and should move to the top after edit
+      const oldApp = createMockBackendApplication({
+        id: 'old-app',
+        companyName: 'Old Company',
+        positionTitle: 'Developer',
+        status: 'APPLIED',
+        updatedAt: '2025-01-01T10:00:00Z', // Oldest - will be at bottom initially
+      });
+
+      const middleApp = createMockBackendApplication({
+        id: 'middle-app',
+        companyName: 'Middle Company',
+        positionTitle: 'Engineer',
+        status: 'APPLIED',
+        updatedAt: '2025-01-15T10:00:00Z', // Middle
+      });
+
+      const newestApp = createMockBackendApplication({
+        id: 'newest-app',
+        companyName: 'Newest Company',
+        positionTitle: 'Architect',
+        status: 'APPLIED',
+        updatedAt: '2025-02-01T10:00:00Z', // Newest - will be at top initially
+      });
+
+      // Return applications in random order - table should sort by lastUpdate desc
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [middleApp, newestApp, oldApp] },
+      });
+
+      renderJobTracker();
+
+      // Wait for table to load
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Verify initial order: Newest, Middle, Old
+      const table = screen.getByRole('table');
+      let rows = within(table).getAllByRole('row');
+      let dataRows = rows.slice(1); // Skip header
+      let companyNames = dataRows.map(row => {
+        const cells = within(row).getAllByRole('cell');
+        return cells[0]?.textContent;
+      }).filter(Boolean);
+
+      expect(companyNames[0]).toBe('Newest Company');
+      expect(companyNames[1]).toBe('Middle Company');
+      expect(companyNames[2]).toBe('Old Company');
+
+      // Set up mock for update - the "Old Company" gets edited and returns with newest updatedAt
+      const updatedOldApp = {
+        ...oldApp,
+        notes: 'Updated notes',
+        updatedAt: '2025-03-01T10:00:00Z', // Now the newest!
+      };
+      jobApplicationsAPI.update.mockResolvedValueOnce({ data: updatedOldApp });
+
+      // Click Edit button on Old Company (which is in the last row)
+      const oldCompanyRow = dataRows[2];
+      const editButton = within(oldCompanyRow).getByRole('button', { name: /edit/i });
+      await user.click(editButton);
+
+      // Wait for modal to open
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /edit application/i })).toBeInTheDocument();
+      });
+
+      // Make a change (update notes)
+      const notesInput = screen.getByLabelText(/notes/i);
+      await user.clear(notesInput);
+      await user.type(notesInput, 'Updated notes');
+
+      // Save the application
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      // Wait for modal to close
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /edit application/i })).not.toBeInTheDocument();
+      });
+
+      // Verify the updated app is now at the top (re-sorted by lastUpdate)
+      rows = within(table).getAllByRole('row');
+      dataRows = rows.slice(1);
+      companyNames = dataRows.map(row => {
+        const cells = within(row).getAllByRole('cell');
+        return cells[0]?.textContent;
+      }).filter(Boolean);
+
+      // Old Company should now be at the top because its updatedAt is the newest
+      expect(companyNames[0]).toBe('Old Company');
+      expect(companyNames[1]).toBe('Newest Company');
+      expect(companyNames[2]).toBe('Middle Company');
+    });
+
+    it('should maintain sort order for applications that were not edited', async () => {
+      const user = userEvent.setup();
+
+      const app1 = createMockBackendApplication({
+        id: 'app-1',
+        companyName: 'First Company',
+        updatedAt: '2025-02-01T10:00:00Z',
+      });
+
+      const app2 = createMockBackendApplication({
+        id: 'app-2',
+        companyName: 'Second Company',
+        updatedAt: '2025-01-15T10:00:00Z',
+      });
+
+      const app3 = createMockBackendApplication({
+        id: 'app-3',
+        companyName: 'Third Company',
+        updatedAt: '2025-01-01T10:00:00Z',
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [app1, app2, app3] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Verify initial order
+      const table = screen.getByRole('table');
+      let rows = within(table).getAllByRole('row');
+      let dataRows = rows.slice(1);
+
+      expect(within(dataRows[0]).getByText('First Company')).toBeInTheDocument();
+      expect(within(dataRows[1]).getByText('Second Company')).toBeInTheDocument();
+      expect(within(dataRows[2]).getByText('Third Company')).toBeInTheDocument();
+
+      // Update Second Company - it should move to the top
+      const updatedApp2 = {
+        ...app2,
+        notes: 'New notes',
+        updatedAt: '2025-03-01T10:00:00Z',
+      };
+      jobApplicationsAPI.update.mockResolvedValueOnce({ data: updatedApp2 });
+
+      // Click Edit on Second Company
+      const editButton = within(dataRows[1]).getByRole('button', { name: /edit/i });
+      await user.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /edit application/i })).toBeInTheDocument();
+      });
+
+      // Save
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /edit application/i })).not.toBeInTheDocument();
+      });
+
+      // Verify new order after edit
+      rows = within(table).getAllByRole('row');
+      dataRows = rows.slice(1);
+
+      // Second Company should now be first
+      expect(within(dataRows[0]).getByText('Second Company')).toBeInTheDocument();
+      expect(within(dataRows[1]).getByText('First Company')).toBeInTheDocument();
+      expect(within(dataRows[2]).getByText('Third Company')).toBeInTheDocument();
+    });
+
+    it('should re-sort table immediately after edit without page refresh', async () => {
+      const user = userEvent.setup();
+
+      // This test verifies the specific bug scenario:
+      // After editing and saving, the table should immediately reflect the new sort order
+      // without requiring a page refresh
+      const app1 = createMockBackendApplication({
+        id: 'app-1',
+        companyName: 'Alpha Corp',
+        status: 'APPLIED',
+        updatedAt: '2025-01-01T10:00:00Z', // Oldest - should be at bottom
+      });
+
+      const app2 = createMockBackendApplication({
+        id: 'app-2',
+        companyName: 'Beta Inc',
+        status: 'APPLIED',
+        updatedAt: '2025-02-01T10:00:00Z', // Newest - should be at top
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [app1, app2] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Verify initial order: Beta (newest) at top, Alpha (oldest) at bottom
+      const table = screen.getByRole('table');
+      let rows = within(table).getAllByRole('row');
+      let dataRows = rows.slice(1);
+
+      expect(within(dataRows[0]).getByText('Beta Inc')).toBeInTheDocument();
+      expect(within(dataRows[1]).getByText('Alpha Corp')).toBeInTheDocument();
+
+      // Edit Alpha Corp - it should move to top after save
+      const updatedApp1 = {
+        ...app1,
+        notes: 'Just edited this one',
+        updatedAt: '2025-03-01T10:00:00Z', // Now the newest
+      };
+      jobApplicationsAPI.update.mockResolvedValueOnce({ data: updatedApp1 });
+
+      // Click Edit on Alpha Corp (second row)
+      const editButton = within(dataRows[1]).getByRole('button', { name: /edit/i });
+      await user.click(editButton);
+
+      // Wait for modal
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /edit application/i })).toBeInTheDocument();
+      });
+
+      // Click Save
+      await user.click(screen.getByRole('button', { name: /save/i }));
+
+      // Wait for modal to close
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /edit application/i })).not.toBeInTheDocument();
+      });
+
+      // CRITICAL: Verify the table is re-sorted WITHOUT a page refresh
+      // Alpha Corp should now be at the top
+      rows = within(table).getAllByRole('row');
+      dataRows = rows.slice(1);
+
+      // The edited app should now be first (it has the newest updatedAt)
+      expect(within(dataRows[0]).getByText('Alpha Corp')).toBeInTheDocument();
+      expect(within(dataRows[1]).getByText('Beta Inc')).toBeInTheDocument();
+    });
+
+    it('should correctly update table when backend returns updated data after save', async () => {
+      // This test specifically validates that when the backend returns updated data,
+      // the frontend correctly processes it and re-sorts the table
+      const user = userEvent.setup();
+
+      const app1 = createMockBackendApplication({
+        id: 'app-1',
+        companyName: 'Company A',
+        updatedAt: '2025-01-01T10:00:00Z',
+      });
+
+      const app2 = createMockBackendApplication({
+        id: 'app-2',
+        companyName: 'Company B',
+        updatedAt: '2025-02-01T10:00:00Z',
+      });
+
+      jobApplicationsAPI.getAll.mockResolvedValueOnce({
+        data: { content: [app1, app2] },
+      });
+
+      renderJobTracker();
+
+      await waitFor(() => {
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // Verify initial order
+      const table = screen.getByRole('table');
+      let rows = within(table).getAllByRole('row').slice(1);
+      expect(within(rows[0]).getByText('Company B')).toBeInTheDocument();
+      expect(within(rows[1]).getByText('Company A')).toBeInTheDocument();
+
+      // Mock update returns app1 with newer updatedAt
+      const updatedApp1 = {
+        ...app1,
+        updatedAt: '2025-03-15T10:00:00Z',
+      };
+      jobApplicationsAPI.update.mockResolvedValueOnce({ data: updatedApp1 });
+
+      // Edit Company A
+      await user.click(within(rows[1]).getByRole('button', { name: /edit/i }));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /edit application/i })).toBeInTheDocument();
+      });
+
+      // Save
+      await user.click(screen.getByRole('button', { name: /save/i }));
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /edit application/i })).not.toBeInTheDocument();
+      });
+
+      // Verify Company A is now first
+      rows = within(table).getAllByRole('row').slice(1);
+      expect(within(rows[0]).getByText('Company A')).toBeInTheDocument();
+      expect(within(rows[1]).getByText('Company B')).toBeInTheDocument();
     });
   });
 
