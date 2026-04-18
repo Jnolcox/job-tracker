@@ -5,6 +5,8 @@
 
 import { useMemo, useState } from "react";
 import ChartContainer from "./ChartContainer";
+import { formatSalaryCompact } from "../../utils/formatters";
+import { CHART_COLORS } from "../../constants/colors";
 
 // SVG coordinate space
 const VB_W = 320;
@@ -15,10 +17,14 @@ const CH = VB_H - PAD.top - PAD.bottom; // chart height (216)
 
 const TICK_COUNT = 5;
 
+/**
+ * Format salary for chart display (returns empty string for null values).
+ * @param {number|null} val - Salary value
+ * @returns {string} Formatted salary or empty string
+ */
 const formatSalary = (val) => {
   if (val == null) return "";
-  if (val >= 1000) return `$${Math.round(val / 1000)}k`;
-  return `$${val}`;
+  return formatSalaryCompact(val);
 };
 
 const niceTicks = (min, max, count) => {
@@ -129,14 +135,14 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
           <line
             x1={sx(avgMin)} y1={PAD.top}
             x2={sx(avgMin)} y2={PAD.top + CH}
-            stroke="#4E9AF1" strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
+            stroke={CHART_COLORS.ACCENT_BLUE} strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
           />
         )}
         {avgMax != null && (
           <line
             x1={PAD.left} y1={sy(avgMax)}
             x2={PAD.left + CW} y2={sy(avgMax)}
-            stroke="#A78BFA" strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
+            stroke={CHART_COLORS.ACCENT_PURPLE} strokeWidth="1" strokeDasharray="4,3" strokeOpacity="0.7"
           />
         )}
 
@@ -148,9 +154,9 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
             cx={sx(e.salaryMin)}
             cy={sy(e.salaryMax)}
             r="3"
-            fill="#7C3AED"
+            fill={CHART_COLORS.ACCENT_VIOLET}
             fillOpacity="0.75"
-            stroke="#A78BFA"
+            stroke={CHART_COLORS.ACCENT_PURPLE}
             strokeWidth="0.75"
             style={{ cursor: "pointer" }}
             onMouseEnter={() => setHoveredEntry({ ...e, x: sx(e.salaryMin), y: sy(e.salaryMax) })}
@@ -199,12 +205,12 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
 
         {/* Average crosshair legend */}
         {avgMin != null && (
-          <text x={sx(avgMin) + 3} y={PAD.top + 8} fill="#4E9AF1" fontSize="6" fontFamily="'DM Mono',monospace">
+          <text x={sx(avgMin) + 3} y={PAD.top + 8} fill={CHART_COLORS.ACCENT_BLUE} fontSize="6" fontFamily="'DM Mono',monospace">
             avg min
           </text>
         )}
         {avgMax != null && (
-          <text x={PAD.left + 3} y={sy(avgMax) - 3} fill="#A78BFA" fontSize="6" fontFamily="'DM Mono',monospace">
+          <text x={PAD.left + 3} y={sy(avgMax) - 3} fill={CHART_COLORS.ACCENT_PURPLE} fontSize="6" fontFamily="'DM Mono',monospace">
             avg max
           </text>
         )}

@@ -6,6 +6,8 @@
 
 import { useMemo } from 'react';
 import ChartContainer from './ChartContainer';
+import { formatSalaryCompact } from '../../utils/formatters';
+import { RTO_COLORS } from '../../constants/colors';
 
 /**
  * Human-readable labels for RTO types.
@@ -18,45 +20,6 @@ const RTO_LABELS = {
   ONSITE: 'Onsite',
   'Not Specified': 'Not Specified',
 };
-
-/**
- * Colors for RTO type visualization.
- */
-const RTO_COLORS = {
-  REMOTE: '#10B981', // Green - most flexible
-  HYBRID_2: '#A78BFA', // Purple
-  HYBRID_3: '#4E9AF1', // Blue
-  HYBRID_4: '#F59E0B', // Orange
-  ONSITE: '#F87171', // Red - least flexible
-  'Not Specified': '#6B7280', // Gray
-};
-
-/**
- * Get color for success rate visualization.
- *
- * @param {number} rate - Success rate (0-100)
- * @returns {string} Hex color code
- */
-function getSuccessRateColor(rate) {
-  if (rate >= 20) return '#10B981'; // Green - excellent
-  if (rate >= 10) return '#A78BFA'; // Purple - good
-  if (rate >= 5) return '#4E9AF1'; // Blue - moderate
-  return '#6B7280'; // Gray - low
-}
-
-/**
- * Format salary for display.
- *
- * @param {number|null} salary - Salary value
- * @returns {string} Formatted salary string
- */
-function formatSalary(salary) {
-  if (salary === null || salary === undefined) return '—';
-  if (salary >= 1000) {
-    return `$${Math.round(salary / 1000)}k`;
-  }
-  return `$${Math.round(salary)}`;
-}
 
 /**
  * @component LocationInsights
@@ -330,7 +293,7 @@ export default function LocationInsights({ data, loading = false }) {
                         }}
                       >
                         {location.avgSalaryMin !== null
-                          ? `${formatSalary(location.avgSalaryMin)}-${formatSalary(location.avgSalaryMax)}`
+                          ? `${formatSalaryCompact(location.avgSalaryMin)}-${formatSalaryCompact(location.avgSalaryMax)}`
                           : '—'}
                       </span>
                     </div>

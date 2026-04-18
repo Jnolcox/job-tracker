@@ -6,6 +6,7 @@
 import { useMemo } from "react";
 import { DAYS } from "../../constants/dashboard";
 import ChartContainer from "./ChartContainer";
+import { CHART_COLORS } from "../../constants/colors";
 
 /**
  * Map from full day names (backend) to DAYS array index.
@@ -81,7 +82,7 @@ export default function DayOfWeekBar({ timePatterns, loading }) {
               <div style={{
                 width: "100%",
                 height: h,
-                background: "linear-gradient(to top,#7C3AED,#A78BFA)",
+                background: `linear-gradient(to top, ${CHART_COLORS.ACCENT_VIOLET}, ${CHART_COLORS.ACCENT_PURPLE})`,
                 borderRadius: "3px 3px 0 0",
                 transition: "height 0.6s",
               }}/>

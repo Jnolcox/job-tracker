@@ -4,6 +4,8 @@
  * Provides consistent styling for chart backgrounds, borders, and titles.
  */
 
+import { CHART_COLORS } from '../../constants/colors';
+
 /**
  * @component ChartContainer
  * @description A standardized container wrapper for chart components.
@@ -45,8 +47,8 @@ export default function ChartContainer({
     <div
       data-testid={testId}
       style={{
-        background: '#0E1117',
-        border: '1px solid #1F2937',
+        background: CHART_COLORS.BACKGROUND_PRIMARY,
+        border: `1px solid ${CHART_COLORS.BORDER_DEFAULT}`,
         borderRadius: 12,
         padding: '20px 24px',
         ...style,
@@ -65,7 +67,7 @@ export default function ChartContainer({
           {title && (
             <h3
               style={{
-                color: '#9CA3AF',
+                color: CHART_COLORS.TEXT_SECONDARY,
                 fontSize: 11,
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
@@ -84,7 +86,7 @@ export default function ChartContainer({
       {subtitle && (
         <p
           style={{
-            color: '#4B5563',
+            color: CHART_COLORS.TEXT_DISABLED,
             fontSize: 10,
             fontFamily: "'DM Mono',monospace",
             marginBottom: 16,
@@ -108,7 +110,7 @@ export default function ChartContainer({
  * @constant {Object}
  */
 export const chartTitleStyle = {
-  color: '#9CA3AF',
+  color: CHART_COLORS.TEXT_SECONDARY,
   fontSize: 11,
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
@@ -123,7 +125,7 @@ export const chartTitleStyle = {
  * @constant {Object}
  */
 export const chartSubtitleStyle = {
-  color: '#4B5563',
+  color: CHART_COLORS.TEXT_DISABLED,
   fontSize: 10,
   fontFamily: "'DM Mono',monospace",
   marginBottom: 16,
@@ -136,8 +138,8 @@ export const chartSubtitleStyle = {
  * @constant {Object}
  */
 export const chartContainerStyle = {
-  background: '#0E1117',
-  border: '1px solid #1F2937',
+  background: CHART_COLORS.BACKGROUND_PRIMARY,
+  border: `1px solid ${CHART_COLORS.BORDER_DEFAULT}`,
   borderRadius: 12,
   padding: '20px 24px',
 };

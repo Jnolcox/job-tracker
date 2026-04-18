@@ -189,3 +189,58 @@ export function extractDomain(url) {
     return url;
   }
 }
+
+/**
+ * Format a salary to a compact display format.
+ * Used for chart labels and compact displays.
+ *
+ * @param {number|null|undefined} salary - Salary amount
+ * @returns {string} Formatted salary (e.g., "$150k") or "—" if invalid
+ *
+ * @example
+ * formatSalaryCompact(150000) // "$150k"
+ * formatSalaryCompact(500) // "$500"
+ * formatSalaryCompact(null) // "—"
+ */
+export function formatSalaryCompact(salary) {
+  if (salary === null || salary === undefined) return '—';
+  if (salary >= 1000) {
+    return `$${Math.round(salary / 1000)}k`;
+  }
+  return `$${Math.round(salary)}`;
+}
+
+/**
+ * Get color for rate visualization based on value and thresholds.
+ *
+ * @param {number} rate - Rate value (0-100)
+ * @param {Object} [config] - Configuration options
+ * @param {boolean} [config.inverted=false] - If true, lower is better (e.g., ghost rate)
+ * @param {Object} [config.thresholds] - Custom thresholds for color bands
+ * @param {number} [config.thresholds.excellent=60] - Threshold for green (excellent)
+ * @param {number} [config.thresholds.good=40] - Threshold for purple (good)
+ * @param {number} [config.thresholds.moderate=20] - Threshold for blue (moderate)
+ * @returns {string} Hex color code
+ *
+ * @example
+ * // Default thresholds (60/40/20)
+ * getRateColor(70) // '#10B981' (green)
+ * getRateColor(50) // '#A78BFA' (purple)
+ *
+ * // Inverted (lower is better)
+ * getRateColor(10, { inverted: true }) // '#10B981' (green, because 100-10=90 >= 60)
+ *
+ * // Custom thresholds for position insights (25/15/8)
+ * getRateColor(20, { thresholds: { excellent: 25, good: 15, moderate: 8 } }) // '#A78BFA' (purple)
+ */
+export function getRateColor(rate, config = {}) {
+  const { inverted = false, thresholds = {} } = config;
+  const { excellent = 60, good = 40, moderate = 20 } = thresholds;
+
+  const effectiveRate = inverted ? 100 - rate : rate;
+
+  if (effectiveRate >= excellent) return '#10B981'; // Green - excellent
+  if (effectiveRate >= good) return '#A78BFA';      // Purple - good
+  if (effectiveRate >= moderate) return '#4E9AF1';  // Blue - moderate
+  return '#6B7280';                                  // Gray - low
+}

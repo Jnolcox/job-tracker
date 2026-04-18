@@ -6,6 +6,8 @@
 
 import { useMemo } from 'react';
 import ChartContainer from './ChartContainer';
+import { formatSalaryCompact, getRateColor } from '../../utils/formatters';
+import { LEVEL_COLORS } from '../../constants/colors';
 
 /**
  * Human-readable labels for position levels.
@@ -22,50 +24,6 @@ const LEVEL_LABELS = {
   VP: 'VP',
   'Not Specified': 'Not Specified',
 };
-
-/**
- * Colors for position level visualization.
- * Gradient from entry-level to executive.
- */
-const LEVEL_COLORS = {
-  JUNIOR: '#4E9AF1', // Blue
-  MID: '#38BDF8', // Light blue
-  SENIOR: '#A78BFA', // Purple
-  STAFF: '#8B5CF6', // Violet
-  PRINCIPAL: '#10B981', // Green
-  LEAD: '#F59E0B', // Orange
-  MANAGER: '#F97316', // Deep orange
-  DIRECTOR: '#EC4899', // Pink
-  VP: '#EF4444', // Red
-  'Not Specified': '#6B7280', // Gray
-};
-
-/**
- * Get color for rate visualization.
- *
- * @param {number} rate - Rate value (0-100)
- * @returns {string} Hex color code
- */
-function getRateColor(rate) {
-  if (rate >= 25) return '#10B981'; // Green - excellent
-  if (rate >= 15) return '#A78BFA'; // Purple - good
-  if (rate >= 8) return '#4E9AF1'; // Blue - moderate
-  return '#6B7280'; // Gray - low
-}
-
-/**
- * Format salary for display.
- *
- * @param {number|null} salary - Salary value
- * @returns {string} Formatted salary string
- */
-function formatSalary(salary) {
-  if (salary === null || salary === undefined) return '—';
-  if (salary >= 1000) {
-    return `$${Math.round(salary / 1000)}k`;
-  }
-  return `$${Math.round(salary)}`;
-}
 
 /**
  * @component PositionInsights
@@ -313,7 +271,7 @@ export default function PositionInsights({ data, loading = false }) {
                     <div style={{ textAlign: 'center' }}>
                       <div
                         style={{
-                          color: getRateColor(level.interviewRate),
+                          color: getRateColor(level.interviewRate, { thresholds: { excellent: 25, good: 15, moderate: 8 } }),
                           fontSize: 11,
                           fontFamily: "'DM Mono',monospace",
                           fontWeight: 600,
@@ -337,7 +295,7 @@ export default function PositionInsights({ data, loading = false }) {
                     <div style={{ textAlign: 'center' }}>
                       <div
                         style={{
-                          color: getRateColor(level.successRate),
+                          color: getRateColor(level.successRate, { thresholds: { excellent: 25, good: 15, moderate: 8 } }),
                           fontSize: 11,
                           fontFamily: "'DM Mono',monospace",
                           fontWeight: 600,
@@ -368,7 +326,7 @@ export default function PositionInsights({ data, loading = false }) {
                         }}
                       >
                         {level.avgSalaryMin !== null
-                          ? `${formatSalary(level.avgSalaryMin)}-${formatSalary(level.avgSalaryMax)}`
+                          ? `${formatSalaryCompact(level.avgSalaryMin)}-${formatSalaryCompact(level.avgSalaryMax)}`
                           : '—'}
                       </span>
                     </div>

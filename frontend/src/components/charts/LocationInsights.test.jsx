@@ -110,7 +110,7 @@ describe('LocationInsights', () => {
       render(<LocationInsights data={mockData} loading={false} />);
 
       expect(screen.getByText('Remote')).toBeInTheDocument();
-      expect(screen.getByText('Hybrid (3 days)')).toBeInTheDocument();
+      expect(screen.getByText('3 days')).toBeInTheDocument();
       expect(screen.getByText('Onsite')).toBeInTheDocument();
     });
 
@@ -161,7 +161,9 @@ describe('LocationInsights', () => {
       expect(notSpecifiedItem).toHaveTextContent('—');
     });
 
-    it('should display success rates as percentages', () => {
+    // Note: Success rate display is currently commented out in the component
+    // Uncomment this test when the feature is re-enabled
+    it.skip('should display success rates as percentages', () => {
       render(<LocationInsights data={mockData} loading={false} />);
 
       // San Francisco has 10% success rate

@@ -83,10 +83,42 @@ export const CHART_COLORS = {
   // Accent colors
   ACCENT_BLUE: '#4E9AF1',
   ACCENT_PURPLE: '#A78BFA',
+  ACCENT_VIOLET: '#7C3AED',
   ACCENT_CYAN: '#38BDF8',
   ACCENT_GREEN: '#10B981',
   ACCENT_AMBER: '#F59E0B',
   ACCENT_RED: '#F87171',
+};
+
+/**
+ * Colors for RTO (Return to Office) type visualization.
+ * @constant {Object<string, string>}
+ */
+export const RTO_COLORS = {
+  REMOTE: '#10B981',      // Green - most flexible
+  HYBRID_2: '#A78BFA',    // Purple
+  HYBRID_3: '#4E9AF1',    // Blue
+  HYBRID_4: '#F59E0B',    // Orange
+  ONSITE: '#F87171',      // Red - least flexible
+  'Not Specified': '#6B7280', // Gray
+};
+
+/**
+ * Colors for position level visualization.
+ * Gradient from entry-level to executive.
+ * @constant {Object<string, string>}
+ */
+export const LEVEL_COLORS = {
+  JUNIOR: '#4E9AF1',      // Blue
+  MID: '#38BDF8',         // Light blue
+  SENIOR: '#A78BFA',      // Purple
+  STAFF: '#8B5CF6',       // Violet
+  PRINCIPAL: '#10B981',   // Green
+  LEAD: '#F59E0B',        // Orange
+  MANAGER: '#F97316',     // Deep orange
+  DIRECTOR: '#EC4899',    // Pink
+  VP: '#EF4444',          // Red
+  'Not Specified': '#6B7280', // Gray
 };
 
 /**

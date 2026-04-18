@@ -6,22 +6,7 @@
 
 import { useMemo } from 'react';
 import ChartContainer from './ChartContainer';
-
-/**
- * Get color for rate visualization based on value.
- * Higher rates get more positive colors.
- *
- * @param {number} rate - Rate value (0-100)
- * @param {boolean} [inverted=false] - If true, lower is better (e.g., ghost rate)
- * @returns {string} Hex color code
- */
-function getRateColor(rate, inverted = false) {
-  const effectiveRate = inverted ? 100 - rate : rate;
-  if (effectiveRate >= 60) return '#10B981'; // Green - excellent
-  if (effectiveRate >= 40) return '#A78BFA'; // Purple - good
-  if (effectiveRate >= 20) return '#4E9AF1'; // Blue - moderate
-  return '#6B7280'; // Gray - low
-}
+import { getRateColor } from '../../utils/formatters';
 
 /**
  * @component CompanyInsights
@@ -204,7 +189,7 @@ export default function CompanyInsights({ data, loading = false }) {
                 <div style={{ textAlign: 'center' }}>
                   <div
                     style={{
-                      color: getRateColor(company.ghostRate, true),
+                      color: getRateColor(company.ghostRate, { inverted: true }),
                       fontSize: 14,
                       fontFamily: "'DM Mono',monospace",
                       fontWeight: 600,
