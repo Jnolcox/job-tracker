@@ -5,9 +5,11 @@ import com.nolcox.jobtracking.domain.entity.EventType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -208,4 +210,62 @@ public interface ApplicationEventRepository extends JpaRepository<ApplicationEve
            "AND e.newValue IN ('REJECTED', 'WITHDRAWN', 'GHOSTED', 'OFFER_ACCEPTED', 'OFFER_DECLINED', 'OFFER_RESCINDED') " +
            "ORDER BY e.createdAt DESC")
     List<ApplicationEvent> findTerminalStatusTransitionsByUserId(@Param("userId") Long userId);
+
+    // ==================== Bulk Delete Operations ====================
+
+    /**
+     * Deletes all events for all applications owned by a specific user.
+     *
+     * <p>This bulk delete operation is critical for data cleanup when deleting
+     * a user's data. Due to the foreign key relationship between ApplicationEvent
+     * and JobApplication, this method MUST be called BEFORE deleting the user's
+     * job applications to maintain JPA/database consistency.</p>
+     *
+     * <p>Uses a subquery to find all application IDs for the user, then deletes
+     * events matching those application IDs. This approach ensures compatibility
+     * across different databases (H2 for tests, MySQL/PostgreSQL for production).</p>
+     *
+     * <p>Handles edge cases gracefully:
+     * <ul>
+     *   <li>User with no applications: No operation performed</li>
+     *   <li>Applications with no events: No operation performed</li>
+     *   <li>Non-existent user ID: No exception thrown</li>
+     * </ul>
+     * </p>
+     *
+     * @param userId the ID of the user whose application events should be deleted
+     * @see JobApplicationRepository#deleteAllByUserId(Long) call this AFTER deleting events
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM application_events WHERE application_id IN " +
+           "(SELECT id FROM job_applications WHERE user_id = :userId)", nativeQuery = true)
+    void deleteAllByUserId(@Param("userId") Long userId);
+
+    /**
+     * Deletes all events for applications with IDs in the provided list.
+     *
+     * <p>This bulk delete operation enables efficient batch deletion of events
+     * for specific applications. MUST be called BEFORE deleting the corresponding
+     * job applications to maintain referential integrity.</p>
+     *
+     * <p>Common use case: When deleting applications by status (e.g., all REJECTED
+     * applications), first call this method with the application IDs, then call
+     * JobApplicationRepository#deleteAllByIdIn with the same IDs.</p>
+     *
+     * <p>Handles edge cases gracefully:
+     * <ul>
+     *   <li>Empty list: No operation performed, no exception thrown</li>
+     *   <li>Non-existent application IDs: Silently ignored</li>
+     *   <li>Applications with no events: No operation needed for those IDs</li>
+     * </ul>
+     * </p>
+     *
+     * @param applicationIds the list of application IDs whose events should be deleted
+     * @see JobApplicationRepository#deleteAllByIdIn(List) call this AFTER deleting events
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM application_events WHERE application_id IN (:applicationIds)", nativeQuery = true)
+    void deleteAllByApplicationIdIn(@Param("applicationIds") List<Long> applicationIds);
 }

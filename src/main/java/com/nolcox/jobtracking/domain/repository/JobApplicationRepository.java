@@ -5,12 +5,15 @@ import com.nolcox.jobtracking.domain.entity.JobApplication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Repository
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
@@ -73,4 +76,73 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
      * @return list of all applications for the user
      */
     List<JobApplication> findAllByUserId(Long userId);
+
+    // ==================== Bulk Delete Operations ====================
+
+    /**
+     * Deletes all job applications for a specific user.
+     *
+     * <p>This bulk delete operation is used when cleaning up all data for a user,
+     * such as during account deletion. IMPORTANT: All related ApplicationEvent
+     * records MUST be deleted BEFORE calling this method to maintain JPA/database
+     * consistency due to the foreign key relationship.</p>
+     *
+     * <p>Uses a subquery approach for H2 compatibility in tests while maintaining
+     * correct behavior in production databases. The @Modifying annotation tells
+     * Spring Data that this is a modifying query, and @Transactional ensures the
+     * operation is atomic.</p>
+     *
+     * @param userId the ID of the user whose applications should be deleted
+     * @see ApplicationEventRepository#deleteAllByUserId(Long) call this first
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM job_applications WHERE user_id = :userId", nativeQuery = true)
+    void deleteAllByUserId(@Param("userId") Long userId);
+
+    /**
+     * Finds application IDs for a user filtered by a set of statuses.
+     *
+     * <p>This query returns only the IDs (not full entities) for performance
+     * optimization when you need to perform bulk operations on applications
+     * matching specific criteria. Common use case: finding all REJECTED or
+     * WITHDRAWN applications for batch cleanup.</p>
+     *
+     * <p>Returns IDs instead of entities to minimize memory usage when dealing
+     * with potentially large result sets that will be passed to deleteAllByIdIn.</p>
+     *
+     * @param userId the ID of the user whose applications to search
+     * @param statuses the set of ApplicationStatus values to filter by (IN clause)
+     * @return list of application IDs matching the criteria; empty list if none found
+     */
+    @Query("SELECT ja.id FROM JobApplication ja WHERE ja.user.id = :userId AND ja.status IN :statuses")
+    List<Long> findIdsByUserIdAndStatusIn(@Param("userId") Long userId,
+                                          @Param("statuses") Set<ApplicationStatus> statuses);
+
+    /**
+     * Deletes all job applications with IDs in the provided list.
+     *
+     * <p>This bulk delete operation enables efficient batch deletion of applications
+     * by ID. Useful when you've identified specific applications to delete (e.g.,
+     * all applications with certain statuses returned by findIdsByUserIdAndStatusIn).</p>
+     *
+     * <p>IMPORTANT: All related ApplicationEvent records MUST be deleted BEFORE
+     * calling this method. Use ApplicationEventRepository#deleteAllByApplicationIdIn
+     * to clean up events first.</p>
+     *
+     * <p>Handles edge cases gracefully:
+     * <ul>
+     *   <li>Empty list: No operation performed, no exception thrown</li>
+     *   <li>Non-existent IDs: Silently ignored, existing IDs still deleted</li>
+     *   <li>Mixed IDs: Only existing applications are deleted</li>
+     * </ul>
+     * </p>
+     *
+     * @param ids the list of application IDs to delete
+     * @see ApplicationEventRepository#deleteAllByApplicationIdIn(List) call this first
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM job_applications WHERE id IN (:ids)", nativeQuery = true)
+    void deleteAllByIdIn(@Param("ids") List<Long> ids);
 }
