@@ -63,7 +63,7 @@ Once everything is up, these addresses work:
 
 To stop the stack, press Ctrl+C and run `docker compose down`. To stop it and also delete the database, run `docker compose down -v`. That second command permanently erases every account and every application you have recorded. Nothing in the project takes a backup for you.
 
-One limitation to know about: the container names are fixed, so you cannot run two copies of the stack on the same machine at once. A second `docker compose up` fails with a name conflict rather than starting alongside the first.
+To run two copies on one machine, start the second under its own project name with `docker compose -p othername up` and change the published ports, which are otherwise the same for both.
 
 ---
 
@@ -101,17 +101,14 @@ The development server runs on `http://localhost:3000` and forwards API calls to
 
 Open `http://localhost:3000`. The landing page offers **Get Started**, which opens the registration form, and **Login**.
 
-The installation seeds a demo account on startup:
+The Docker Compose install seeds a demo account on startup. A local development install does not, unless you set `DEMO_DATA_ENABLED=true`:
 
 - Email: `test@example.com`
 - Password: `password123`
 
 That account comes with five sample applications spread across different statuses, which is useful for seeing what the dashboard looks like with data in it.
 
-To create your own account, choose **Get Started** and fill in first name, last name, email and password. The password must be at least eight characters. That minimum is also enforced when you sign in, so typing a password shorter than eight characters is rejected as invalid input rather than as a wrong password.
-
-> [!NOTE]
-> If you sign in with a wrong password, the login page reloads and shows no error message. The server does reject the attempt correctly, but the page is replaced before the message can appear. There is nothing wrong with your installation; check the address and try again.
+To create your own account, choose **Get Started** and fill in first name, last name, email and password. The password must be at least eight characters. That minimum applies when you register; signing in accepts whatever you type and simply tells you if it is wrong.
 
 ---
 
@@ -122,7 +119,7 @@ Job Tracker ships in a state designed to start with zero configuration. That con
 1. **The signing key is a value published in this repository.** Every session is authenticated by a token signed with the key in `JWT_SECRET`. Anyone who knows that key can create a token for any account on your installation, without knowing any password.
 2. **The database passwords are published too**, and the database port is open on your machine at `localhost:3306`. Nothing in the application needs that port to be reachable from outside; the backend talks to the database over Docker's internal network.
 3. **There is no HTTPS anywhere.** All traffic, including your password when you sign in, travels as plain text.
-4. **A demo account with a published password is created on every startup**, on both the Docker and local-development installs.
+4. **The Docker Compose install creates a demo account with a published password.** Set `DEMO_DATA_ENABLED=false` in `.env` to stop it. A local development install does not seed it.
 
 > [!WARNING]
 > Run Job Tracker on your own machine, reachable only from that machine. Do not put it on a shared server, a company network, or the public internet without putting your own HTTPS proxy and firewall in front of it. As shipped, anyone who can reach port 8080 or port 3306 can read and change all of your data.
@@ -135,7 +132,7 @@ Before you use the installation for real applications, edit `.env` and change th
 After editing `.env`, run `docker compose up --build` again so the containers pick up the new values.
 
 > [!IMPORTANT]
-> The demo account is recreated at every startup if it is missing, and its password is printed in the backend's startup log. Deleting the account is not enough; it comes back on the next restart. Treat any installation that other people can reach as compromised until you have removed the seeding step from the code. See [Security and authentication](../development/04-security-and-authentication.md) for how.
+> While demo data is enabled, the account is recreated at every startup if it is missing, so deleting it is not enough. Set `DEMO_DATA_ENABLED=false` and restart before anyone else can reach the installation. See [Security and authentication](../development/04-security-and-authentication.md).
 
 ---
 
@@ -156,4 +153,4 @@ After editing `.env`, run `docker compose up --build` again so the containers pi
 - [Troubleshooting](./06-troubleshooting.md), for what to do when something does not work.
 - [Configuration](../development/08-configuration.md), for the full list of settings and which of them actually take effect.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

@@ -1,6 +1,6 @@
 # Known gaps and defects
 
-> **Audience:** Contributors and operators  ·  **Scope:** What remains broken, unreachable, or inconsistent after the 1.3.2 defect sweep, with the evidence for each
+> **Audience:** Contributors and operators  ·  **Scope:** What remains broken, unreachable, or inconsistent after the 2.0.0 defect sweep, with the evidence for each
 
 This page records what is broken, what exists but is unreachable, and where the code, the
 configuration, and the documentation disagree. It exists so that a contributor does not
@@ -27,7 +27,7 @@ than it claims; **low** means the defect is cosmetic or affects only contributor
 
 ## Contents
 
-- [1. Closed since 1.3.1](#1-closed-since-131)
+- [1. Closed in 2.0.0](#1-closed-in-200)
 - [2. Unreachable and dead code](#2-unreachable-and-dead-code)
 - [3. Remaining drift](#3-remaining-drift)
 - [4. Scaling characteristics](#4-scaling-characteristics)
@@ -37,7 +37,7 @@ than it claims; **low** means the defect is cosmetic or affects only contributor
 
 ---
 
-## 1. Closed since 1.3.1
+## 1. Closed in 2.0.0
 
 Every entry below was recorded as a defect against 1.3.1 and no longer reproduces. They
 are kept as a record, not as a list of things to investigate.
@@ -310,4 +310,4 @@ request opens.
   several entries on this page.
 - [Contributing](./10-contributing.md) if you intend to fix one of these.
 
-*Documentation current as of Job Tracker 1.3.2 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

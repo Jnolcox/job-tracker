@@ -50,8 +50,8 @@ Every URL is prefixed with the servlet context path `/api` (`src/main/resources/
 | 1 | `server.port` | `8080` (`:2`) | `8080` (`:2`) | inherited `8080`; integration tests override with `RANDOM_PORT` |
 | 2 | `server.servlet.context-path` | `/api` (`:4`) | `/api` (`:4`) | inherited `/api` |
 | 3 | `spring.application.name` | `job-tracking-system` (`:8`) | `job-tracking-system` (`:8`) | inherited |
-| 4 | `spring.jackson.serialization.write-dates-as-timestamps` | `false` (`:12`) | `false` (`:12`) | inherited. Applied since 1.3.2 |
-| 5 | `spring.jackson.deserialization.fail-on-unknown-properties` | `false` (`:14`) | `false` (`:14`) | inherited. Applied since 1.3.2 |
+| 4 | `spring.jackson.serialization.write-dates-as-timestamps` | `false` (`:12`) | `false` (`:12`) | inherited. Applied since 2.0.0 |
+| 5 | `spring.jackson.deserialization.fail-on-unknown-properties` | `false` (`:14`) | `false` (`:14`) | inherited. Applied since 2.0.0 |
 | 6 | `spring.datasource.url` | `jdbc:mysql://localhost:3306/job_tracking_db`, no placeholder (`:17`) | `${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/job_tracking_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}` (`:17`) | `jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE` (`:3`) |
 | 7 | `spring.datasource.username` | `jobtracker` (`:18`) | `${SPRING_DATASOURCE_USERNAME:jobtracker}` (`:18`) | `sa` (`:5`) |
 | 8 | `spring.datasource.password` | `jobtracker123` (`:19`) | `${SPRING_DATASOURCE_PASSWORD:jobtracker123}` (`:19`) | empty (`:6`) |
@@ -150,7 +150,7 @@ These are set, look meaningful, and change nothing. They are collected here so y
 | 4 | `spring.h2.console.enabled: false` plus `permitAll` on `/h2-console/**` | `application-test.yml:21`, `SecurityConfig.java:68` | The console is disabled in the only profile that uses H2, and H2 is not the datasource anywhere else. The security rule is dead |
 | 5 | `.dockerignore` negations `!.mvn` and `!mvnw` | `.dockerignore:50-51` | The comment says "we copy it explicitly", but nothing in `Dockerfile` copies the Maven wrapper. The build uses the builder image's own `mvn` (`Dockerfile:8`, `:12`) |
 
-The Jackson properties were the sharpest of these until 1.3.2, because they were visible in every API response. `DatabaseConfig` declared a `@Primary ObjectMapper`, which made Spring Boot's `JacksonAutoConfiguration` back off and silently inverted both settings: timestamps serialized as epoch-second decimals and unknown request properties were rejected. It now registers a `Jackson2ObjectMapperBuilderCustomizer` instead, which customizes the auto-configured mapper rather than replacing it:
+The Jackson properties were the sharpest of these until 2.0.0, because they were visible in every API response. `DatabaseConfig` declared a `@Primary ObjectMapper`, which made Spring Boot's `JacksonAutoConfiguration` back off and silently inverted both settings: timestamps serialized as epoch-second decimals and unknown request properties were rejected. It now registers a `Jackson2ObjectMapperBuilderCustomizer` instead, which customizes the auto-configured mapper rather than replacing it:
 
 ```java
 @Bean
@@ -221,4 +221,4 @@ CORS therefore only matters if someone points a browser application at the backe
 
 ---
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

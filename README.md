@@ -312,4 +312,4 @@ Released under the MIT License, copyright 2025-2026 John Nolcox. See [LICENSE](L
 
 Built with Spring Boot, Spring Security, Spring Data JPA, Hibernate, jjwt, SpringDoc OpenAPI, ModelMapper, React, React Router, Axios, JUnit 5, Mockito, JaCoCo, Jest, React Testing Library, and jest-axe. Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

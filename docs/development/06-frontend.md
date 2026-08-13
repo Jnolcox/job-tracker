@@ -28,7 +28,7 @@ The frontend is a Create React App project on `react-scripts` 5. It has not been
 
 | Fact | Value | Source |
 | ---- | ----- | ------ |
-| Package name and version | `job-tracking-frontend`, `1.3.1` | `frontend/package.json:2-3` |
+| Package name and version | `job-tracking-frontend`, `2.0.0` | `frontend/package.json:2-3` |
 | Toolchain | `react-scripts` ^5.0.1, not ejected | `frontend/package.json:21,23-28` |
 | React | ^18.2.0 | `frontend/package.json:18` |
 | Router | `react-router-dom` ^6.20.1 | `frontend/package.json:20` |
@@ -429,7 +429,7 @@ Three facts about this layer are worth stating plainly:
 
 ### Why it normalizes timestamps
 
-The backend serializes every timestamp as an ISO-8601 string. Until 1.3.2 it emitted epoch-second decimals, because a hand-built `@Primary ObjectMapper` suppressed the `spring.jackson.*` properties. `convertDate` still accepts every encoding, which is why the change required no frontend edit:
+The backend serializes every timestamp as an ISO-8601 string. Until 2.0.0 it emitted epoch-second decimals, because a hand-built `@Primary ObjectMapper` suppressed the `spring.jackson.*` properties. `convertDate` still accepts every encoding, which is why the change required no frontend edit:
 
 ```javascript
 export function convertDate(dateValue, fallback = null) {
@@ -493,4 +493,4 @@ Three more exports complete the boundary:
 - [Known gaps](./11-known-gaps.md) for the defects referenced from this page.
 - [Settings and shortcuts](../user-guide/05-settings-and-shortcuts.md) for the user-facing view of the settings modal and the shortcut list.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

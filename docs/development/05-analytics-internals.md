@@ -4,7 +4,7 @@
 
 The analytics are the product. Twelve endpoints turn a user's application rows into rates, distributions, and health signals, and most of them are single-pass Java stream aggregations over every application the user owns. This page states, for each endpoint, what it computes, the formula in words, the response shape, what happens on empty or degenerate input, and the exact bucketing and rounding values. It also states three things that a reader will otherwise get wrong: what data each endpoint actually reads, which computations are broken, and what a single dashboard load costs the database.
 
-Everything below is against Job Tracker 1.3.1 on `develop`. The engine lives in one file, `src/main/java/com/nolcox/jobtracking/application/service/impl/AnalyticsServiceImpl.java`, 1279 lines, and all line citations without another path are to that file.
+Everything below is against Job Tracker 2.0.0 on `develop`. The engine lives in one file, `src/main/java/com/nolcox/jobtracking/application/service/impl/AnalyticsServiceImpl.java`, 1279 lines, and all line citations without another path are to that file.
 
 ## Contents
 
@@ -161,7 +161,7 @@ Every timestamp on the entities is a `java.time.Instant`, which carries no zone.
 - Day counts use `ChronoUnit.DAYS.between(Instant, Instant)`, which truncates toward zero. Twenty-three hours to a response counts as 0 days, not 1.
 - Only two endpoints convert to a calendar, `activity-heatmap` (:449-451) and `time-patterns` (:480), and both use `ZoneId.systemDefault()`. That is the JVM's zone, not the user's. The heatmap's default year is server local as well (`JobApplicationController.java:256`). A user in a different zone from the server will see applications land on the wrong day and in the wrong hour bucket.
 
-Timestamps serialize as ISO-8601 strings, for example `"lastEventAt": "2026-08-13T04:05:13Z"`. They were epoch-second decimals until 1.3.2, when the `@Primary ObjectMapper` that suppressed the `spring.jackson.*` properties was replaced with a builder customizer. See [configuration](./08-configuration.md).
+Timestamps serialize as ISO-8601 strings, for example `"lastEventAt": "2026-08-13T04:05:13Z"`. They were epoch-second decimals until 2.0.0, when the `@Primary ObjectMapper` that suppressed the `spring.jackson.*` properties was replaced with a builder customizer. See [configuration](./08-configuration.md).
 
 ---
 
@@ -589,7 +589,7 @@ Two different computations claim to describe time in a stage, and they do not ag
 
 The **backend** `/analytics/stage-durations` reads only the two timestamp columns and files the whole applied-to-latest-transition span under the current status, as described under [`GET /analytics/stage-durations`](#get-analyticsstage-durations).
 
-The frontend rendered a second, independent stage walk in a journey timeline component. That component and its helper were removed in 1.3.2: nothing mounted them, and the walk branched on an event type the backend never writes, so it silently dropped the initial `APPLIED` stage. Stage durations now come from the API alone.
+The frontend rendered a second, independent stage walk in a journey timeline component. That component and its helper were removed in 2.0.0: nothing mounted them, and the walk branched on an event type the backend never writes, so it silently dropped the initial `APPLIED` stage. Stage durations now come from the API alone.
 
 Note also that the dashboard fetches `/analytics/stage-durations` on every load but never reads the result: `Dashboard.jsx` does not destructure `stageDurations` from `useAnalytics` (`frontend/src/Dashboard.jsx:88-101`). The request is paid for and discarded, and its 500 on a fresh install is therefore invisible in the UI.
 
@@ -603,4 +603,4 @@ Note also that the dashboard fetches `/analytics/stage-durations` on every load 
 - [Frontend](./06-frontend.md) for how `useAnalytics` fans out and how the hand-written SVG charts consume these payloads.
 - [Analytics and insights](../user-guide/04-analytics-and-insights.md) for the same metrics described from the user's side.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
