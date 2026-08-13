@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ import com.nolcox.jobtracking.application.dto.request.JobApplicationCreateReques
 import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateRequest;
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
+import com.nolcox.jobtracking.application.dto.response.BulkDeleteResponse;
 import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse;
 import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse.CompanyMetrics;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
@@ -748,6 +750,177 @@ class JobApplicationControllerTest {
             assertThat(response.getBody().byLevel()).hasSize(3);
             assertThat(response.getBody().byLevel().get(0).level()).isEqualTo("SENIOR");
             assertThat(response.getBody().byLevel().get(0).percentage()).isEqualTo(62.5);
+        }
+    }
+
+    @Nested
+    @DisplayName("Bulk Delete All Applications Tests")
+    class DeleteAllApplicationsTests {
+
+        @Test
+        @DisplayName("Should return 200 with the number of applications deleted")
+        void shouldReturnDeletedCount() {
+            // Given
+            when(applicationService.deleteAllApplications(testUser.getId())).thenReturn(12);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteAllApplications(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().deletedCount()).isEqualTo(12);
+        }
+
+        @Test
+        @DisplayName("Should include the deleted count in the message")
+        void shouldIncludeDeletedCountInMessage() {
+            // Given
+            when(applicationService.deleteAllApplications(testUser.getId())).thenReturn(12);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteAllApplications(authentication);
+
+            // Then
+            assertThat(response.getBody().message()).contains("12");
+        }
+
+        @Test
+        @DisplayName("Should delete only the authenticated user's applications")
+        void shouldDeleteOnlyAuthenticatedUsersApplications() {
+            // Given
+            when(applicationService.deleteAllApplications(testUser.getId())).thenReturn(1);
+
+            // When
+            jobApplicationController.deleteAllApplications(authentication);
+
+            // Then
+            verify(applicationService).deleteAllApplications(testUser.getId());
+        }
+
+        @Test
+        @DisplayName("Should return zero when the user has no applications")
+        void shouldReturnZeroWhenUserHasNoApplications() {
+            // Given
+            when(applicationService.deleteAllApplications(testUser.getId())).thenReturn(0);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteAllApplications(authentication);
+
+            // Then
+            assertThat(response.getBody().deletedCount()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("Bulk Delete Non-Active Applications Tests")
+    class DeleteNonActiveApplicationsTests {
+
+        @Test
+        @DisplayName("Should return 200 with the number of applications deleted")
+        void shouldReturnDeletedCount() {
+            // Given
+            when(applicationService.deleteNonActiveApplications(testUser.getId())).thenReturn(5);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteNonActiveApplications(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().deletedCount()).isEqualTo(5);
+        }
+
+        @Test
+        @DisplayName("Should describe the deletion as non-active in the message")
+        void shouldDescribeDeletionAsNonActiveInMessage() {
+            // Given
+            when(applicationService.deleteNonActiveApplications(testUser.getId())).thenReturn(5);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteNonActiveApplications(authentication);
+
+            // Then
+            assertThat(response.getBody().message()).contains("5").contains("non-active");
+        }
+
+        @Test
+        @DisplayName("Should delete only the authenticated user's applications")
+        void shouldDeleteOnlyAuthenticatedUsersApplications() {
+            // Given
+            when(applicationService.deleteNonActiveApplications(testUser.getId())).thenReturn(1);
+
+            // When
+            jobApplicationController.deleteNonActiveApplications(authentication);
+
+            // Then
+            verify(applicationService).deleteNonActiveApplications(testUser.getId());
+        }
+
+        @Test
+        @DisplayName("Should return zero when no non-active applications exist")
+        void shouldReturnZeroWhenNoNonActiveApplicationsExist() {
+            // Given
+            when(applicationService.deleteNonActiveApplications(testUser.getId())).thenReturn(0);
+
+            // When
+            ResponseEntity<BulkDeleteResponse> response =
+                    jobApplicationController.deleteNonActiveApplications(authentication);
+
+            // Then
+            assertThat(response.getBody().deletedCount()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("Count Non-Active Applications Tests")
+    class CountNonActiveApplicationsTests {
+
+        @Test
+        @DisplayName("Should return 200 with the count keyed by 'count'")
+        void shouldReturnCountKeyedByCount() {
+            // Given
+            when(applicationService.countNonActiveApplications(testUser.getId())).thenReturn(9L);
+
+            // When
+            ResponseEntity<Map<String, Long>> response =
+                    jobApplicationController.countNonActiveApplications(authentication);
+
+            // Then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getBody()).containsEntry("count", 9L);
+        }
+
+        @Test
+        @DisplayName("Should count only the authenticated user's applications")
+        void shouldCountOnlyAuthenticatedUsersApplications() {
+            // Given
+            when(applicationService.countNonActiveApplications(testUser.getId())).thenReturn(0L);
+
+            // When
+            jobApplicationController.countNonActiveApplications(authentication);
+
+            // Then
+            verify(applicationService).countNonActiveApplications(testUser.getId());
+        }
+
+        @Test
+        @DisplayName("Should return zero when no non-active applications exist")
+        void shouldReturnZeroWhenNoNonActiveApplicationsExist() {
+            // Given
+            when(applicationService.countNonActiveApplications(testUser.getId())).thenReturn(0L);
+
+            // When
+            ResponseEntity<Map<String, Long>> response =
+                    jobApplicationController.countNonActiveApplications(authentication);
+
+            // Then
+            assertThat(response.getBody()).containsEntry("count", 0L);
         }
     }
 }
