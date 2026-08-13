@@ -4,8 +4,9 @@
  * Allows users to toggle which dashboard components are displayed.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DASHBOARD_COMPONENTS } from '../../hooks/useDashboardSettings';
+import ConfirmDeleteModal from '../common/ConfirmDeleteModal';
 
 /**
  * @component ToggleSwitch
@@ -68,6 +69,74 @@ function ToggleSwitch({ id, checked, onChange, label }) {
  *
  * @returns {JSX.Element} Setting row component
  */
+/**
+ * @component DangerZoneRow
+ * @description A single destructive action in the Danger Zone, with an
+ * explanatory label on the left and the triggering button on the right.
+ *
+ * @param {Object} props - Component props
+ * @param {string} props.label - Name of the destructive action
+ * @param {string} props.description - What the action removes
+ * @param {string} props.buttonLabel - Text for the action button
+ * @param {Function} props.onClick - Callback when the button is clicked
+ * @param {boolean} props.disabled - Whether there is nothing to delete
+ *
+ * @returns {JSX.Element} Danger zone row component
+ */
+function DangerZoneRow({ label, description, buttonLabel, onClick, disabled }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 0',
+        gap: 16,
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <span
+          style={{
+            color: '#F9FAFB',
+            fontSize: 14,
+            fontFamily: "'DM Mono', monospace",
+            display: 'block',
+          }}
+        >
+          {label}
+        </span>
+        <span
+          style={{
+            color: '#6B7280',
+            fontSize: 11,
+            fontFamily: "'DM Mono', monospace",
+          }}
+        >
+          {description}
+        </span>
+      </div>
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        style={{
+          padding: '8px 16px',
+          borderRadius: 6,
+          border: `1px solid ${disabled ? '#374151' : 'rgba(248, 113, 113, 0.5)'}`,
+          background: 'transparent',
+          color: disabled ? '#4B5563' : '#F87171',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontSize: 12,
+          fontFamily: "'DM Mono', monospace",
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  );
+}
+
 function SettingRow({ componentKey, label, checked, onToggle, subtitle }) {
   return (
     <div
@@ -126,6 +195,12 @@ function SettingRow({ componentKey, label, checked, onToggle, subtitle }) {
  * @param {Function} props.onToggle - Callback when a component toggle is clicked
  * @param {Function} props.onReset - Callback when reset button is clicked
  * @param {Object} props.componentDisplayNames - Human-readable names for components
+ * @param {number} [props.totalApps=0] - Total applications the user has tracked
+ * @param {number} [props.nonActiveCount=0] - Count of REJECTED/WITHDRAWN/GHOSTED applications
+ * @param {Function} [props.onDeleteAll] - Async callback to delete all applications
+ * @param {Function} [props.onDeleteNonActive] - Async callback to delete non-active applications
+ * @param {boolean} [props.deleteLoading=false] - Whether a bulk delete is in flight
+ * @param {string} [props.deleteError] - Error message from the last bulk delete attempt
  *
  * @example
  * <DashboardSettingsModal
@@ -135,6 +210,10 @@ function SettingRow({ componentKey, label, checked, onToggle, subtitle }) {
  *   onToggle={toggleComponent}
  *   onReset={resetSettings}
  *   componentDisplayNames={componentDisplayNames}
+ *   totalApps={apps.length}
+ *   nonActiveCount={nonActiveCount}
+ *   onDeleteAll={handleDeleteAll}
+ *   onDeleteNonActive={handleDeleteNonActive}
  * />
  *
  * @returns {JSX.Element|null} Modal component or null if not open
@@ -146,8 +225,34 @@ export default function DashboardSettingsModal({
   onToggle,
   onReset,
   componentDisplayNames,
+  totalApps = 0,
+  nonActiveCount = 0,
+  onDeleteAll,
+  onDeleteNonActive,
+  deleteLoading = false,
+  deleteError,
 }) {
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [showDeleteNonActiveConfirm, setShowDeleteNonActiveConfirm] = useState(false);
+
   if (!isOpen) return null;
+
+  /**
+   * Runs a bulk delete handler and closes its confirmation modal on success.
+   * A rejected handler leaves the modal open so the error stays visible.
+   *
+   * @param {Function} handler - The async delete callback
+   * @param {Function} closeConfirm - Setter that hides the confirmation modal
+   */
+  const confirmDeletion = async (handler, closeConfirm) => {
+    if (!handler) return;
+    try {
+      await handler();
+      closeConfirm(false);
+    } catch {
+      // The parent surfaces the failure through deleteError.
+    }
+  };
 
   // Define component groups for better organization
   const statCardsKey = DASHBOARD_COMPONENTS.STAT_CARDS;
@@ -292,6 +397,44 @@ export default function DashboardSettingsModal({
           </div>
         </div>
 
+        {/* Danger Zone */}
+        <div style={{ marginTop: 24 }}>
+          <h3
+            style={{
+              color: '#F87171',
+              fontSize: 11,
+              fontFamily: "'DM Mono', monospace",
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: 8,
+            }}
+          >
+            Danger Zone
+          </h3>
+          <div
+            style={{
+              border: '1px solid rgba(248, 113, 113, 0.3)',
+              borderRadius: 8,
+              padding: '4px 16px',
+            }}
+          >
+            <DangerZoneRow
+              label="Delete Non-Active Applications"
+              description="Removes rejected, withdrawn and ghosted applications"
+              buttonLabel={`Delete ${nonActiveCount}`}
+              onClick={() => setShowDeleteNonActiveConfirm(true)}
+              disabled={nonActiveCount === 0}
+            />
+            <DangerZoneRow
+              label="Delete All Applications"
+              description="Removes every application you have tracked"
+              buttonLabel="Delete All"
+              onClick={() => setShowDeleteAllConfirm(true)}
+              disabled={totalApps === 0}
+            />
+          </div>
+        </div>
+
         {/* Footer */}
         <div
           style={{
@@ -338,6 +481,36 @@ export default function DashboardSettingsModal({
             Reset to Default
           </button>
         </div>
+      </div>
+
+      {/*
+        These sit inside the settings backdrop, so their clicks would otherwise
+        bubble up to it and dismiss the settings modal underneath.
+      */}
+      <div onClick={(e) => e.stopPropagation()}>
+        <ConfirmDeleteModal
+          isOpen={showDeleteAllConfirm}
+          onClose={() => setShowDeleteAllConfirm(false)}
+          onConfirm={() => confirmDeletion(onDeleteAll, setShowDeleteAllConfirm)}
+          title="Delete All Applications"
+          description="This permanently removes every application you have tracked, along with their history."
+          confirmPhrase="DELETE ALL"
+          itemCount={totalApps}
+          loading={deleteLoading}
+          error={deleteError}
+        />
+
+        <ConfirmDeleteModal
+          isOpen={showDeleteNonActiveConfirm}
+          onClose={() => setShowDeleteNonActiveConfirm(false)}
+          onConfirm={() => confirmDeletion(onDeleteNonActive, setShowDeleteNonActiveConfirm)}
+          title="Delete Non-Active Applications"
+          description="This permanently removes your rejected, withdrawn and ghosted applications, along with their history."
+          confirmPhrase="DELETE"
+          itemCount={nonActiveCount}
+          loading={deleteLoading}
+          error={deleteError}
+        />
       </div>
     </div>
   );

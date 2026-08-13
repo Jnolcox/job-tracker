@@ -91,6 +91,21 @@ export const jobApplicationsAPI = {
     const response = await api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/events/all`);
     return response.data || [];
   },
+  /**
+   * Permanently delete every application for the current user.
+   * @returns {Promise} Axios promise resolving to { deletedCount, message }
+   */
+  deleteAll: () => api.delete(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/bulk/all`),
+  /**
+   * Permanently delete the current user's REJECTED, WITHDRAWN and GHOSTED applications.
+   * @returns {Promise} Axios promise resolving to { deletedCount, message }
+   */
+  deleteNonActive: () => api.delete(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/bulk/non-active`),
+  /**
+   * Count the current user's non-active applications, for the cleanup prompt.
+   * @returns {Promise} Axios promise resolving to { count }
+   */
+  countNonActive: () => api.get(`${API_CONFIG.ENDPOINTS.JOB_APPLICATIONS.BASE}/counts/non-active`),
 };
 
 /**

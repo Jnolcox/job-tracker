@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import DashboardSettingsModal from './DashboardSettingsModal';
 import { DASHBOARD_COMPONENTS } from '../../hooks/useDashboardSettings';
@@ -253,6 +253,165 @@ describe('DashboardSettingsModal', () => {
       render(<DashboardSettingsModal {...defaultProps} />);
 
       expect(screen.getByText(/table is always visible/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('danger zone', () => {
+    const dangerProps = {
+      ...defaultProps,
+      totalApps: 20,
+      nonActiveCount: 7,
+      onDeleteAll: jest.fn(),
+      onDeleteNonActive: jest.fn(),
+    };
+
+    const getDeleteAllButton = () => screen.getByRole('button', { name: /^delete all$/i });
+    const getDeleteNonActiveButton = () => screen.getByRole('button', { name: /^delete 7$/i });
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should render the danger zone heading', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      expect(screen.getByText(/danger zone/i)).toBeInTheDocument();
+    });
+
+    it('should show the non-active count on its delete button', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      expect(getDeleteNonActiveButton()).toBeInTheDocument();
+    });
+
+    it('should disable the non-active button when the count is zero', () => {
+      render(<DashboardSettingsModal {...dangerProps} nonActiveCount={0} />);
+
+      expect(screen.getByRole('button', { name: /^delete 0$/i })).toBeDisabled();
+    });
+
+    it('should disable the delete all button when there are no applications', () => {
+      render(<DashboardSettingsModal {...dangerProps} totalApps={0} />);
+
+      expect(getDeleteAllButton()).toBeDisabled();
+    });
+
+    it('should enable the delete all button when applications exist', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      expect(getDeleteAllButton()).toBeEnabled();
+    });
+
+    it('should not open a confirmation until a danger zone button is clicked', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      expect(screen.queryByTestId('confirm-delete-backdrop')).not.toBeInTheDocument();
+    });
+
+    it('should open the delete all confirmation when its button is clicked', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      fireEvent.click(getDeleteAllButton());
+
+      expect(
+        screen.getByRole('dialog', { name: 'Delete All Applications' })
+      ).toBeInTheDocument();
+    });
+
+    it('should open the non-active confirmation when its button is clicked', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+
+      fireEvent.click(getDeleteNonActiveButton());
+
+      expect(
+        screen.getByRole('dialog', { name: 'Delete Non-Active Applications' })
+      ).toBeInTheDocument();
+    });
+
+    it('should not call onDeleteAll until the confirm phrase is typed', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.click(screen.getByTestId('confirm-delete-button'));
+
+      expect(dangerProps.onDeleteAll).not.toHaveBeenCalled();
+    });
+
+    it('should call onDeleteAll once the confirm phrase is typed', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.change(screen.getByLabelText(/type .* to confirm/i), {
+        target: { value: 'DELETE ALL' },
+      });
+      fireEvent.click(screen.getByTestId('confirm-delete-button'));
+
+      expect(dangerProps.onDeleteAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onDeleteNonActive once its confirm phrase is typed', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteNonActiveButton());
+
+      fireEvent.change(screen.getByLabelText(/type .* to confirm/i), {
+        target: { value: 'DELETE' },
+      });
+      fireEvent.click(screen.getByTestId('confirm-delete-button'));
+
+      expect(dangerProps.onDeleteNonActive).toHaveBeenCalledTimes(1);
+    });
+
+    it('should close the confirmation after a successful delete', async () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.change(screen.getByLabelText(/type .* to confirm/i), {
+        target: { value: 'DELETE ALL' },
+      });
+      fireEvent.click(screen.getByTestId('confirm-delete-button'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-delete-backdrop')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should keep the confirmation open when the delete fails', async () => {
+      const onDeleteAll = jest.fn().mockRejectedValue(new Error('network down'));
+      render(<DashboardSettingsModal {...dangerProps} onDeleteAll={onDeleteAll} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.change(screen.getByLabelText(/type .* to confirm/i), {
+        target: { value: 'DELETE ALL' },
+      });
+      fireEvent.click(screen.getByTestId('confirm-delete-button'));
+
+      await waitFor(() => expect(onDeleteAll).toHaveBeenCalled());
+      expect(screen.getByTestId('confirm-delete-backdrop')).toBeInTheDocument();
+    });
+
+    it('should surface the delete error in the confirmation', () => {
+      render(<DashboardSettingsModal {...dangerProps} deleteError="Server unavailable" />);
+      fireEvent.click(getDeleteAllButton());
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Server unavailable');
+    });
+
+    it('should not close the settings modal when the confirmation is clicked', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.click(screen.getByRole('dialog', { name: 'Delete All Applications' }));
+
+      expect(dangerProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it('should not close the settings modal when the confirmation backdrop is clicked', () => {
+      render(<DashboardSettingsModal {...dangerProps} />);
+      fireEvent.click(getDeleteAllButton());
+
+      fireEvent.click(screen.getByTestId('confirm-delete-backdrop'));
+
+      expect(dangerProps.onClose).not.toHaveBeenCalled();
     });
   });
 });
