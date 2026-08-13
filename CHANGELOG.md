@@ -55,6 +55,11 @@ Closes the defects catalogued in
 - An expired token wrote an error line on every request from a stale session.
 - The Axios client ignored its own configured timeout, so requests to a stalled backend
   hung indefinitely.
+- An authenticated request could be answered with 401. The JWT filter mutated the context
+  returned by `SecurityContextHolder.getContext()`, which Spring Security 6 resolves
+  lazily, so the authentication could be discarded before authorization read it. The
+  filter now publishes a fresh context. This reproduced only when the request was the
+  first one against a fresh application context.
 
 ### Changed
 

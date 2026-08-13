@@ -70,6 +70,7 @@ are kept as a record, not as a list of things to investigate.
 | The frontend called a logout endpoint that did not exist | The call was removed; logout is entirely client side |
 | `ErrorMessages` constants existed and were bypassed | The literals were replaced with the constants |
 | Nothing validated that `salaryMin` was at most `salaryMax` | Both request DTOs carry a cross-field assertion |
+| An authenticated request could be answered with 401 | The JWT filter publishes a fresh `SecurityContext` rather than mutating the lazily resolved one |
 
 > [!NOTE]
 > The funnel now reads the event history, so an application that passed three interview
