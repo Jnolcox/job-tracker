@@ -9,6 +9,7 @@ import com.nolcox.jobtracking.domain.entity.JobApplication;
 import com.nolcox.jobtracking.domain.repository.ApplicationEventRepository;
 import com.nolcox.jobtracking.domain.repository.JobApplicationRepository;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
+import com.nolcox.jobtracking.shared.exception.ErrorMessages;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
 import static com.nolcox.jobtracking.shared.exception.ErrorMessages.APPLICATION_NOT_FOUND;
@@ -153,8 +154,8 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
                 .application(application)
                 .eventType(EventType.FIELD_UPDATED)
                 .fieldName(fieldName)
-                .oldValue(oldValue)
-                .newValue(newValue)
+                .oldValue(truncateForAudit(oldValue))
+                .newValue(truncateForAudit(newValue))
                 .createdAt(Instant.now())
                 .build();
 
@@ -175,8 +176,8 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
                 .application(application)
                 .eventType(EventType.NOTE_ADDED)
                 .fieldName("notes")
-                .oldValue(oldNotes)
-                .newValue(newNotes)
+                .oldValue(truncateForAudit(oldNotes))
+                .newValue(truncateForAudit(newNotes))
                 .createdAt(Instant.now())
                 .build();
 
@@ -336,6 +337,29 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
      * @param newValue the current value (may be null)
      * @param toStringConverter function to convert non-null values to strings
      */
+    /**
+     * Maximum length of an audit value, matching the column and the bean validation
+     * constraint on {@code ApplicationEvent.oldValue} and {@code newValue}.
+     */
+    private static final int MAX_AUDIT_VALUE_LENGTH = 500;
+
+    /**
+     * Truncates a value so that recording history can never fail the edit that produced it.
+     *
+     * <p>Notes accept 5000 characters and a job description 10000, while an audit value
+     * column holds 500. Without this, editing a long field would violate the constraint and
+     * roll back the whole update.</p>
+     *
+     * @param value the value to record, possibly null
+     * @return the value, shortened with a trailing ellipsis if it was too long
+     */
+    private String truncateForAudit(String value) {
+        if (value == null || value.length() <= MAX_AUDIT_VALUE_LENGTH) {
+            return value;
+        }
+        return value.substring(0, MAX_AUDIT_VALUE_LENGTH - 3) + "...";
+    }
+
     private <T> void compareField(
             JobApplication application,
             String fieldName,
@@ -368,7 +392,7 @@ public class ApplicationEventServiceImpl implements ApplicationEventService {
      */
     private void assertUserOwnsApplication(JobApplication application, Long userId) {
         if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
+            throw new UnauthorizedException(ErrorMessages.ACCESS_DENIED);
         }
     }
 

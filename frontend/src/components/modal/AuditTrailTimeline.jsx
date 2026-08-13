@@ -66,6 +66,36 @@ function formatStatusValue(status) {
 }
 
 /**
+ * Turns a backend field name into something readable in the timeline.
+ *
+ * The audit trail records entity property names, so without this a user reads
+ * "salaryMin updated from 100000.0 to 120000.0".
+ *
+ * @param {string} fieldName - the camelCase property name recorded on the event
+ * @returns {string} a capitalized, spaced label
+ */
+function humanizeFieldName(fieldName) {
+  if (!fieldName) return 'Field';
+  const labels = {
+    companyName: 'Company',
+    positionTitle: 'Position',
+    jobDescription: 'Job description',
+    jobUrl: 'Job URL',
+    salaryMin: 'Minimum salary',
+    salaryMax: 'Maximum salary',
+    rtoType: 'Work arrangement',
+    contactName: 'Contact name',
+    contactEmail: 'Contact email',
+    contactPhone: 'Contact phone',
+    appliedDate: 'Applied date',
+    statusChangedAt: 'Status changed date',
+  };
+  if (labels[fieldName]) return labels[fieldName];
+  const spaced = fieldName.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
  * Format an event into a human-readable description.
  *
  * @param {Object} event - The audit event object
@@ -95,7 +125,7 @@ function formatEventDescription(event) {
       return 'Note added';
 
     case 'FIELD_UPDATED':
-      return `${fieldName} updated from ${oldValue} to ${newValue}`;
+      return `${humanizeFieldName(fieldName)} updated from ${oldValue} to ${newValue}`;
 
     default:
       return eventType;

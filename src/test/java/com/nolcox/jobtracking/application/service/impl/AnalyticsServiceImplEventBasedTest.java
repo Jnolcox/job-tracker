@@ -204,10 +204,57 @@ class AnalyticsServiceImplEventBasedTest {
             assertThat(result.totalApplicationsAnalyzed()).isEqualTo(8L);
             assertThat(result.stageConversionRates()).isNotEmpty();
 
-            // 6 out of 8 applications advanced past APPLIED (75%)
-            // (RECRUITER_SCREEN x2 + TECH_SCREEN + REJECTED + OFFER_RECEIVED + OFFER_ACCEPTED)
+            // All 8 applications reached APPLIED. With no status events recorded, only the
+            // 5 whose current status is a later stage are known to have advanced:
+            // RECRUITER_SCREEN x2, TECH_SCREEN, OFFER_RECEIVED, OFFER_ACCEPTED. The
+            // REJECTED application carries no evidence of a stage it passed through.
             assertThat(result.stageConversionRates().get(ApplicationStatus.APPLIED))
-                    .isCloseTo(75.0, within(0.1));
+                    .isCloseTo(62.5, within(0.1));
+        }
+
+        @Test
+        @DisplayName("Should credit stages an application passed through before being rejected")
+        void shouldCreditStagesReachedBeforeRejection() {
+            // Given: one application, now rejected, that reached the tech screen
+            JobApplication rejected = createApplicationWithId(1L, ApplicationStatus.REJECTED,
+                    "Company A", "Software Engineer");
+            when(jobApplicationRepository.findAllByUserId(USER_ID))
+                    .thenReturn(List.of(rejected));
+            when(eventRepository.findStatusTransitionsByUserId(USER_ID))
+                    .thenReturn(List.of(
+                            statusChangeEvent(rejected, "APPLIED", "RECRUITER_SCREEN"),
+                            statusChangeEvent(rejected, "RECRUITER_SCREEN", "TECH_SCREEN"),
+                            statusChangeEvent(rejected, "TECH_SCREEN", "REJECTED")
+                    ));
+
+            // When
+            FunnelAnalyticsResponse result = analyticsService.getFunnelAnalytics(USER_ID);
+
+            // Then: the interview stages it passed through are counted, which is what
+            // reading the current status alone could never show.
+            assertThat(result.stageConversionRates().get(ApplicationStatus.APPLIED))
+                    .isCloseTo(100.0, within(0.1));
+            assertThat(result.stageConversionRates().get(ApplicationStatus.RECRUITER_SCREEN))
+                    .isCloseTo(100.0, within(0.1));
+            assertThat(result.stageConversionRates()).containsKey(ApplicationStatus.TECH_SCREEN);
+            assertThat(result.stageConversionRates().get(ApplicationStatus.TECH_SCREEN))
+                    .isCloseTo(0.0, within(0.1));
+        }
+
+        @Test
+        @DisplayName("Should tolerate an unrecognized status recorded on an event")
+        void shouldTolerateUnrecognizedStatusOnEvent() {
+            JobApplication app = createApplicationWithId(1L, ApplicationStatus.APPLIED,
+                    "Company A", "Software Engineer");
+            when(jobApplicationRepository.findAllByUserId(USER_ID)).thenReturn(List.of(app));
+            when(eventRepository.findStatusTransitionsByUserId(USER_ID))
+                    .thenReturn(List.of(statusChangeEvent(app, "APPLIED", "A_STATUS_THAT_WAS_REMOVED")));
+
+            FunnelAnalyticsResponse result = analyticsService.getFunnelAnalytics(USER_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(result.stageConversionRates().get(ApplicationStatus.APPLIED))
+                    .isCloseTo(0.0, within(0.1));
         }
 
         @Test
@@ -632,6 +679,19 @@ class AnalyticsServiceImplEventBasedTest {
     }
 
     // ==================== Helper Methods ====================
+
+    /**
+     * Builds a status-change event against a specific application, so that funnel stage
+     * reconstruction can join the event back to the application it belongs to.
+     */
+    private ApplicationEvent statusChangeEvent(JobApplication application, String from, String to) {
+        return ApplicationEventFixture.statusChangedEvent()
+                .withApplication(application)
+                .withOldValue(from)
+                .withNewValue(to)
+                .withCreatedAt(Instant.now())
+                .build();
+    }
 
     private ApplicationEvent createStatusChangeEvent(ApplicationStatus from, ApplicationStatus to) {
         JobApplication app = JobApplicationFixture.aJobApplication()

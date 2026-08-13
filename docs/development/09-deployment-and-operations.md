@@ -57,7 +57,6 @@ flowchart LR
 | # | Aspect | Value | Source |
 | - | ------ | ----- | ------ |
 | 1 | Image | `mysql:8.3.0` | `docker-compose.yml:3` |
-| 2 | Container name | `jobtracking-mysql` | `:4` |
 | 3 | Restart policy | `unless-stopped` | `:5` |
 | 4 | Environment | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | `:6-10` |
 | 5 | Ports | `3306:3306` | `:12` |
@@ -77,7 +76,6 @@ The init script mount (row 6) lands in `/docker-entrypoint-initdb.d/`, which the
 | # | Aspect | Value | Source |
 | - | ------ | ----- | ------ |
 | 1 | Build | context `.`, dockerfile `Dockerfile` | `docker-compose.yml:26-28` |
-| 2 | Container name | `jobtracking-backend` | `:29` |
 | 3 | Restart policy | `unless-stopped` | `:30` |
 | 4 | Environment | `SPRING_PROFILES_ACTIVE` (inert), `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION` (inert), `CORS_ALLOWED_ORIGINS` | `:31-38` |
 | 5 | Ports | `8080:8080` | `:39-40` |
@@ -100,7 +98,6 @@ The Compose healthcheck duplicates the image's own `HEALTHCHECK` (`Dockerfile:40
 | # | Aspect | Value | Source |
 | - | ------ | ----- | ------ |
 | 1 | Build | context `./frontend`, dockerfile `Dockerfile` | `docker-compose.yml:54-56` |
-| 2 | Container name | `jobtracking-frontend` | `:57` |
 | 3 | Restart policy | `unless-stopped` | `:58` |
 | 4 | Ports | `3000:80`, host 3000 to container 80 | `:59-60` |
 | 5 | depends_on | `- backend`, plain list form, **no condition** | `:61-62` |
@@ -336,10 +333,10 @@ One thing to expect on that first dashboard load: `GET /api/v1/job-applications/
 
 You cannot, without editing the file.
 
-Every service sets an explicit `container_name`: `jobtracking-mysql` (`docker-compose.yml:4`), `jobtracking-backend` (`:29`) and `jobtracking-frontend` (`:57`). Container names are global to the Docker daemon, not scoped to the Compose project, so bringing the stack up under a different project name still collides with any existing containers of those names and fails with a name conflict rather than starting alongside.
+No service sets `container_name`, so Compose derives container names from the project name and a second copy of the stack can run alongside the first. Until 1.3.2 the names were pinned, which made `docker compose -p other up` fail with a name conflict.
 
 > [!WARNING]
-> `docker compose -p other up` does not give you a second instance. It fails on the first hardcoded `container_name`. The published host ports (3000, 8080, 3306) collide too.
+> `docker compose -p other up` gives you a second instance only if you also override the published host ports. 3000, 8080 and 3306 are fixed in the file and collide between copies.
 
 The workaround is to remove the three `container_name:` lines and change the three port mappings, then run each instance under its own project name:
 

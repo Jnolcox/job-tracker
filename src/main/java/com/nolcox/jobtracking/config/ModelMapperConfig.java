@@ -6,13 +6,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class ModelMapperConfig {@Bean
+public class ModelMapperConfig {
+
+    /**
+     * The general-purpose mapper. Null source values are skipped, so a mapping never
+     * clears a field the source did not carry.
+     */
+    @Bean
     public ModelMapper modelMapper() {
-        ModelMapper modelMapper = new ModelMapper();
+        return configure(new ModelMapper(), true);
+    }
+
+    private ModelMapper configure(ModelMapper modelMapper, boolean skipNull) {
         modelMapper.getConfiguration()
                 .setMatchingStrategy(MatchingStrategies.STRICT)
                 .setFieldMatchingEnabled(true)
-                .setSkipNullEnabled(true)
+                .setSkipNullEnabled(skipNull)
                 .setFieldAccessLevel(org.modelmapper.config.Configuration.AccessLevel.PRIVATE);
         return modelMapper;
     }

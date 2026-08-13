@@ -94,8 +94,8 @@ Tear down with `docker compose down`. Add `-v` to drop the `mysql_data` volume, 
 destroys all application data with no recovery path.
 
 Two Compose behaviors will bite you eventually. Every service declares an explicit
-`container_name`, so a second instance of the stack under a different Compose project name
-still collides on container names and fails to start. And the MySQL init script mounted at
+Container names are derived from the Compose project name, so a second instance can run
+alongside the first once you override the published host ports.
 `/docker-entrypoint-initdb.d/init.sql` runs only when `/var/lib/mysql` is empty, so edits
 to `src/main/resources/database/job_tracking_db_1.sql` do nothing until you
 `docker compose down -v`.

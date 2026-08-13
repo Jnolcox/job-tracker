@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS job_applications (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     status_changed_at TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Application events table for audit trail tracking

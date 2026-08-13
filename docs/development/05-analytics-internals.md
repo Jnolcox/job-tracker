@@ -66,49 +66,21 @@ Two related effects follow from the same mechanism:
 
 ## 2. Known defects
 
-Three defects in this layer are confirmed. Each is tracked on [known gaps](./11-known-gaps.md).
+The defects this section recorded at 1.3.1 have been fixed. What follows is what remains.
 
-### `stage-durations` returns 500 on a fresh install
+### Quick wins still include unresolved offers
 
-`getStageDurations` guards `appliedDate` for null but not `statusChangedAt`, then dereferences `statusChangedAt` on the non-`APPLIED` branch:
+`findQuickOutcomes` selects wins from `OFFER_STATUSES`, which contains `OFFER_RECEIVED` and
+`NEGOTIATING`. Neither is a resolution, so an application still in negotiation is reported
+as a quick win with a `resolvedAt` that is only its most recent status change.
 
-```java
-if (app.getStatus() == ApplicationStatus.APPLIED) {
-    days = ChronoUnit.DAYS.between(app.getAppliedDate(), now);
-} else {
-    days = ChronoUnit.DAYS.between(app.getAppliedDate(), app.getStatusChangedAt());
-}
-```
-
-That second call is line 523. `status_changed_at` is nullable: the column carries a bare `@Column(name = "status_changed_at")` with no `nullable = false` and no lifecycle callback (`src/main/java/com/nolcox/jobtracking/domain/entity/JobApplication.java:99-100`). The API write paths always populate it, defaulting to `Instant.now()` on create (`JobApplicationServiceImpl.java:116`) and preserving or refreshing it on update (`JobApplicationServiceImpl.java:193-197`), so an application created through the UI is safe.
-
-`DataInitializer` bypasses the service and builds entities directly. It never sets `statusChangedAt`, and it seeds three non-`APPLIED` statuses: `TECH_SCREEN`, `REJECTED`, and `OFFER_RECEIVED` (`src/main/java/com/nolcox/jobtracking/config/DataInitializer.java:85,103,120`). The result, confirmed at runtime against the Compose stack:
-
-```text
-java.lang.NullPointerException: temporal
-	at java.base/java.time.Instant.from(Unknown Source)
-	at java.base/java.time.temporal.ChronoUnit.between(Unknown Source)
-	at com.nolcox.jobtracking.application.service.impl.AnalyticsServiceImpl.getStageDurations(AnalyticsServiceImpl.java:523)
-```
-
-> [!WARNING]
-> Install with Compose, log in as the seeded demo user, open the dashboard: eleven of the twelve analytics routes return 200 and `analytics/stage-durations` returns 500. The dashboard fetches with `Promise.allSettled` (`frontend/src/hooks/useAnalytics.js:233`), so the page still renders; the failed slice is set to `null`.
-
-### Quick wins and quick losses double count two statuses
-
-`findQuickOutcomes` picks its target set from a boolean:
-
-```java
-Set<ApplicationStatus> targetStatuses = wins ? OFFER_STATUSES : NEGATIVE_TERMINAL_STATUSES;
-```
-
-That is line 927. `OFFER_STATUSES` (:98-104) contains `OFFER_DECLINED` and `OFFER_RESCINDED`, and so does `NEGATIVE_TERMINAL_STATUSES` (:192-198). An application in either of those two statuses that resolved within seven days is emitted into both `quickWins` and `quickLosses`, and counted in both `quickWinCount` and `quickLossCount` (:833-839). The two lists are not disjoint and the summary counts do not sum to a meaningful total.
-
-A second, smaller problem sits in the same function: `OFFER_STATUSES` also contains `OFFER_RECEIVED` and `NEGOTIATING`, which are not resolutions. An application still in negotiation is reported as a quick win with a `resolvedAt` that is only its most recent status change.
+The double count is gone: quick losses now draw from `QUICK_LOSS_STATUSES`, which is
+`NEGATIVE_TERMINAL_STATUSES` minus `OFFER_STATUSES`, so `OFFER_DECLINED` and
+`OFFER_RESCINDED` can no longer appear in both lists at once.
 
 ### Related rough edges
 
-These are documented in full on [known gaps](./11-known-gaps.md) rather than repeated here: `WAITING_FOR_RESPONSE` counting as a response (:154-162), `stageConversionRates` returning exactly one key (:666-681), `extractPositionType` matching substrings inside unrelated words (:762-779), salary coalescing biasing both averages (:395-401), `staleDays` and `topN` being unvalidated (`application/controller/JobApplicationController.java:375,400`), and the frontend journey timeline branching on an event type the backend never writes (`frontend/src/utils/stageDurationUtils.js:148`).
+These are documented in full on [known gaps](./11-known-gaps.md) rather than repeated here: `WAITING_FOR_RESPONSE` counting as a response (:154-162), `stageConversionRates` returning exactly one key (:666-681), `extractPositionType` matching substrings inside unrelated words (:762-779), salary coalescing biasing both averages (:395-401), `staleDays` and `topN` being unvalidated (`application/controller/JobApplicationController.java:375,400`).
 
 ---
 
@@ -189,7 +161,7 @@ Every timestamp on the entities is a `java.time.Instant`, which carries no zone.
 - Day counts use `ChronoUnit.DAYS.between(Instant, Instant)`, which truncates toward zero. Twenty-three hours to a response counts as 0 days, not 1.
 - Only two endpoints convert to a calendar, `activity-heatmap` (:449-451) and `time-patterns` (:480), and both use `ZoneId.systemDefault()`. That is the JVM's zone, not the user's. The heatmap's default year is server local as well (`JobApplicationController.java:256`). A user in a different zone from the server will see applications land on the wrong day and in the wrong hour bucket.
 
-Timestamps serialize as epoch-second decimals, for example `"lastEventAt": 1784862476.0`, not as ISO-8601 strings. `spring.jackson.serialization.write-dates-as-timestamps: false` is set in `src/main/resources/application.yml` but has no effect, because a hand-built `@Primary ObjectMapper` in `src/main/java/com/nolcox/jobtracking/config/DatabaseConfig.java` makes Spring Boot's Jackson auto-configuration back off. The frontend compensates in its data adapter. See [configuration](./08-configuration.md).
+Timestamps serialize as ISO-8601 strings, for example `"lastEventAt": "2026-08-13T04:05:13Z"`. They were epoch-second decimals until 1.3.2, when the `@Primary ObjectMapper` that suppressed the `spring.jackson.*` properties was replaced with a builder customizer. See [configuration](./08-configuration.md).
 
 ---
 
@@ -617,12 +589,7 @@ Two different computations claim to describe time in a stage, and they do not ag
 
 The **backend** `/analytics/stage-durations` reads only the two timestamp columns and files the whole applied-to-latest-transition span under the current status, as described under [`GET /analytics/stage-durations`](#get-analyticsstage-durations).
 
-The **frontend journey timeline** walks the event log instead. `JourneyTimeline.jsx` calls `getStageDurations(applicationId, events)` from `frontend/src/utils/stageDurationUtils.js:121-183` and never calls the analytics endpoint. That function filters events to the application, sorts them ascending by `createdAt`, seeds `currentStatus` to `'APPLIED'`, and walks forward: on a `STATUS_CHANGED` event with `fieldName === 'status'` it closes the open stage with `durationDays = floor((eventTime - stageStartTime) / 86400000)` and opens a new one at `event.newValue`. After the loop it appends the open stage with `endDate: null` and `isCurrent: true`, measured to now. Day math uses `Math.floor` (`frontend/src/utils/dateHelpers.js:25`), matching the backend's truncation.
-
-For an application sitting at `TECHNICAL_I` 40 days after applying, the backend reports 40 days under `TECHNICAL_I` while the timeline reports the real per-stage split. These will essentially never match, and the timeline is the one describing what actually happened.
-
-> [!NOTE]
-> The timeline's loop also branches on `event.eventType === 'CREATED'` to set the initial start time (`frontend/src/utils/stageDurationUtils.js:148`), but the backend only ever writes `APPLICATION_CREATED`. Against real data `stageStartTime` stays null through the creation event, so the initial `APPLIED` stage is dropped and the chart begins at the first status change. The unit tests fabricate `'CREATED'` events, which hides this. See [known gaps](./11-known-gaps.md).
+The frontend rendered a second, independent stage walk in a journey timeline component. That component and its helper were removed in 1.3.2: nothing mounted them, and the walk branched on an event type the backend never writes, so it silently dropped the initial `APPLIED` stage. Stage durations now come from the API alone.
 
 Note also that the dashboard fetches `/analytics/stage-durations` on every load but never reads the result: `Dashboard.jsx` does not destructure `stageDurations` from `useAnalytics` (`frontend/src/Dashboard.jsx:88-101`). The request is paid for and discarded, and its 500 on a fresh install is therefore invisible in the UI.
 

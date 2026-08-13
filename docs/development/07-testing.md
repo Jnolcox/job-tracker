@@ -283,12 +283,10 @@ Sixteen test files contain jest-axe assertions, 24 assertions in total. The patt
 | 6 | LocationInsights | `frontend/src/components/charts/LocationInsights.test.jsx:229,235` | 2 |
 | 7 | PositionInsights | `frontend/src/components/charts/PositionInsights.test.jsx:212,218` | 2 |
 | 8 | SalaryRangeChart | `frontend/src/components/charts/SalaryRangeChart.test.jsx:167,179` | 2 |
-| 9 | StageDurationChart | `frontend/src/components/charts/StageDurationChart.test.jsx:232` | 1 |
 | 10 | StatusTransitionHeatmap | `frontend/src/components/charts/StatusTransitionHeatmap.test.jsx:124` | 1 |
 | 11 | StatCard | `frontend/src/components/common/StatCard.test.jsx:215,224,231` | 3 |
 | 12 | ApplicationModal | `frontend/src/components/modal/ApplicationModal.test.jsx:221,232` | 2 |
 | 13 | ApplicationViewModal | `frontend/src/components/modal/ApplicationViewModal.test.jsx:500` | 1 |
-| 14 | JourneyTimeline | `frontend/src/components/modal/JourneyTimeline.test.jsx:215` | 1 |
 | 15 | DashboardSettingsModal | `frontend/src/components/settings/DashboardSettingsModal.test.jsx:226` | 1 |
 | 16 | AppTable | `frontend/src/components/table/AppTable.test.jsx:285` | 1 |
 

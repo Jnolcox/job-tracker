@@ -1,6 +1,7 @@
 package com.nolcox.jobtracking.domain.entity;
 
 public enum Level {
+    INTERN,
     JUNIOR,
     MID,
     SENIOR,
@@ -9,5 +10,6 @@ public enum Level {
     LEAD,
     MANAGER,
     DIRECTOR,
-    VP
+    VP,
+    C_LEVEL
 }

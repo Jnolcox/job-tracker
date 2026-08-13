@@ -63,16 +63,6 @@ Two other things sign you out the same way: restarting the stack after changing 
 
 ## 2. The dashboard
 
-### A request to `stage-durations` fails with a server error
-
-**Symptom.** The dashboard looks normal, but your browser's developer tools show one failed request, to `analytics/stage-durations`, returning a server error. The backend log shows a `NullPointerException`. If you call that endpoint yourself, from Swagger UI for example, it returns a 500.
-
-**Cause.** This is a known defect and it fires on a brand new installation, using the demo account, following the readme exactly. The calculation needs a status-change date on every application whose status is not Applied. The five demo applications are written straight into the database without one, and three of them carry a later status, so the calculation fails on the first of them.
-
-Nothing on the dashboard displays this data, so no chart breaks and no error banner appears. The visible effect is limited to the failed request and the log entry.
-
-**Fix.** Applications you create through the interface always carry a status-change date, so the problem is confined to seeded or externally inserted rows. To clear it, either delete the demo applications, or open each of the three that are not at Applied, change the status (which stamps today's date) or fill in the **STATUS CHANGED DATE** field at the bottom of the edit form, and save. See [Known gaps](../development/11-known-gaps.md) for the tracking entry.
-
 ### Charts and stat cards do not change after you add or edit an application
 
 **Symptom.** You add an application and the table updates instantly, but Total Applied, every rate and every chart stay exactly as they were.
@@ -123,9 +113,9 @@ If you move the web interface off port 3000, update `CORS_ALLOWED_ORIGINS` in yo
 
 **Symptom.** You already have Job Tracker running and try to start a second copy, perhaps from another checkout or under a different Compose project name. It fails immediately with a name conflict rather than starting alongside the first.
 
-**Cause.** All three services declare fixed container names: `jobtracking-mysql`, `jobtracking-backend` and `jobtracking-frontend`. Container names are unique across the whole Docker daemon, so a project name does not separate them. This is a known limitation.
+**Cause.** The published host ports (3000, 8080, 3306) are the same for both copies, so the second one cannot bind them. Container names no longer collide: they are derived from the Compose project name.
 
-**Fix.** Run one copy at a time. Stop the first with `docker compose down` before starting the second. If you genuinely need two side by side, edit `container_name` in the second copy's `docker-compose.yml` to something distinct, and change its host ports as described above.
+**Fix.** Start the second copy under its own project name and give it different host ports, for example `docker compose -p jobtracker-two up` with the ports overridden as described above. Running one copy at a time needs nothing special: stop the first with `docker compose down`.
 
 ### The interface loads but every action fails on a cold start
 

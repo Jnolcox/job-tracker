@@ -4,6 +4,8 @@ import com.nolcox.jobtracking.domain.entity.ApplicationStatus;
 import com.nolcox.jobtracking.domain.entity.Level;
 import com.nolcox.jobtracking.domain.entity.RtoType;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import java.time.Instant;
 import jakarta.validation.constraints.NotBlank;
@@ -59,4 +61,19 @@ public record JobApplicationCreateRequest(
         Instant statusChangedAt,
 
         Instant interviewDate
-) {}
+) {
+
+    /**
+     * Cross-field check that the salary range is the right way round.
+     *
+     * <p>Nothing previously stopped a minimum above a maximum, and such a record flowed
+     * into the salary averages and the distribution chart unchallenged.</p>
+     *
+     * @return true when either bound is absent or the maximum is not below the minimum
+     */
+    @JsonIgnore
+    @AssertTrue(message = "Salary max must be greater than or equal to salary min")
+    public boolean isSalaryRangeValid() {
+        return salaryMin == null || salaryMax == null || salaryMax >= salaryMin;
+    }
+}

@@ -121,6 +121,15 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- Generates build-info.properties so the running application can
+                         report the version Maven built, rather than a hardcoded literal. -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <excludes>
                         <exclude>

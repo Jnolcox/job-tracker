@@ -20,19 +20,4 @@ public interface AuthService {
      * @return AuthResponse with JWT token and user information
      */
     AuthResponse authenticate(AuthRequest request);
-
-    /**
-     * Refresh JWT token
-     *
-     * @param refreshToken The refresh token
-     * @return AuthResponse with new JWT token
-     */
-    AuthResponse refreshToken(String refreshToken);
-
-    /**
-     * Logout user (if implementing token blacklisting)
-     *
-     * @param token The JWT token to invalidate
-     */
-    void logout(String token);
 }

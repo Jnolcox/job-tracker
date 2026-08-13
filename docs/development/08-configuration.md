@@ -50,8 +50,8 @@ Every URL is prefixed with the servlet context path `/api` (`src/main/resources/
 | 1 | `server.port` | `8080` (`:2`) | `8080` (`:2`) | inherited `8080`; integration tests override with `RANDOM_PORT` |
 | 2 | `server.servlet.context-path` | `/api` (`:4`) | `/api` (`:4`) | inherited `/api` |
 | 3 | `spring.application.name` | `job-tracking-system` (`:8`) | `job-tracking-system` (`:8`) | inherited |
-| 4 | `spring.jackson.serialization.write-dates-as-timestamps` | `false` (`:12`) | `false` (`:12`) | inherited. **No effect, see section 5** |
-| 5 | `spring.jackson.deserialization.fail-on-unknown-properties` | `false` (`:14`) | `false` (`:14`) | inherited. **No effect, see section 5** |
+| 4 | `spring.jackson.serialization.write-dates-as-timestamps` | `false` (`:12`) | `false` (`:12`) | inherited. Applied since 1.3.2 |
+| 5 | `spring.jackson.deserialization.fail-on-unknown-properties` | `false` (`:14`) | `false` (`:14`) | inherited. Applied since 1.3.2 |
 | 6 | `spring.datasource.url` | `jdbc:mysql://localhost:3306/job_tracking_db`, no placeholder (`:17`) | `${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/job_tracking_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}` (`:17`) | `jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE` (`:3`) |
 | 7 | `spring.datasource.username` | `jobtracker` (`:18`) | `${SPRING_DATASOURCE_USERNAME:jobtracker}` (`:18`) | `sa` (`:5`) |
 | 8 | `spring.datasource.password` | `jobtracker123` (`:19`) | `${SPRING_DATASOURCE_PASSWORD:jobtracker123}` (`:19`) | empty (`:6`) |
@@ -70,8 +70,8 @@ Every URL is prefixed with the servlet context path `/api` (`src/main/resources/
 | 21 | `spring.sql.init.schema-locations` | - | - | `classpath:schema.sql` (`:17`) |
 | 22 | `spring.h2.console.enabled` | - | - | `false` (`:21`) |
 | 23 | `app.jwt.secret` | `${JWT_SECRET:404E63...5970}` (`:33`) | `${JWT_SECRET:404E63...5970}`, same literal fallback (`:38`) | `testSecretKeyForJWTTokenGenerationWhichShouldBeAtLeast256Bits` (`:25`) |
-| 24 | `app.jwt.expiration` | `${JWT_EXPIRATION:2592000000}`, 30 days (`:34`) | hardcoded `86400000`, 24 hours, **no placeholder** (`:39`) | `86400000` (`:26`) |
-| 25 | `app.jwt.refresh-expiration` | not set | not set | not set. Code default `604800000` (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java:26`) |
+| 24 | `app.jwt.expiration` | `${JWT_EXPIRATION:2592000000}`, 30 days | `${JWT_EXPIRATION:86400000}`, 24 hour default | `86400000` (`:26`) |
+| 25 | `app.demo-data.enabled` | `${DEMO_DATA_ENABLED:false}` | `${DEMO_DATA_ENABLED:true}` | not read; `DataInitializer` is excluded from the `test` profile |
 | 26 | `app.cors.allowed-origins` | `${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}` (`:37`) | `${CORS_ALLOWED_ORIGINS:http://localhost}` (`:42`) | inherited from `application.yml` |
 | 27 | `springdoc.api-docs.path` | `/api-docs` (`:41`) | `/api-docs` (`:46`) | inherited |
 | 28 | `springdoc.swagger-ui.path` | `/swagger-ui.html` (`:43`) | `/swagger-ui.html` (`:48`) | inherited |
@@ -144,35 +144,24 @@ These are set, look meaningful, and change nothing. They are collected here so y
 
 | # | Setting | Where | Why it does nothing |
 | - | ------- | ----- | ------------------- |
-| 1 | `JWT_EXPIRATION` under the `docker` profile | `docker-compose.yml:37`, `.env.example:11` | `application-docker.yml:39` hardcodes `86400000` with no placeholder |
-| 2 | `SPRING_PROFILES_ACTIVE: docker` | `docker-compose.yml:32` | Overridden by the entrypoint argument at `Dockerfile:44`. Harmless because both say `docker`, but changing it has no effect |
-| 3 | `spring.jackson.serialization.write-dates-as-timestamps: false` | `application.yml:12`, `application-docker.yml:12` | A `@Primary ObjectMapper` bean exists, so Jackson auto-configuration backs off |
-| 4 | `spring.jackson.deserialization.fail-on-unknown-properties: false` | `application.yml:14`, `application-docker.yml:14` | Same cause as row 3 |
-| 5 | `spring.jpa.properties.hibernate.format_sql: true` | `application.yml:28`, `application-docker.yml:33` | `show-sql` is `false` in every profile and no SQL logger is at DEBUG, so no SQL is printed to format |
-| 6 | `management.endpoint.health.show-details: when-authorized` | `application-docker.yml:57` | `/actuator/**` is `permitAll` (`src/main/java/com/nolcox/jobtracking/config/SecurityConfig.java:69`), so callers are anonymous and details are never shown. Equivalent to `never` as deployed |
-| 7 | `info` in `management.endpoints.web.exposure.include` | `application-docker.yml:54` | No `InfoContributor` bean exists and the Maven plugin does not generate `build-info.properties`, so `/api/actuator/info` returns `{}` |
-| 8 | `spring.h2.console.enabled: false` plus `permitAll` on `/h2-console/**` | `application-test.yml:21`, `SecurityConfig.java:68` | The console is disabled in the only profile that uses H2, and H2 is not the datasource anywhere else. The security rule is dead |
-| 9 | `.dockerignore` negations `!.mvn` and `!mvnw` | `.dockerignore:50-51` | The comment says "we copy it explicitly", but nothing in `Dockerfile` copies the Maven wrapper. The build uses the builder image's own `mvn` (`Dockerfile:8`, `:12`) |
+| 1 | `SPRING_PROFILES_ACTIVE: docker` | `docker-compose.yml:32` | Overridden by the entrypoint argument at `Dockerfile:44`. Harmless because both say `docker`, but changing it has no effect |
+| 2 | `spring.jpa.properties.hibernate.format_sql: true` | `application.yml:28`, `application-docker.yml:33` | `show-sql` is `false` in every profile and no SQL logger is at DEBUG, so no SQL is printed to format |
+| 3 | `management.endpoint.health.show-details: when-authorized` | `application-docker.yml:57` | `/actuator/**` is `permitAll` (`src/main/java/com/nolcox/jobtracking/config/SecurityConfig.java:69`), so callers are anonymous and details are never shown. Equivalent to `never` as deployed |
+| 4 | `spring.h2.console.enabled: false` plus `permitAll` on `/h2-console/**` | `application-test.yml:21`, `SecurityConfig.java:68` | The console is disabled in the only profile that uses H2, and H2 is not the datasource anywhere else. The security rule is dead |
+| 5 | `.dockerignore` negations `!.mvn` and `!mvnw` | `.dockerignore:50-51` | The comment says "we copy it explicitly", but nothing in `Dockerfile` copies the Maven wrapper. The build uses the builder image's own `mvn` (`Dockerfile:8`, `:12`) |
 
-Row 3 and row 4 deserve more than a table cell, because they are visible in every API response. `src/main/java/com/nolcox/jobtracking/config/DatabaseConfig.java:14-16` declares a `@Primary ObjectMapper` built with a bare `new ObjectMapper()` plus a `JavaTimeModule` and a `BigDecimal` serializer:
+The Jackson properties were the sharpest of these until 1.3.2, because they were visible in every API response. `DatabaseConfig` declared a `@Primary ObjectMapper`, which made Spring Boot's `JacksonAutoConfiguration` back off and silently inverted both settings: timestamps serialized as epoch-second decimals and unknown request properties were rejected. It now registers a `Jackson2ObjectMapperBuilderCustomizer` instead, which customizes the auto-configured mapper rather than replacing it:
 
 ```java
 @Bean
-@Primary
-public ObjectMapper objectMapper() {
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.registerModule(new JavaTimeModule());
-    // ... BigDecimal serializer with setScale(2, HALF_UP) ...
-    return objectMapper;
+public Jackson2ObjectMapperBuilderCustomizer monetaryScaleCustomizer() {
+    return builder -> builder.serializerByType(BigDecimal.class, /* setScale(2, HALF_UP) */);
 }
 ```
 
-Because a user-supplied `ObjectMapper` bean exists, Spring Boot's `JacksonAutoConfiguration` backs off and none of the `spring.jackson.*` properties are applied. `WRITE_DATES_AS_TIMESTAMPS` therefore stays `true` and `FAIL_ON_UNKNOWN_PROPERTIES` stays `true`, the exact opposite of both YAML settings. Timestamps serialize as epoch-second decimals, confirmed at runtime, for example `"timestamp":1786590482.142765877`. The frontend compensates for this in `frontend/src/utils/dataAdapter.js`. An unrecognized field in a request body still produces a 400, despite the config saying otherwise.
+Both properties now apply as written: timestamps render as ISO-8601 and an unrecognized field in a request body is ignored.
 
 The class is named `DatabaseConfig` but contains only Jackson configuration.
-
-> [!NOTE]
-> Status: not wired. `JwtService.generateRefreshToken` (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java:47`) and `JwtService.getRefreshExpiration` (`:104`) have no callers in production code, and `app.jwt.refresh-expiration` is not set in any configuration file. The only authentication flow issues a single access token whose lifetime comes from `app.jwt.expiration`, surfaced to clients at `src/main/java/com/nolcox/jobtracking/application/service/impl/AuthServiceImpl.java:185`. Setting `app.jwt.refresh-expiration` changes nothing.
 
 ---
 
@@ -180,7 +169,7 @@ The class is named `DatabaseConfig` but contains only Jackson configuration.
 
 This is the sharpest configuration edge in the project, so it gets its own section.
 
-`JwtService.getSigningKey` decodes the configured secret as Base64 and hands the bytes to jjwt (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java:90-91`):
+`JwtService.getSigningKey` decodes the configured secret as Base64 and hands the bytes to jjwt (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java`):
 
 ```java
 byte[] keyBytes = Decoders.BASE64.decode(secretKey);

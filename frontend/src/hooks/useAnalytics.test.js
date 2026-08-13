@@ -267,7 +267,7 @@ describe('useAnalytics', () => {
     expect(result.current.timePatterns.byDayOfWeek.Monday).toBe(10);
   });
 
-  it('should fetch stage durations', async () => {
+  it('should not fetch stage durations, which nothing renders', async () => {
     setupAllMocks();
 
     const { result } = renderHook(() => useAnalytics());
@@ -276,8 +276,8 @@ describe('useAnalytics', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.stageDurations).toEqual(mockStageDurationsResponse.data);
-    expect(result.current.stageDurations.bottleneckStages[0].stage).toBe('RECRUITER_SCREEN');
+    expect(result.current.stageDurations).toBeUndefined();
+    expect(analyticsAPI.getStageDurations).not.toHaveBeenCalled();
   });
 
   it('should fetch transition matrix', async () => {
@@ -420,7 +420,6 @@ describe('useAnalytics', () => {
     expect(result.current.metrics).toEqual(mockMetricsResponse.data);
     expect(result.current.countsByStatus).toEqual(mockCountsByStatusResponse.data);
     expect(result.current.activityHeatmap).toEqual(mockHeatmapResponse.data);
-    expect(result.current.stageDurations).toEqual(mockStageDurationsResponse.data);
     expect(result.current.transitionMatrix).toEqual(mockTransitionMatrixResponse.data);
     expect(result.current.healthIndicators).toEqual(mockHealthResponse.data);
 

@@ -77,24 +77,8 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void testDoFilterInternal_WithAuthEndpoint_ShouldBypassAuthentication() throws ServletException, IOException {
-        // Given
-        when(request.getServletPath()).thenReturn("/api/auth/login");
-        
-        // When
-        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
-        
-        // Then
-        verify(filterChain).doFilter(request, response);
-        verify(jwtService, never()).extractUsername(anyString());
-        verify(userDetailsService, never()).loadUserByUsername(anyString());
-        verify(securityContext, never()).setAuthentication(any());
-    }
-
-    @Test
     void testDoFilterInternal_WithoutAuthorizationHeader_ShouldBypassAuthentication() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(null);
         
         // When
@@ -110,7 +94,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithInvalidAuthorizationHeader_ShouldBypassAuthentication() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn("Basic invalidheader");
         
         // When
@@ -124,9 +107,38 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void testDoFilterInternal_WithValidTokenButDisabledAccount_ShouldNotAuthenticate()
+            throws ServletException, IOException {
+        // Given: a signed, unexpired token belonging to an account that has been disabled.
+        // The signature stays valid until the token expires, so the filter has to recheck
+        // enabled state on every request or a disabled user keeps API access.
+        User disabledUser = User.builder()
+                .id(2L)
+                .email(userEmail)
+                .password("encoded")
+                .role(Role.USER)
+                .enabled(false)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+
+        when(request.getHeader("Authorization")).thenReturn(bearerToken);
+        when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
+        when(securityContext.getAuthentication()).thenReturn(null);
+        when(userDetailsService.loadUserByUsername(userEmail)).thenReturn(disabledUser);
+        when(jwtService.isTokenValid(validToken, disabledUser)).thenReturn(true);
+
+        // When
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        // Then
+        verify(filterChain).doFilter(request, response);
+        verify(securityContext, never()).setAuthentication(any());
+    }
+
+    @Test
     void testDoFilterInternal_WithValidToken_ShouldAuthenticateUser() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
         when(securityContext.getAuthentication()).thenReturn(null);
@@ -157,7 +169,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithInvalidToken_ShouldNotAuthenticate() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
         when(securityContext.getAuthentication()).thenReturn(null);
@@ -178,7 +189,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithExistingAuthentication_ShouldNotReauthenticate() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
         
@@ -199,7 +209,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithNullUsername_ShouldNotAuthenticate() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(null);
         
@@ -217,7 +226,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithUserNotFound_ShouldNotAuthenticate() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
         when(securityContext.getAuthentication()).thenReturn(null);
@@ -238,7 +246,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithJwtException_ShouldNotAuthenticate() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenThrow(new RuntimeException("JWT parsing error"));
         
@@ -256,7 +263,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithEmptyBearerToken_ShouldHandleGracefully() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn("Bearer ");
         when(jwtService.extractUsername("")).thenThrow(new RuntimeException("Empty token"));
         
@@ -276,7 +282,6 @@ class JwtAuthenticationFilterTest {
         String longToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIn0.token";
         String bearerHeader = "Bearer " + longToken;
         
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerHeader);
         when(jwtService.extractUsername(longToken)).thenReturn(userEmail);
         when(securityContext.getAuthentication()).thenReturn(null);
@@ -294,7 +299,6 @@ class JwtAuthenticationFilterTest {
     @Test
     void testDoFilterInternal_WithValidTokenAndDetails_ShouldSetAuthenticationDetails() throws ServletException, IOException {
         // Given
-        when(request.getServletPath()).thenReturn("/api/jobs");
         when(request.getHeader("Authorization")).thenReturn(bearerToken);
         when(jwtService.extractUsername(validToken)).thenReturn(userEmail);
         when(securityContext.getAuthentication()).thenReturn(null);

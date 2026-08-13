@@ -267,6 +267,7 @@ describe('dataAdapter', () => {
       status: 'APPLIED',
       appliedAt: '2025-01-15T10:00:00.000Z',
       lastUpdate: '2025-01-15T10:00:00.000Z',
+      statusChangedAt: '2025-01-15T10:00:00.000Z',
       notes: 'Original notes',
       salaryMin: 100000,
       salaryMax: 150000,
@@ -290,7 +291,7 @@ describe('dataAdapter', () => {
         const originalData = createOriginalData();
         const form = {
           ...originalData,
-          lastUpdate: '2025-02-20T14:00:00.000Z', // User changed this
+          statusChangedAt: '2025-02-20T14:00:00.000Z', // User changed this
         };
         const statusChanged = false;
 
@@ -304,7 +305,7 @@ describe('dataAdapter', () => {
         const originalData = createOriginalData();
         const form = {
           ...originalData,
-          lastUpdate: '2025-01-15T11:00:00.000Z', // 1 hour later
+          statusChangedAt: '2025-01-15T11:00:00.000Z', // 1 hour later
         };
         const statusChanged = false;
 
@@ -450,14 +451,14 @@ describe('dataAdapter', () => {
         expect(result.appliedDate).toBeDefined();
       });
 
-      it('should handle null originalData.lastUpdate', () => {
+      it('should handle null originalData.statusChangedAt', () => {
         const originalData = {
           ...createOriginalData(),
-          lastUpdate: null,
+          statusChangedAt: null,
         };
         const form = {
           ...originalData,
-          lastUpdate: '2025-02-15T10:00:00.000Z',
+          statusChangedAt: '2025-02-15T10:00:00.000Z',
         };
         const statusChanged = false;
 
@@ -702,23 +703,23 @@ describe('dataAdapter', () => {
       expect(backendData.appliedDate).not.toBeNull();
     });
 
-    it('should include statusChangedAt (lastUpdate) when user changes the date in Modal', () => {
+    it('should include statusChangedAt when user changes the date in the modal', () => {
       const originalData = {
         id: 1,
         company: 'Test Company',
         role: 'Developer',
         status: 'RECRUITER_SCREEN',
         appliedAt: '2025-01-15T10:00:00.000Z',
-        lastUpdate: '2025-01-20T10:00:00.000Z',
+        statusChangedAt: '2025-01-20T10:00:00.000Z',
       };
 
-      // User changes the status changed date (lastUpdate)
+      // User edits the status changed date field in the modal
       const newInputValue = '2025-01-25T16:00';
-      const newLastUpdate = convertDateTimeInputToISO(newInputValue);
+      const newStatusChangedAt = convertDateTimeInputToISO(newInputValue);
 
       const formData = {
         ...originalData,
-        lastUpdate: newLastUpdate,
+        statusChangedAt: newStatusChangedAt,
       };
 
       // Status did NOT change, so user's date edit should be respected
@@ -956,13 +957,13 @@ describe('dataAdapter', () => {
           role: 'Developer',
           status: 'RECRUITER_SCREEN',
           appliedAt: '2025-01-15T10:00:00.000Z',
-          lastUpdate: '2025-01-20T10:00:00.000Z',
+          statusChangedAt: '2025-01-20T10:00:00.000Z',
         };
 
         const formData = {
           ...originalData,
           // User manually backdates when the status actually changed
-          lastUpdate: '2025-01-18T14:30:00.000Z',
+          statusChangedAt: '2025-01-18T14:30:00.000Z',
         };
 
         const statusChanged = formData.status !== originalData.status;

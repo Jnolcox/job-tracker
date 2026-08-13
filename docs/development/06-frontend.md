@@ -429,7 +429,7 @@ Three facts about this layer are worth stating plainly:
 
 ### Why it normalizes timestamps
 
-The backend serializes every timestamp as an epoch-second decimal, for example `1786590482.142765877`. The `spring.jackson.serialization.write-dates-as-timestamps: false` setting in `src/main/resources/application.yml` has no effect, because a hand-built `@Primary ObjectMapper` in `src/main/java/com/nolcox/jobtracking/config/DatabaseConfig.java` causes Spring Boot's Jackson auto-configuration to back off. The `spring.jackson.*` properties are therefore inert. The frontend compensates in `convertDate`:
+The backend serializes every timestamp as an ISO-8601 string. Until 1.3.2 it emitted epoch-second decimals, because a hand-built `@Primary ObjectMapper` suppressed the `spring.jackson.*` properties. `convertDate` still accepts every encoding, which is why the change required no frontend edit:
 
 ```javascript
 export function convertDate(dateValue, fallback = null) {

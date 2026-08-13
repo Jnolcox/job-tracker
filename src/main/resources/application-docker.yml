@@ -34,9 +34,14 @@ spring:
     open-in-view: false
 
 app:
+  demo-data:
+    # The Compose stack exists for local evaluation, so the demo account is on by
+    # default here. Set DEMO_DATA_ENABLED=false before exposing this to a network.
+    enabled: ${DEMO_DATA_ENABLED:true}
+
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-    expiration: 86400000
+    expiration: ${JWT_EXPIRATION:86400000}
 
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost}

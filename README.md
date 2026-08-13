@@ -221,7 +221,7 @@ Configuration is Spring YAML plus a small set of environment variables. Two runn
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins |
 | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | Read by Compose only, for the `mysql` service and the backend JDBC URL |
 
-Two traps worth knowing before you tune anything. `JWT_EXPIRATION` is forwarded by Compose and documented in `.env.example`, but `application-docker.yml:39` hardcodes the value, so setting it changes nothing under Docker; the default profile does honor it. And the `spring.jackson.*` properties are inert, because a `@Primary ObjectMapper` in `config/DatabaseConfig.java` makes Spring Boot's Jackson auto-configuration back off, which is why timestamps serialize as epoch-second decimals.
+`DEMO_DATA_ENABLED` is worth knowing about before you deploy anything. It seeds an account whose password is published in this repository, and it defaults to true under Compose because that stack exists for local evaluation. Set it to false for anything others can reach.
 
 Full detail, profile by profile and property by property, is in [docs/development/08-configuration.md](docs/development/08-configuration.md).
 

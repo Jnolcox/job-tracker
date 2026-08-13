@@ -19,7 +19,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,53 +97,6 @@ public class AuthServiceImpl implements AuthService {
             // This allows the exception handler to return HTTP 401 without fragile string matching
             throw new AuthenticationFailureException(INVALID_CREDENTIALS);
         }
-    }
-
-    @Override
-    public AuthResponse refreshToken(String refreshToken) {
-        log.debug("Refreshing token");
-
-        try {
-            // Extract username from refresh token
-            String username = jwtService.extractUsername(refreshToken);
-
-            // Load user
-            User user = userRepository.findByEmail(username)
-                    .orElseThrow(() -> new BusinessException(USER_NOT_FOUND));
-
-            // Validate refresh token
-            if (!jwtService.isTokenValid(refreshToken, user)) {
-                throw new BusinessException(INVALID_REFRESH_TOKEN);
-            }
-
-            // Generate new access token with standard claims
-            String newAccessToken = jwtService.generateToken(buildExtraClaims(user), user);
-
-            log.info("Token refreshed successfully for user: {}", user.getEmail());
-
-            return buildAuthResponse(newAccessToken, user);
-
-        } catch (Exception e) {
-            log.error("Error refreshing token", e);
-            throw new BusinessException(TOKEN_REFRESH_FAILED);
-        }
-    }
-
-    @Override
-    public void logout(String token) {
-        log.debug("Logging out user");
-
-        // Clear security context
-        SecurityContextHolder.clearContext();
-
-        // If implementing token blacklisting, add token to blacklist here
-        // For now, just log the logout
-        log.info("User logged out successfully");
-
-        // Note: In a production system, you might want to:
-        // 1. Implement a token blacklist (Redis-based)
-        // 2. Store invalidated tokens until their expiration
-        // 3. Check blacklist in JwtAuthenticationFilter
     }
 
     /**
