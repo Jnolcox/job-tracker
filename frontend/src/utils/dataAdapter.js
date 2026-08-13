@@ -270,9 +270,12 @@ export function toBackendFormatForUpdate(form, originalData, statusChanged) {
   // - If status didn't change but user manually edited the date: send it
   // - If status didn't change and user didn't edit the date: DON'T send it
   if (!statusChanged) {
-    const statusDateChanged = !areDatesEqual(form.lastUpdate, originalData.lastUpdate);
+    // Compare the status-change timestamp, not the record's last-modified timestamp.
+    // The modal used to read and write lastUpdate under a "status changed" label, so it
+    // both displayed the wrong value and sent an edit derived from it.
+    const statusDateChanged = !areDatesEqual(form.statusChangedAt, originalData.statusChangedAt);
     if (statusDateChanged) {
-      result.statusChangedAt = form.lastUpdate ? new Date(form.lastUpdate).toISOString() : null;
+      result.statusChangedAt = form.statusChangedAt ? new Date(form.statusChangedAt).toISOString() : null;
     }
   }
   // When statusChanged is true, we intentionally omit statusChangedAt

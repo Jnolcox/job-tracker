@@ -23,16 +23,8 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    @Value("${app.jwt.refresh-expiration:604800000}") // 7 days default
-    private long refreshExpiration;
-
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
-    }
-
-    public Long extractUserId(String token) {
-        final Claims claims = extractAllClaims(token);
-        return claims.get("userId", Long.class);
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -42,10 +34,6 @@ public class JwtService {
     public String generateToken(Map<String, Object> extraClaims,
                                 UserDetails userDetails) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
-    }
-
-    public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, refreshExpiration);
     }
 
     private String buildToken(Map<String, Object> extraClaims,
@@ -98,10 +86,4 @@ public class JwtService {
         return jwtExpiration;
     }
 
-    /**
-     * Get refresh token expiration time in milliseconds
-     */
-    public long getRefreshExpiration() {
-        return refreshExpiration;
-    }
 }

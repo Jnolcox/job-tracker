@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -19,11 +20,23 @@ import com.nolcox.jobtracking.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Seeds a demo account and sample applications so that a fresh install has something to
+ * look at.
+ *
+ * <p>Disabled unless {@code app.demo-data.enabled} is true. It defaults to false so that a
+ * deployment never ships an account whose password is published in this repository. The
+ * {@code docker} profile enables it, because that stack exists for local evaluation.</p>
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 @Profile("!test")
+@ConditionalOnProperty(name = "app.demo-data.enabled", havingValue = "true")
 public class DataInitializer implements CommandLineRunner {
+
+    private static final String DEMO_EMAIL = "test@example.com";
+    private static final String DEMO_PASSWORD = "password123";
 
     private final UserRepository userRepository;
     private final JobApplicationRepository jobApplicationRepository;
@@ -37,24 +50,27 @@ public class DataInitializer implements CommandLineRunner {
 
     private void initializeDefaultUser() {
         // Check if default user already exists
-        if (userRepository.findByEmail("test@example.com").isEmpty()) {
+        if (userRepository.findByEmail(DEMO_EMAIL).isEmpty()) {
             User testUser = User.builder()
                     .firstName("Test")
                     .lastName("User")
-                    .email("test@example.com")
-                    .password(passwordEncoder.encode("password123"))
+                    .email(DEMO_EMAIL)
+                    .password(passwordEncoder.encode(DEMO_PASSWORD))
                     .role(Role.USER)
                     .enabled(true)
                     .build();
-            
+
             userRepository.save(testUser);
-            log.info("Created default test user: test@example.com / password123");
+            log.warn("Demo data is enabled and the demo account {} was created. "
+                    + "Its password is published in this repository. Set "
+                    + "app.demo-data.enabled=false for any deployment others can reach.",
+                    DEMO_EMAIL);
         }
     }
 
     private void initializeSampleData() {
         // Add some sample job applications for the test user
-        User testUser = userRepository.findByEmail("test@example.com").orElse(null);
+        User testUser = userRepository.findByEmail(DEMO_EMAIL).orElse(null);
         if (testUser != null && jobApplicationRepository.findByUserId(testUser.getId(), 
                 org.springframework.data.domain.PageRequest.of(0, 1)).isEmpty()) {
             
@@ -84,6 +100,7 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Join our fast-growing startup and help build the next generation platform")
                     .status(ApplicationStatus.TECH_SCREEN)
                     .appliedDate(Instant.now().minus(Duration.ofDays(8)))
+                    .statusChangedAt(Instant.now().minus(Duration.ofDays(3)))
                     .interviewDate(Instant.now().plus(Duration.ofDays(2)))
                     .salaryMin(90000.0)
                     .salaryMax(100000.0)
@@ -102,6 +119,7 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Work on user-facing features for millions of users")
                     .status(ApplicationStatus.REJECTED)
                     .appliedDate(Instant.now().minus(Duration.ofDays(15)))
+                    .statusChangedAt(Instant.now().minus(Duration.ofDays(6)))
                     .salaryMin(100000.0)
                     .salaryMax(120000.0)
                     .location("Seattle, WA")
@@ -119,6 +137,7 @@ public class DataInitializer implements CommandLineRunner {
                     .jobDescription("Build scalable financial systems and APIs")
                     .status(ApplicationStatus.OFFER_RECEIVED)
                     .appliedDate(Instant.now().minus(Duration.ofDays(20)))
+                    .statusChangedAt(Instant.now().minus(Duration.ofDays(1)))
                     .interviewDate(Instant.now().minus(Duration.ofDays(3)))
                     .salaryMin(120000.0)
                     .salaryMax(140000.0)

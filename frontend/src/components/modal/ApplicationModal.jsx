@@ -370,8 +370,8 @@ export default function ApplicationModal({ app, onClose, onSave, saving }) {
               <span style={labelStyle}>STATUS CHANGED DATE</span>
               <input
                 type="datetime-local"
-                value={toDateTimeLocalInput(form.lastUpdate)}
-                onChange={e => set("lastUpdate", e.target.value ? new Date(e.target.value).toISOString() : null)}
+                value={toDateTimeLocalInput(form.statusChangedAt)}
+                onChange={e => set("statusChangedAt", e.target.value ? new Date(e.target.value).toISOString() : null)}
                 style={inputStyle}
                 disabled={saving}
               />

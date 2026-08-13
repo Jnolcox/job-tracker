@@ -14,8 +14,7 @@ export const API_CONFIG = {
     // Auth endpoints
     AUTH: {
       LOGIN: '/auth/login',
-      REGISTER: '/auth/register',
-      LOGOUT: '/auth/logout'
+      REGISTER: '/auth/register'
     },
     
     // Job Applications endpoints

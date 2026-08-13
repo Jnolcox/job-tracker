@@ -89,7 +89,7 @@ Tokens are signed with an HMAC key derived by Base64-decoding `app.jwt.secret` a
 ## 3. Serialization rules
 
 > [!IMPORTANT]
-> Timestamps do **not** serialize as ISO 8601. Every `Instant` renders as an epoch-second decimal number, for example `1786590482.142765877` or `1786158476.0`. `spring.jackson.serialization.write-dates-as-timestamps: false` is set in `src/main/resources/application.yml:12` but has no effect, because a hand-built `@Primary ObjectMapper` in `src/main/java/com/nolcox/jobtracking/config/DatabaseConfig.java:15-17` makes Spring Boot's Jackson auto-configuration back off and the `spring.jackson.*` properties inert. Parse timestamps as seconds-since-epoch with a fractional part, not as strings.
+> Timestamps serialize as ISO 8601 strings, for example `"2026-08-13T04:05:13Z"`. Until 1.3.2 they rendered as epoch-second decimals, because a hand-built `@Primary ObjectMapper` made Spring Boot's Jackson auto-configuration back off and left every `spring.jackson.*` property inert. That mapper is now a builder customizer, so `write-dates-as-timestamps: false` applies as written. A client built against the old format should parse strings, not numbers.
 
 This applies uniformly: `appliedDate`, `createdAt`, `updatedAt`, `statusChangedAt`, `interviewDate`, event `createdAt`, and the `timestamp` on error bodies.
 

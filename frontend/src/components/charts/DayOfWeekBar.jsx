@@ -72,13 +72,6 @@ export default function DayOfWeekBar({ timePatterns, loading }) {
               alignItems: "center",
               gap: 4,
             }}>
-              <span style={{
-                color: "#A78BFA",
-                fontSize: 10,
-                fontFamily: "'DM Mono',monospace",
-              }}>
-                {/* {v || ""} */}
-              </span>
               <div style={{
                 width: "100%",
                 height: h,

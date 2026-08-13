@@ -55,6 +55,9 @@ class JobApplicationServiceImplTest {
     @Mock
     private ModelMapper modelMapper;
 
+    @Mock
+    private JobApplicationUpdateMapper updateMapper;
+
     @InjectMocks
     private JobApplicationServiceImpl jobApplicationService;
 
@@ -294,7 +297,7 @@ class JobApplicationServiceImplTest {
                 // ModelMapper would set statusChangedAt to null since request has null
                 app.setStatusChangedAt(null);
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -343,7 +346,7 @@ class JobApplicationServiceImplTest {
                 app.setCompanyName(request.companyName());
                 app.setPositionTitle(request.positionTitle());
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -388,7 +391,7 @@ class JobApplicationServiceImplTest {
                 app.setCompanyName(request.companyName());
                 app.setPositionTitle(request.positionTitle());
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -477,7 +480,7 @@ class JobApplicationServiceImplTest {
                 // Simulate ModelMapper overwriting appliedDate with null from request
                 app.setAppliedDate(null);
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -524,7 +527,7 @@ class JobApplicationServiceImplTest {
                 app.setPositionTitle(request.positionTitle());
                 app.setAppliedDate(newAppliedDate);
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -572,7 +575,7 @@ class JobApplicationServiceImplTest {
                 app.setPositionTitle(req.positionTitle());
                 app.setStatusChangedAt(req.statusChangedAt());
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -643,7 +646,7 @@ class JobApplicationServiceImplTest {
                 app.setAppliedDate(req.appliedDate());
                 app.setStatusChangedAt(req.statusChangedAt());
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -708,7 +711,7 @@ class JobApplicationServiceImplTest {
                 app.setAppliedDate(req.appliedDate());
                 app.setStatusChangedAt(req.statusChangedAt());
                 return null;
-            }).when(modelMapper).map(eq(request), any(JobApplication.class));
+            }).when(updateMapper).applyTo(eq(request), any(JobApplication.class));
 
             when(repository.save(any(JobApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

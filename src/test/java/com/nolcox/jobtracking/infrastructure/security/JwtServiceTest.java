@@ -24,7 +24,6 @@ class JwtServiceTest {
     private UserDetails testUser;
     private final String testSecretKey = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
     private final long testExpiration = 86400000; // 24 hours
-    private final long testRefreshExpiration = 604800000; // 7 days
 
     @BeforeEach
     void setUp() {
@@ -33,7 +32,6 @@ class JwtServiceTest {
         // Set private fields using ReflectionTestUtils
         ReflectionTestUtils.setField(jwtService, "secretKey", testSecretKey);
         ReflectionTestUtils.setField(jwtService, "jwtExpiration", testExpiration);
-        ReflectionTestUtils.setField(jwtService, "refreshExpiration", testRefreshExpiration);
         
         // Create test user
         testUser = User.builder()
@@ -80,23 +78,6 @@ class JwtServiceTest {
     }
 
     @Test
-    void testGenerateRefreshToken_ShouldReturnValidTokenWithLongerExpiration() {
-        // When
-        String refreshToken = jwtService.generateRefreshToken(testUser);
-        
-        // Then
-        assertThat(refreshToken).isNotNull();
-        assertThat(refreshToken).isNotEmpty();
-        
-        // Verify expiration time
-        Date expiration = jwtService.extractClaim(refreshToken, Claims::getExpiration);
-        Date issuedAt = jwtService.extractClaim(refreshToken, Claims::getIssuedAt);
-        long actualExpiration = expiration.getTime() - issuedAt.getTime();
-        
-        assertThat(actualExpiration).isEqualTo(testRefreshExpiration);
-    }
-
-    @Test
     void testExtractUsername_WithValidToken_ShouldReturnCorrectUsername() {
         // Given
         String token = jwtService.generateToken(testUser);
@@ -106,20 +87,6 @@ class JwtServiceTest {
         
         // Then
         assertThat(extractedUsername).isEqualTo(testUser.getUsername());
-    }
-
-    @Test
-    void testExtractUserId_WithTokenContainingUserId_ShouldReturnUserId() {
-        // Given
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("userId", 1L);
-        String token = jwtService.generateToken(extraClaims, testUser);
-        
-        // When
-        Long extractedUserId = jwtService.extractUserId(token);
-        
-        // Then
-        assertThat(extractedUserId).isEqualTo(1L);
     }
 
     @Test
@@ -239,15 +206,6 @@ class JwtServiceTest {
         
         // Then
         assertThat(expiration).isEqualTo(testExpiration);
-    }
-
-    @Test
-    void testGetRefreshExpiration_ShouldReturnCorrectValue() {
-        // When
-        long refreshExpiration = jwtService.getRefreshExpiration();
-        
-        // Then
-        assertThat(refreshExpiration).isEqualTo(testRefreshExpiration);
     }
 
     @Test

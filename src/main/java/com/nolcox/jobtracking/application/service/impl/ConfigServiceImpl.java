@@ -52,75 +52,77 @@ public class ConfigServiceImpl implements ConfigService {
     private static final Map<String, List<String>> STATUS_GROUPS = new HashMap<>();
 
     static {
-        // Initialize status metadata with colors and labels
-        // Blue tones for initial/waiting states
+        // These values are the contract the shipped interface renders, so they are kept
+        // byte for byte in step with frontend/src/constants/statuses.js and
+        // frontend/src/constants/colors.js. The two copies had drifted apart in labels,
+        // colors, and group membership, and the group difference changed a number on
+        // screen: "In Interviews" counted a different set on each side.
+
+        // Applied and waiting states, blue
         STATUS_METADATA.put(ApplicationStatus.APPLIED,
                 new StatusMetadata("Applied", "#4E9AF1", "WAITING"));
         STATUS_METADATA.put(ApplicationStatus.WAITING_FOR_RESPONSE,
-                new StatusMetadata("Waiting for Response", "#60A5FA", "WAITING"));
+                new StatusMetadata("Waiting for Response", "#EAB308", "WAITING"));
 
-        // Purple tones for recruiter/initial screening
+        // Recruiter screening, purple
         STATUS_METADATA.put(ApplicationStatus.RECRUITER_SCREEN,
                 new StatusMetadata("Recruiter Screen", "#A78BFA", "INTERVIEWING"));
 
-        // Cyan/teal for technical stages
+        // Technical stages, amber
         STATUS_METADATA.put(ApplicationStatus.TECH_SCREEN,
-                new StatusMetadata("Technical Screen", "#22D3EE", "TECHNICAL"));
+                new StatusMetadata("Tech Screen", "#F59E0B", "TECHNICAL"));
         STATUS_METADATA.put(ApplicationStatus.TAKE_HOME,
-                new StatusMetadata("Take Home Assignment", "#06B6D4", "TECHNICAL"));
+                new StatusMetadata("Take Home", "#F59E0B", "TECHNICAL"));
         STATUS_METADATA.put(ApplicationStatus.SYSTEM_DESIGN,
-                new StatusMetadata("System Design", "#0891B2", "TECHNICAL"));
+                new StatusMetadata("System Design", "#F59E0B", "TECHNICAL"));
         STATUS_METADATA.put(ApplicationStatus.TECHNICAL_I,
-                new StatusMetadata("Technical Interview I", "#14B8A6", "TECHNICAL"));
+                new StatusMetadata("Technical I", "#F59E0B", "TECHNICAL"));
         STATUS_METADATA.put(ApplicationStatus.TECHNICAL_II,
-                new StatusMetadata("Technical Interview II", "#0D9488", "TECHNICAL"));
+                new StatusMetadata("Technical II", "#F59E0B", "TECHNICAL"));
 
-        // Blue-green for final stages
+        // Reference check, pink
         STATUS_METADATA.put(ApplicationStatus.REFERENCE_CHECK,
-                new StatusMetadata("Reference Check", "#10B981", "INTERVIEWING"));
+                new StatusMetadata("Reference Check", "#cb37a1", "INTERVIEWING"));
 
-        // Green for offers
+        // Offers, green
         STATUS_METADATA.put(ApplicationStatus.OFFER_RECEIVED,
-                new StatusMetadata("Offer Received", "#22C55E", "OFFER"));
+                new StatusMetadata("Offer Received", "#10B981", "OFFER"));
         STATUS_METADATA.put(ApplicationStatus.NEGOTIATING,
-                new StatusMetadata("Negotiating", "#84CC16", "OFFER"));
+                new StatusMetadata("Negotiating", "#10B981", "OFFER"));
         STATUS_METADATA.put(ApplicationStatus.OFFER_ACCEPTED,
-                new StatusMetadata("Offer Accepted", "#16A34A", "OFFER"));
+                new StatusMetadata("Offer Accepted", "#059669", "OFFER"));
 
-        // Orange/yellow for declined/rescinded offers
+        // Negative outcomes, red
         STATUS_METADATA.put(ApplicationStatus.OFFER_DECLINED,
-                new StatusMetadata("Offer Declined", "#F59E0B", "REJECTED"));
+                new StatusMetadata("Offer Declined", "#F87171", "REJECTED"));
         STATUS_METADATA.put(ApplicationStatus.OFFER_RESCINDED,
-                new StatusMetadata("Offer Rescinded", "#EF4444", "REJECTED"));
-
-        // Red for rejections
+                new StatusMetadata("Offer Rescinded", "#F87171", "REJECTED"));
         STATUS_METADATA.put(ApplicationStatus.REJECTED,
-                new StatusMetadata("Rejected", "#EF4444", "REJECTED"));
+                new StatusMetadata("Rejected", "#F87171", "REJECTED"));
+        STATUS_METADATA.put(ApplicationStatus.GHOSTED,
+                new StatusMetadata("Ghosted", "#F87171", "REJECTED"));
 
-        // Orange for withdrawn
+        // Withdrawn, gray
         STATUS_METADATA.put(ApplicationStatus.WITHDRAWN,
-                new StatusMetadata("Withdrawn", "#F97316", "WITHDRAWN"));
+                new StatusMetadata("Withdrawn", "#6B7280", "WITHDRAWN"));
 
-        // Yellow for on-hold
+        // On hold, yellow
         STATUS_METADATA.put(ApplicationStatus.ON_HOLD,
                 new StatusMetadata("On Hold", "#EAB308", "WAITING"));
 
-        // Gray for ghosted
-        STATUS_METADATA.put(ApplicationStatus.GHOSTED,
-                new StatusMetadata("Ghosted", "#6B7280", "REJECTED"));
-
-        // Initialize status groups
+        // Groups, matching STATUS_GROUPS in the frontend constants.
         STATUS_GROUPS.put("REJECTED", List.of(
                 "REJECTED", "OFFER_DECLINED", "OFFER_RESCINDED", "GHOSTED"));
         STATUS_GROUPS.put("WITHDRAWN", List.of("WITHDRAWN"));
         STATUS_GROUPS.put("INTERVIEWING", List.of(
-                "RECRUITER_SCREEN", "REFERENCE_CHECK"));
+                "RECRUITER_SCREEN", "TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN",
+                "TECHNICAL_I", "TECHNICAL_II", "REFERENCE_CHECK"));
         STATUS_GROUPS.put("TECHNICAL", List.of(
                 "TECH_SCREEN", "TAKE_HOME", "SYSTEM_DESIGN", "TECHNICAL_I", "TECHNICAL_II"));
         STATUS_GROUPS.put("OFFER", List.of(
                 "OFFER_RECEIVED", "NEGOTIATING", "OFFER_ACCEPTED"));
         STATUS_GROUPS.put("WAITING", List.of(
-                "APPLIED", "WAITING_FOR_RESPONSE", "ON_HOLD"));
+                "ON_HOLD", "WAITING_FOR_RESPONSE"));
     }
 
     /**

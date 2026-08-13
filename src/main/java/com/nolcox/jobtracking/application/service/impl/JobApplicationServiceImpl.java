@@ -25,7 +25,9 @@ import com.nolcox.jobtracking.domain.repository.UserRepository;
 import com.nolcox.jobtracking.shared.exception.ResourceNotFoundException;
 import com.nolcox.jobtracking.shared.exception.UnauthorizedException;
 
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.ACCESS_DENIED;
 import static com.nolcox.jobtracking.shared.exception.ErrorMessages.APPLICATION_NOT_FOUND;
+import static com.nolcox.jobtracking.shared.exception.ErrorMessages.USER_NOT_FOUND;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +53,9 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     private final UserRepository userRepository;
     private final ApplicationEventRepository eventRepository;
     private final ModelMapper modelMapper;
+
+    /** Applies full-replacement updates, including clearing fields sent as null. */
+    private final JobApplicationUpdateMapper updateMapper;
 
     /**
      * Event service for logging audit trail events.
@@ -107,7 +112,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             JobApplicationCreateRequest request, Long userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
 
         JobApplication application = modelMapper.map(request, JobApplication.class);
         application.setUser(user);
@@ -177,7 +182,10 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         Instant originalAppliedDate = application.getAppliedDate();
         Instant originalStatusChangedAt = application.getStatusChangedAt();
 
-        modelMapper.map(request, application);
+        // PUT is a full replacement, so this mapper applies nulls rather than skipping
+        // them. That is what lets a client clear notes, location, level, rtoType or a
+        // contact field. Values that must survive a null are restored immediately below.
+        updateMapper.applyTo(request, application);
 
         // BUSINESS RULE: Restore appliedDate if not explicitly changed in request
         // This prevents ModelMapper from clearing the date when request.appliedDate() is null
@@ -347,7 +355,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
      */
     private void assertUserOwnsApplication(JobApplication application, Long userId) {
         if (!application.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("Access denied");
+            throw new UnauthorizedException(ACCESS_DENIED);
         }
     }
 

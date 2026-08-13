@@ -20,16 +20,16 @@ Job Tracker computes about a dozen different views of your application history. 
 
 ## 1. How almost every number is calculated
 
-Each application has one status at any moment: Applied, Tech Screen, Rejected, and so on. When you change an application's status, the old one is replaced. Job Tracker keeps a record of the change, but almost none of the analytics reads that record.
+Each application has one status at any moment: Applied, Tech Screen, Rejected, and so on. When you change an application's status, the old one is replaced, and Job Tracker records the change. Some views read that record of what happened, and some read only where each application stands today. Which one a view uses changes what its number means.
 
-The consequence is worth stating plainly. Suppose you applied to a company, did a recruiter screen, did two technical rounds, and were then rejected. The application's status is now Rejected. To the interview rate, the offer rate, the conversion cards, the Pipeline Funnel and every per-company or per-level rate, that application is a rejection and nothing else. The three interviews you did leave no trace in any of those numbers.
+**Pipeline Funnel** and **Status Transitions** read the record. Suppose you applied to a company, did a recruiter screen, did two technical rounds, and were then rejected. Both of those views count the stages you actually reached, so your interviews show up even though the application ended as a rejection.
 
-Only one view on the dashboard reads the record of what actually happened: **Status Transitions**. Two more, the stale and hot lists inside **Application Health**, read it partially. Everything else reads current status only.
+The stat cards, the per-company and per-level rates, and the offer and response rates read current status only. In the same example they see one rejection and nothing else. Read them as "where is my pipeline sitting today", not "what have I been through".
 
-This is not an error to be worked around. It means your interview rate and your conversion rates will read low compared to your lived experience, and will read lower the more of your pipeline has resolved. Read them as "how many of my applications are sitting at an interview stage today", not "how many interviews have I done".
+One consequence worth knowing: an application you recorded before the audit trail existed has no history to read, so it contributes only its current status even to the views that would otherwise count its stages.
 
 > [!IMPORTANT]
-> Every number and chart on the dashboard loads once, when the page opens. Adding, editing or deleting an application updates the table immediately and leaves all of the analytics untouched. Reload the page after a batch of changes if you want the two to agree.
+> Adding, editing or deleting an application refreshes the charts as well as the table, so the two halves of the dashboard agree without a page reload.
 
 ---
 
@@ -43,7 +43,7 @@ The ten cards across the top are described mechanically in [Dashboard and naviga
 | --- | --- | --- |
 | Total Applied | The size of what is loaded in the table right now. | Your real total, if you have recorded more than 100 applications. Only the first 100 are loaded. |
 | True Response Rate | Roughly how often anybody gets back to you at all. | Whether the response was good news. A rejection counts as a response. So do the On Hold and Waiting for Response statuses, despite what their names suggest. |
-| True Interview Rate | How much of your pipeline is sitting at an interview stage today. | How many interviews you have actually done. Applications that interviewed and were then rejected or withdrawn count for nothing here. |
+| True Interview Rate | How much of your pipeline is sitting at an interview stage today. | How many interviews you have actually done. Applications that interviewed and were then rejected or withdrawn count for nothing here. The Pipeline Funnel does count them. |
 | Avg Response Time | A rough sense of how long employers take. | The time to the *first* response. It measures from the applied date to the *most recent* status change, so an application that screened on day 3 and was rejected on day 60 contributes 60 days. Whole days only, rounded down: a reply in 23 hours counts as 0 days. When there is nothing to average it shows `0d`, which looks the same as a genuine zero. |
 | True Offer Rate | The share of applications currently at an offer status. | Offers you walked away from. Marking an application Withdrawn removes it from this rate entirely, even if you had an offer in hand. Declined and rescinded offers, on the other hand, still count as offers. |
 | In Interviews | How many loaded applications are at an interview stage. | Anything about applications past the first 100 loaded. |

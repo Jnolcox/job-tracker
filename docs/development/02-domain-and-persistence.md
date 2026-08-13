@@ -155,16 +155,12 @@ all return `true`. `isEnabled()` resolves to the Lombok getter on the `enabled` 
 | `statusChangedAt` | `Instant` | `status_changed_at` | nullable, set by the service, never by auditing | `JobApplication.java:99-100` |
 | `version` | `Long` | `version` | `@Version` | `JobApplication.java:102-103` |
 
-> [!IMPORTANT]
-> `statusChangedAt` is nullable and has no lifecycle callback. The API write paths always
-> populate it, defaulting to `Instant.now()`
-> (`application/service/impl/JobApplicationServiceImpl.java:116` on create, `:190-198` on
-> update), but `DataInitializer` builds entities directly and never sets it while seeding
-> three non-`APPLIED` statuses (`config/DataInitializer.java:85`, `:103`, `:120`).
-> `AnalyticsServiceImpl.getStageDurations` dereferences it without a null guard
-> (`application/service/impl/AnalyticsServiceImpl.java:523`), so
-> `GET /api/v1/job-applications/analytics/stage-durations` returns 500 on a freshly
-> seeded install. Confirmed at runtime.
+> [!NOTE]
+> `statusChangedAt` is nullable and no lifecycle callback populates it. The write paths
+> default it to `Instant.now()`, but anything that builds the entity directly, such as the
+> demo seeder, has to set it. Analytics that measure time in a stage skip an application
+> that has no value rather than failing.
+
 
 `@Data` generates `equals` and `hashCode` over all fields, including the lazy `user`
 reference and `version`. That means calling `equals` can trigger proxy initialization,

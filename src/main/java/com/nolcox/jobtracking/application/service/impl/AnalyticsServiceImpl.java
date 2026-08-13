@@ -187,7 +187,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     /**
      * Negative terminal statuses (rejection/failure outcomes).
-     * Used for identifying quick losses in health indicators.
      */
     private static final Set<ApplicationStatus> NEGATIVE_TERMINAL_STATUSES = EnumSet.of(
             ApplicationStatus.REJECTED,
@@ -196,6 +195,47 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             ApplicationStatus.OFFER_DECLINED,
             ApplicationStatus.OFFER_RESCINDED
     );
+
+    /**
+     * The pipeline stages, in the order an application passes through them.
+     *
+     * <p>Only forward-moving stages appear. Terminal outcomes ({@code REJECTED},
+     * {@code WITHDRAWN}, {@code GHOSTED}, {@code OFFER_DECLINED},
+     * {@code OFFER_RESCINDED}) and the holding statuses ({@code ON_HOLD},
+     * {@code WAITING_FOR_RESPONSE}) are not stages and are excluded.</p>
+     *
+     * <p>This list mirrors {@code FUNNEL_STAGE_ORDER} in
+     * {@code frontend/src/components/charts/FunnelAnalytics.jsx}, which renders it.</p>
+     */
+    private static final List<ApplicationStatus> FUNNEL_STAGE_ORDER = List.of(
+            ApplicationStatus.APPLIED,
+            ApplicationStatus.RECRUITER_SCREEN,
+            ApplicationStatus.TECH_SCREEN,
+            ApplicationStatus.TAKE_HOME,
+            ApplicationStatus.SYSTEM_DESIGN,
+            ApplicationStatus.TECHNICAL_I,
+            ApplicationStatus.TECHNICAL_II,
+            ApplicationStatus.REFERENCE_CHECK,
+            ApplicationStatus.OFFER_RECEIVED,
+            ApplicationStatus.NEGOTIATING,
+            ApplicationStatus.OFFER_ACCEPTED
+    );
+
+    /**
+     * Quick-loss statuses: the negative terminal outcomes that did not reach an offer.
+     *
+     * <p>{@code OFFER_DECLINED} and {@code OFFER_RESCINDED} are terminal negatives but they
+     * are also in {@link #OFFER_STATUSES}, because the application did reach an offer. They
+     * are excluded here so that a single application can never be reported as both a quick
+     * win and a quick loss.
+     */
+    private static final Set<ApplicationStatus> QUICK_LOSS_STATUSES;
+
+    static {
+        EnumSet<ApplicationStatus> quickLosses = EnumSet.copyOf(NEGATIVE_TERMINAL_STATUSES);
+        quickLosses.removeAll(OFFER_STATUSES);
+        QUICK_LOSS_STATUSES = quickLosses;
+    }
 
     /**
      * Default number of days to consider an application stale.
@@ -519,8 +559,13 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             long days;
             if (app.getStatus() == ApplicationStatus.APPLIED) {
                 days = ChronoUnit.DAYS.between(app.getAppliedDate(), now);
-            } else {
+            } else if (app.getStatusChangedAt() != null) {
                 days = ChronoUnit.DAYS.between(app.getAppliedDate(), app.getStatusChangedAt());
+            } else {
+                // statusChangedAt is nullable and is not populated by every write path,
+                // so a non-APPLIED application can reach here without one. Skip it rather
+                // than failing the whole request.
+                continue;
             }
 
             if (days < 0) {
@@ -629,8 +674,10 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         long total = applications.size();
 
-        // Calculate stage conversion rates - percentage advancing from each status
-        Map<ApplicationStatus, Double> stageConversionRates = calculateStageConversionRates(applications, total);
+        // Calculate stage conversion rates from the event history, so that a stage an
+        // application passed through still counts after it moved on or was rejected.
+        Map<ApplicationStatus, Double> stageConversionRates = calculateStageConversionRates(
+                applications, eventRepository.findStatusTransitionsByUserId(userId));
 
         // Identify drop-off points (terminal statuses)
         List<DropOffPoint> dropOffPoints = calculateDropOffPoints(applications, total);
@@ -658,26 +705,125 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     /**
-     * Calculates the percentage of applications that advanced past each status.
+     * Calculates, for each pipeline stage, the percentage of the applications that reached
+     * that stage which went on to reach a later one.
      *
-     * <p>For APPLIED status, this is the percentage of applications that moved
-     * to any status other than APPLIED (i.e., received some response).</p>
+     * <p>Stage membership is taken from the status-change history rather than from the
+     * current status, so an application that interviewed three times and was then rejected
+     * still counts toward every stage it actually passed through. An application with no
+     * recorded transitions contributes only its current status.</p>
+     *
+     * <p>Terminal outcomes such as {@code REJECTED} are not stages and never appear as
+     * keys. A stage that nothing reached is omitted rather than reported as zero.</p>
+     *
+     * @param applications every application belonging to the user
+     * @param statusEvents the user's {@code STATUS_CHANGED} events
+     * @return conversion rate per stage, keyed by the stage being advanced out of
      */
     private Map<ApplicationStatus, Double> calculateStageConversionRates(List<JobApplication> applications,
-                                                                          long total) {
+                                                                          List<ApplicationEvent> statusEvents) {
         Map<ApplicationStatus, Double> rates = new EnumMap<>(ApplicationStatus.class);
 
-        if (total == 0) {
+        if (applications.isEmpty()) {
             return rates;
         }
 
-        // Count applications NOT in APPLIED status (i.e., those that advanced)
-        long advanced = applications.stream()
-                .filter(app -> app.getStatus() != ApplicationStatus.APPLIED)
-                .count();
-        rates.put(ApplicationStatus.APPLIED, roundToOneDecimal((advanced * 100.0) / total));
+        List<Set<ApplicationStatus>> reachedByApplication = buildReachedStages(applications, statusEvents);
+
+        // reachedAtOrBeyond[i] is the number of applications that reached
+        // FUNNEL_STAGE_ORDER[i] or any stage after it.
+        int[] reachedAtOrBeyond = new int[FUNNEL_STAGE_ORDER.size()];
+        for (Set<ApplicationStatus> reached : reachedByApplication) {
+            int furthest = -1;
+            for (ApplicationStatus status : reached) {
+                furthest = Math.max(furthest, FUNNEL_STAGE_ORDER.indexOf(status));
+            }
+            for (int i = 0; i <= furthest; i++) {
+                reachedAtOrBeyond[i]++;
+            }
+        }
+
+        for (int i = 0; i < FUNNEL_STAGE_ORDER.size() - 1; i++) {
+            int atStage = reachedAtOrBeyond[i];
+            if (atStage == 0) {
+                continue;
+            }
+            rates.put(FUNNEL_STAGE_ORDER.get(i),
+                    roundToOneDecimal((reachedAtOrBeyond[i + 1] * 100.0) / atStage));
+        }
 
         return rates;
+    }
+
+    /**
+     * Reconstructs the set of pipeline stages each application has occupied, from its
+     * current status plus every status it moved out of or into.
+     *
+     * <p>One set is returned per application, in input order. Applications are joined to
+     * their events by id, but the result never depends on ids being present or distinct:
+     * an application with no id simply contributes its current status.</p>
+     *
+     * @param applications every application belonging to the user
+     * @param statusEvents the user's {@code STATUS_CHANGED} events
+     * @return the stages reached, one set per application, in input order
+     */
+    private List<Set<ApplicationStatus>> buildReachedStages(List<JobApplication> applications,
+                                                            List<ApplicationEvent> statusEvents) {
+        List<Set<ApplicationStatus>> reached = new ArrayList<>(applications.size());
+        Map<Long, Set<ApplicationStatus>> byApplicationId = new HashMap<>();
+
+        for (JobApplication app : applications) {
+            // Every application reached APPLIED by definition, so it is always in the
+            // denominator of the first conversion even when it was rejected outright.
+            Set<ApplicationStatus> stages = EnumSet.of(ApplicationStatus.APPLIED);
+            addIfStage(stages, app.getStatus());
+            reached.add(stages);
+            if (app.getId() != null) {
+                byApplicationId.putIfAbsent(app.getId(), stages);
+            }
+        }
+
+        for (ApplicationEvent event : statusEvents) {
+            if (event.getApplication() == null || event.getApplication().getId() == null) {
+                continue;
+            }
+            Set<ApplicationStatus> stages = byApplicationId.get(event.getApplication().getId());
+            if (stages == null) {
+                continue;
+            }
+            addIfStage(stages, parseStatus(event.getOldValue()));
+            addIfStage(stages, parseStatus(event.getNewValue()));
+        }
+
+        return reached;
+    }
+
+    /**
+     * Adds a status to the set only if it is a pipeline stage. Terminal outcomes and
+     * nulls are ignored.
+     */
+    private void addIfStage(Set<ApplicationStatus> stages, ApplicationStatus status) {
+        if (status != null && FUNNEL_STAGE_ORDER.contains(status)) {
+            stages.add(status);
+        }
+    }
+
+    /**
+     * Parses a status name recorded on an event, tolerating values that no longer map to
+     * a known constant.
+     *
+     * @param value the recorded status name, possibly null
+     * @return the matching status, or null if it is absent or unrecognized
+     */
+    private ApplicationStatus parseStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return ApplicationStatus.valueOf(value.trim());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     /**
@@ -924,7 +1070,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
      * @return list of quick outcomes
      */
     private List<QuickOutcome> findQuickOutcomes(List<JobApplication> applications, boolean wins) {
-        Set<ApplicationStatus> targetStatuses = wins ? OFFER_STATUSES : NEGATIVE_TERMINAL_STATUSES;
+        Set<ApplicationStatus> targetStatuses = wins ? OFFER_STATUSES : QUICK_LOSS_STATUSES;
         List<QuickOutcome> outcomes = new ArrayList<>();
 
         for (JobApplication app : applications) {

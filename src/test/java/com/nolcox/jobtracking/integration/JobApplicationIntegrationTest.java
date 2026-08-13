@@ -666,8 +666,60 @@ class JobApplicationIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should preserve interviewDate when field is omitted from update request")
-    void shouldPreserveInterviewDateWhenFieldOmitted() throws Exception {
+    @DisplayName("Should clear an optional field when the update sends an explicit null")
+    void shouldClearOptionalFieldWhenExplicitlyNull() throws Exception {
+        // Given - an application with notes, a location and a contact email
+        JobApplication application = JobApplication.builder()
+                .user(testUser)
+                .companyName(TEST_COMPANY)
+                .positionTitle(TEST_POSITION)
+                .status(ApplicationStatus.APPLIED)
+                .appliedDate(Instant.now().minus(Duration.ofDays(3)))
+                .statusChangedAt(Instant.now().minus(Duration.ofDays(3)))
+                .location("Denver, CO")
+                .notes("Some notes worth removing")
+                .contactEmail("someone@example.com")
+                .build();
+        application = jobApplicationRepository.save(application);
+
+        String rawJson = String.format("""
+            {
+                "companyName": "%s",
+                "positionTitle": "%s",
+                "status": "APPLIED",
+                "location": null,
+                "notes": null,
+                "contactEmail": null
+            }
+            """, TEST_COMPANY, TEST_POSITION);
+
+        // When
+        MvcResult result = mockMvc.perform(put("/v1/job-applications/{id}", application.getId())
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rawJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Then - every field sent as null is cleared
+        JobApplicationResponse response = objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                JobApplicationResponse.class
+        );
+        assertThat(response.location()).isNull();
+        assertThat(response.notes()).isNull();
+        assertThat(response.contactEmail()).isNull();
+
+        JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
+        assertThat(updatedInDb).isNotNull();
+        assertThat(updatedInDb.getLocation()).isNull();
+        assertThat(updatedInDb.getNotes()).isNull();
+        assertThat(updatedInDb.getContactEmail()).isNull();
+    }
+
+    @Test
+    @DisplayName("Should clear an optional field when it is omitted from the update request")
+    void shouldClearOptionalFieldWhenOmittedFromUpdate() throws Exception {
         // Given - Create application with an interview date set
         Instant originalInterviewDate = Instant.parse("2026-02-15T14:00:00Z");
         JobApplication application = JobApplication.builder()
@@ -687,8 +739,9 @@ class JobApplicationIntegrationTest {
                 .build();
         application = jobApplicationRepository.save(application);
 
-        // Update request does NOT include interviewDate field at all
-        // This simulates frontend not sending the field
+        // Update request does NOT include interviewDate. PUT is a full replacement, so
+        // an omitted optional field is cleared rather than carried over. This is the only
+        // way a client can empty a field that already has a value.
         String rawJson = String.format("""
             {
                 "companyName": "%s",
@@ -715,19 +768,23 @@ class JobApplicationIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // Then - The original interviewDate should be PRESERVED, not wiped out
+        // Then - the omitted field is cleared
         JobApplicationResponse response = objectMapper.readValue(
                 result.getResponse().getContentAsString(),
                 JobApplicationResponse.class
         );
 
-        // interviewDate should still be the original, not null
-        assertThat(response.interviewDate()).isEqualTo(originalInterviewDate);
+        assertThat(response.interviewDate()).isNull();
+
+        // Fields the request did carry are applied, and appliedDate is protected
+        assertThat(response.notes()).isEqualTo("Updated notes");
+        assertThat(response.appliedDate()).isNotNull();
 
         // Also verify in database
         JobApplication updatedInDb = jobApplicationRepository.findById(application.getId()).orElse(null);
         assertThat(updatedInDb).isNotNull();
-        assertThat(updatedInDb.getInterviewDate()).isEqualTo(originalInterviewDate);
+        assertThat(updatedInDb.getInterviewDate()).isNull();
+        assertThat(updatedInDb.getAppliedDate()).isNotNull();
     }
 
     @Test

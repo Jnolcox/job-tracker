@@ -10,6 +10,78 @@ releases, so they are less granular than entries written at the time.
 
 ## [Unreleased]
 
+Closes the defects catalogued in
+[docs/development/11-known-gaps.md](docs/development/11-known-gaps.md) at 1.3.1.
+
+### Fixed
+
+- `GET /api/v1/job-applications/analytics/stage-durations` returned 500 on every fresh
+  install. `statusChangedAt` is nullable and the seeded demo applications did not set it,
+  and the calculation dereferenced it without a guard.
+- A failed login cleared credentials and reloaded the page, destroying the error message
+  before it could render. The 401 interceptor no longer redirects for login and
+  registration, so the form shows the server's message.
+- Analytics panels kept pre-mutation values until the page was reloaded. Creating,
+  editing, or deleting an application now refreshes them.
+- The level and RTO dropdowns offered `INTERN`, `C_LEVEL` and `HYBRID_1`, which the
+  backend enums rejected, while `LEAD` and `MANAGER` were supported and unreachable. Both
+  sides now offer the same values.
+- "Interviewed" in Funnel Analytics was permanently zero, because the backend emitted a
+  single `APPLIED` conversion key and the frontend looked for the interview stages.
+- Quick wins and quick losses counted the same application twice when it was in
+  `OFFER_DECLINED` or `OFFER_RESCINDED`.
+- `JWT_EXPIRATION` was ignored under the `docker` profile, which hardcoded the value.
+- The MySQL init script was missing the `level` column, and the two checked-in schemas
+  disagreed on column widths and cascade behavior.
+- `PUT` could not clear an optional field, because null values were skipped rather than
+  applied. It now behaves as the full replacement its verb implies.
+- Editing an application whose notes or job description exceeded 500 characters could
+  fail the whole update, because the audit columns are 500 wide. Audit values are
+  truncated.
+- The `spring.jackson.*` properties had no effect, so timestamps serialized as
+  epoch-second decimals rather than ISO-8601 and unknown request fields were rejected.
+- A disabled account kept API access until its token expired.
+- Logging in restated the password policy to an unauthenticated caller and locked out any
+  account whose password predated the rule.
+- The dashboard replaced every API error with a fixed string, hiding per-field validation
+  messages.
+- The "Status Changed Date" field displayed and edited the record's last-modified
+  timestamp instead of the status-change timestamp.
+- Nothing validated that `salaryMin` was at most `salaryMax`.
+- The OpenAPI document advertised version 1.0 and an Apache 2.0 license. It now reports
+  the built version and MIT.
+- The two copies of status metadata had diverged in labels, colors, and group membership,
+  which made the "In Interviews" figure depend on which copy was consulted.
+- An expired token wrote an error line on every request from a stale session.
+- The Axios client ignored its own configured timeout, so requests to a stalled backend
+  hung indefinitely.
+- An authenticated request could be answered with 401. The JWT filter mutated the context
+  returned by `SecurityContextHolder.getContext()`, which Spring Security 6 resolves
+  lazily, so the authentication could be discarded before authorization read it. The
+  filter now publishes a fresh context. This reproduced only when the request was the
+  first one against a fresh application context.
+
+### Changed
+
+- The demo account is gated behind `app.demo-data.enabled`, which defaults to false. The
+  `docker` profile enables it so the quick start still works. It is no longer possible to
+  ship a known-credential account by accident.
+- Funnel stage conversion rates are derived from the status-change history, so an
+  application that passed several interview rounds before being rejected now contributes
+  to every stage it reached.
+- `docker-compose.yml` no longer pins `container_name`, so a second copy of the stack can
+  run alongside the first.
+- The audit trail renders readable field names instead of entity property names.
+
+### Removed
+
+- The refresh-token machinery, which had no route and no way to work in a stateless
+  design, along with the unrouted `logout` service method and the frontend call to the
+  logout endpoint that never existed.
+- `ApiConstants`, an unused `JpaSpecificationExecutor`, an unreferenced test
+  configuration, four frontend components that nothing rendered, and the per-load
+  analytics request whose result was discarded.
+
 ### Added
 
 - A full documentation set under `docs/`, covering a user guide and a developer and

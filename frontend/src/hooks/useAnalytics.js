@@ -110,7 +110,6 @@ import { analyticsAPI } from '../services/api';
  * @property {SalaryDistribution|null} salaryDistribution - Salary analytics
  * @property {ActivityHeatmap|null} activityHeatmap - Heatmap data
  * @property {TimePatterns|null} timePatterns - Day/hour distribution
- * @property {StageDurations|null} stageDurations - Stage duration analytics
  * @property {TransitionMatrix|null} transitionMatrix - Status transition matrix for heatmap
  * @property {FunnelAnalytics|null} funnelAnalytics - Funnel/conversion analytics
  * @property {HealthIndicators|null} healthIndicators - Application health indicators
@@ -146,7 +145,6 @@ export function useAnalytics(options = {}) {
   const [salaryDistribution, setSalaryDistribution] = useState(null);
   const [activityHeatmap, setActivityHeatmap] = useState(null);
   const [timePatterns, setTimePatterns] = useState(null);
-  const [stageDurations, setStageDurations] = useState(null);
   const [transitionMatrix, setTransitionMatrix] = useState(null);
   const [funnelAnalytics, setFunnelAnalytics] = useState(null);
   const [healthIndicators, setHealthIndicators] = useState(null);
@@ -191,11 +189,6 @@ export function useAnalytics(options = {}) {
         fetch: () => analyticsAPI.getTimePatterns(),
         setter: setTimePatterns,
         name: 'timePatterns',
-      },
-      {
-        fetch: () => analyticsAPI.getStageDurations(),
-        setter: setStageDurations,
-        name: 'stageDurations',
       },
       {
         fetch: () => analyticsAPI.getTransitionMatrix(),
@@ -272,7 +265,6 @@ export function useAnalytics(options = {}) {
     salaryDistribution,
     activityHeatmap,
     timePatterns,
-    stageDurations,
     transitionMatrix,
     funnelAnalytics,
     healthIndicators,

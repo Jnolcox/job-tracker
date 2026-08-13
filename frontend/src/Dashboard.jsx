@@ -52,6 +52,28 @@ import { DashboardSettingsModal } from "./components/settings";
  *
  * @returns {JSX.Element} JobTracker dashboard
  */
+/**
+ * Extracts the most specific message the API returned.
+ *
+ * The backend sends either a `message` or a per-field `errors` map, and replacing both
+ * with a fixed string hid precise validation feedback from the user. Declared at module
+ * scope because it closes over nothing, which keeps it out of hook dependency lists.
+ *
+ * @param {Error} err - the rejected Axios error
+ * @param {string} fallback - message to use when the response carries nothing usable
+ * @returns {string} the message to display
+ */
+function messageFrom(err, fallback) {
+  const data = err?.response?.data;
+  if (data?.errors && typeof data.errors === 'object') {
+    const fieldMessages = Object.values(data.errors).filter(Boolean);
+    if (fieldMessages.length > 0) {
+      return fieldMessages.join('. ');
+    }
+  }
+  return data?.message || fallback;
+}
+
 export default function JobTracker() {
   const { user, logout, isAuthenticated } = useAuth();
   const { toggleHelp } = useKeyboardShortcutContext();
@@ -98,6 +120,7 @@ export default function JobTracker() {
     locationInsights,
     positionInsights,
     loading: analyticsLoading,
+    refetch: refetchAnalytics,
   } = useAnalytics();
 
   // Sync selectedIndex when items change (clamp to valid range)
@@ -167,11 +190,26 @@ export default function JobTracker() {
   }, [selectedIndex, sortedItems]);
 
   // Handle Delete to delete selected
+  const handleDelete = useCallback(async (id) => {
+    if (!window.confirm("Are you sure you want to delete this application?")) {
+      return;
+    }
+    try {
+      setError(null);
+      await jobApplicationsAPI.delete(id);
+      setApps(prev => prev.filter(a => a.id !== id));
+      refetchAnalytics();
+    } catch (err) {
+      console.error("Failed to delete application:", err);
+      setError(messageFrom(err, "Failed to delete application. Please try again."));
+    }
+  }, [refetchAnalytics]);
+
   const handleDeleteSelected = useCallback(() => {
     if (selectedIndex >= 0 && selectedIndex < sortedItems.length) {
       handleDelete(sortedItems[selectedIndex].id);
     }
-  }, [selectedIndex, sortedItems]);
+  }, [selectedIndex, sortedItems, handleDelete]);
 
   // Global keyboard shortcuts (only active when modal is closed)
   useKeyboardShortcuts([
@@ -205,7 +243,7 @@ export default function JobTracker() {
       setApps(data.map(toUIFormat));
     } catch (err) {
       console.error("Failed to fetch applications:", err);
-      setError("Failed to load applications. Please try again.");
+      setError(messageFrom(err, "Failed to load applications. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -241,25 +279,12 @@ export default function JobTracker() {
         setApps(prev => [...prev, created]);
       }
       setEditing(null);
+      refetchAnalytics();
     } catch (err) {
       console.error("Failed to save application:", err);
-      setError("Failed to save application. Please try again.");
+      setError(messageFrom(err, "Failed to save application. Please try again."));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this application?")) {
-      return;
-    }
-    try {
-      setError(null);
-      await jobApplicationsAPI.delete(id);
-      setApps(prev => prev.filter(a => a.id !== id));
-    } catch (err) {
-      console.error("Failed to delete application:", err);
-      setError("Failed to delete application. Please try again.");
     }
   };
 

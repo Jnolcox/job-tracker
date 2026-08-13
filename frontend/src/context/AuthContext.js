@@ -70,11 +70,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    // Optional: call logout API endpoint
-    authAPI.logout().catch(() => {
-      // Ignore errors for logout endpoint
-    });
+
+    // No server call is made. Sessions are stateless JWTs and the backend exposes no
+    // logout route, so clearing local state is the whole of logging out.
   };
 
   const value = {

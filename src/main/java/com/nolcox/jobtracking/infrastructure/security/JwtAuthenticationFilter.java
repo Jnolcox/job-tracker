@@ -8,6 +8,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -32,12 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Skip authentication for public endpoints
-        if (request.getServletPath().contains("/api/auth")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         // Extract JWT token from Authorization header
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
@@ -60,8 +55,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Load user details
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                // Validate token
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                // Validate token. A disabled account keeps a valid signature until the
+                // token expires, so enabled state has to be rechecked on every request.
+                if (jwtService.isTokenValid(jwt, userDetails) && userDetails.isEnabled()) {
 
                     // Create authentication token
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -75,16 +71,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new WebAuthenticationDetailsSource().buildDetails(request)
                     );
 
-                    // Update SecurityContext
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Publish a fresh context rather than mutating the one the holder
+                    // hands back. Since Spring Security 6 the context is resolved lazily
+                    // by SecurityContextHolderFilter, so mutating the deferred instance
+                    // can be discarded before AuthorizationFilter reads it, which
+                    // presents as a 401 on a request that authenticated successfully.
+                    SecurityContext context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(authToken);
+                    SecurityContextHolder.setContext(context);
 
                     log.debug("User {} authenticated successfully", userEmail);
                 } else {
-                    log.warn("Invalid JWT token for user: {}", userEmail);
+                    log.debug("Rejected JWT for user {}: token invalid or account disabled", userEmail);
                 }
             }
         } catch (Exception e) {
-            log.error("Cannot set user authentication: {}", e.getMessage());
+            // An expired or malformed token is a routine condition on a public endpoint,
+            // not a server fault, so it must not write an error line per request.
+            log.debug("Could not authenticate request: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

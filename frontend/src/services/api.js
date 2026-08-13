@@ -7,6 +7,7 @@ const API_BASE_URL = '/api/v1';
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: API_CONFIG.REQUEST.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,14 +22,41 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Requests whose own 401 means "these credentials are wrong", not "your session ended".
+ * A 401 from one of these must reach the calling component so it can show the message,
+ * rather than triggering the session-expiry redirect below.
+ */
+const CREDENTIAL_ENDPOINTS = [
+  API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+  API_CONFIG.ENDPOINTS.AUTH.REGISTER,
+];
+
+/**
+ * True when the failed request was an attempt to authenticate.
+ *
+ * @param {Object|undefined} config - the Axios request config from the error
+ * @returns {boolean} whether this was a credential submission
+ */
+function isCredentialRequest(config) {
+  const url = config?.url ?? '';
+  return CREDENTIAL_ENDPOINTS.some((endpoint) => url.endsWith(endpoint));
+}
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
+    // A 401 anywhere else means the session is gone, so clear it and send the user to
+    // the login screen. Doing that for a failed login too would reload the page and
+    // destroy the error message the login form is about to render.
+    if (
+      error.response?.status === HTTP_STATUS.UNAUTHORIZED &&
+      !isCredentialRequest(error.config)
+    ) {
       localStorage.removeItem(AUTH.TOKEN_KEY);
       localStorage.removeItem(AUTH.USER_KEY);
-      window.location.href = '/login';
+      window.location.href = '/login?expired=1';
     }
     return Promise.reject(error);
   }
@@ -38,7 +66,6 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (userData) => api.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, userData),
   login: (credentials) => api.post(API_CONFIG.ENDPOINTS.AUTH.LOGIN, credentials),
-  logout: () => api.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT),
 };
 
 // Job Applications API

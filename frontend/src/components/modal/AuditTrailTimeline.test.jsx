@@ -207,7 +207,7 @@ describe('AuditTrailTimeline', () => {
       render(<AuditTrailTimeline events={events} loading={false} />);
 
       expect(
-        screen.getByText(/salaryMin updated from 100000 to 120000/)
+        screen.getByText(/Minimum salary updated from 100000 to 120000/)
       ).toBeInTheDocument();
     });
 
