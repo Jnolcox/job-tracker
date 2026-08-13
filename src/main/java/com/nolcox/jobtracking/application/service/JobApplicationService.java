@@ -118,4 +118,48 @@ public interface JobApplicationService {
      * @return List of recent applications
      */
     List<JobApplicationResponse> getUserApplications(Long userId, int limit);
+
+    // ==================== Bulk Delete Operations ====================
+
+    /**
+     * Deletes all job applications for a specific user.
+     *
+     * <p>This method performs a bulk deletion of all applications belonging to the user,
+     * including all associated events. Events are deleted first to maintain referential
+     * integrity due to the foreign key relationship.</p>
+     *
+     * <p>Use this method for complete data cleanup scenarios such as user account
+     * deletion or when a user wants to start fresh.</p>
+     *
+     * @param userId the ID of the user whose applications should be deleted
+     * @return the number of applications that were deleted
+     */
+    int deleteAllApplications(Long userId);
+
+    /**
+     * Deletes all non-active job applications for a specific user.
+     *
+     * <p>Non-active applications are those with status: REJECTED, WITHDRAWN, or GHOSTED.
+     * These represent closed-out applications that users may want to clean up to
+     * keep their dashboard focused on active opportunities.</p>
+     *
+     * <p>Associated events for the deleted applications are also removed to maintain
+     * data consistency.</p>
+     *
+     * @param userId the ID of the user whose non-active applications should be deleted
+     * @return the number of applications that were deleted
+     */
+    int deleteNonActiveApplications(Long userId);
+
+    /**
+     * Counts the number of non-active job applications for a specific user.
+     *
+     * <p>Non-active applications are those with status: REJECTED, WITHDRAWN, or GHOSTED.
+     * This method is useful for displaying cleanup suggestions to users or determining
+     * if the "clean up" feature should be shown in the UI.</p>
+     *
+     * @param userId the ID of the user whose non-active applications should be counted
+     * @return the count of non-active applications
+     */
+    long countNonActiveApplications(Long userId);
 }
