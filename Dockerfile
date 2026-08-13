@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -s /bin/bash appuser
 
-# Copy JAR from builder
-COPY --from=builder /app/target/jobtracking-1.0.0.jar app.jar
+# Copy JAR from builder. Matched by glob so the image build does not need
+# updating every time the project version changes in pom.xml.
+COPY --from=builder /app/target/jobtracking-*.jar app.jar
 
 # Change ownership
 RUN chown -R appuser:appgroup /app
