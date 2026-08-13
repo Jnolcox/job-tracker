@@ -188,10 +188,6 @@ export default function FunnelAnalytics({ data, loading = false }) {
     const terminalCount = ghostedCount + rejectedCount + withdrawnCount;
     // Include successful applications (offers accepted)
     const successfulCount = Math.round((data.overallSuccessRate / 100) * total);
-    const activeCount = Math.max(
-      0,
-      total - terminalCount - successfulCount - (interviewedCount > 0 ? 0 : 0)
-    );
 
     // Ensure we don't double count - active should be applications still in progress
     const calculatedActive = total - terminalCount - successfulCount;

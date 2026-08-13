@@ -10,21 +10,6 @@ import { STATUS_LABELS } from '../../utils/dataAdapter';
 import ChartContainer from './ChartContainer';
 
 /**
- * Format relative time (e.g., "5d ago", "2 weeks ago").
- *
- * @param {number} days - Number of days
- * @returns {string} Formatted relative time
- */
-function formatDaysAgo(days) {
-  if (days === 0) return 'today';
-  if (days === 1) return '1d';
-  if (days < 7) return `${days}d`;
-  if (days < 14) return '1w';
-  if (days < 30) return `${Math.floor(days / 7)}w`;
-  return `${Math.floor(days / 30)}mo`;
-}
-
-/**
  * Get urgency color based on days stale.
  *
  * @param {number} days - Days since last event
