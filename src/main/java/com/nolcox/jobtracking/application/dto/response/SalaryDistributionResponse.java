@@ -16,7 +16,7 @@ import java.util.List;
  * @param avgMid the average midpoint salary ((avgMin + avgMax) / 2)
  * @param activeAppsWithSalary count of active applications that have salary data
  * @param entries individual per-application salary entries, sorted by midpoint descending,
- *                capped at 15 — used to render the dumbbell scatter plot
+ *                capped at 15, used to render the dumbbell scatter plot
  */
 public record SalaryDistributionResponse(
         Double globalMin,
@@ -31,8 +31,8 @@ public record SalaryDistributionResponse(
      * Per-application salary data for chart rendering.
      *
      * @param company   company name (may be truncated for display)
-     * @param salaryMin minimum salary — nullable if only max was provided
-     * @param salaryMax maximum salary — nullable if only min was provided
+     * @param salaryMin minimum salary, nullable if only max was provided
+     * @param salaryMax maximum salary, nullable if only min was provided
      */
     public record ApplicationSalaryEntry(
             String company,
