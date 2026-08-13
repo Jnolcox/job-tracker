@@ -99,7 +99,7 @@ Dependencies point inward toward `domain`:
 - `application.controller` depends on `application.service` (interfaces only), on
   `application.dto`, and on `domain.entity` for enum path and query parameters. It also
   casts the authenticated principal to the `User` entity
-  (`application/controller/JobApplicationController.java:449-452`).
+  (`application/controller/JobApplicationController.java:516-519`).
 - `application.service.impl` depends on `domain.repository`, `domain.entity`,
   `application.dto` and `shared.exception`.
 - `domain.repository` depends on `domain.entity`.
@@ -213,16 +213,16 @@ The corresponding source locations, step by step:
    `infrastructure/security/JwtAuthenticationEntryPoint.java:32-42`).
 5. `DispatcherServlet` resolves
    `JobApplicationController.updateApplication`
-   (`application/controller/JobApplicationController.java:110-120`).
+   (`application/controller/JobApplicationController.java:114-124`).
 6. The body is deserialized by the `@Primary` `ObjectMapper` from `DatabaseConfig`
    (`config/DatabaseConfig.java:14-37`) and validated against the record's Bean
    Validation constraints (`application/dto/request/JobApplicationUpdateRequest.java:14-62`).
    A violation throws `MethodArgumentNotValidException` and jumps to step 11.
 7. `getUserIdFromAuthentication` casts the principal to the `User` entity and reads its
-   id (`application/controller/JobApplicationController.java:449-452`).
+   id (`application/controller/JobApplicationController.java:516-519`).
 8. `JobApplicationServiceImpl.updateApplication` opens a read-write transaction that
    overrides the class-level `readOnly = true`
-   (`application/service/impl/JobApplicationServiceImpl.java:161-162`). Inside it:
+   (`application/service/impl/JobApplicationServiceImpl.java:174-175`). Inside it:
    `findById` or `ResourceNotFoundException`; `assertUserOwnsApplication` or
    `UnauthorizedException` (`:348-352`); a manual `captureApplicationState` snapshot
    (`:226`); `ModelMapper` copies non-null request fields onto the managed entity
@@ -232,16 +232,16 @@ The corresponding source locations, step by step:
    increments `@Version version` (`domain/entity/JobApplication.java:95-103`).
 10. `ApplicationEventServiceImpl.compareAndLogChanges` joins the same transaction and
     inserts one `ApplicationEvent` per detected difference
-    (`application/service/impl/JobApplicationServiceImpl.java:203-206`). The call is
+    (`application/service/impl/JobApplicationServiceImpl.java:216-219`). The call is
     guarded by a null check because the event service is optional (see section 5).
 11. Any exception thrown from steps 6 through 10 is translated by
     `GlobalExceptionHandler` (`application/controller/GlobalExceptionHandler.java:24`,
     `:36`, `:54`, `:76`, `:98`, `:110`).
 
 The create path is identical through step 7, then diverges into
-`createApplication` (`application/service/impl/JobApplicationServiceImpl.java:105-127`),
+`createApplication` (`application/service/impl/JobApplicationServiceImpl.java:118-140`),
 which logs an `APPLICATION_CREATED` event and returns 201 with a `Location` header
-(`application/controller/JobApplicationController.java:90-108`).
+(`application/controller/JobApplicationController.java:94-112`).
 
 ---
 
@@ -260,7 +260,7 @@ security is enabled and unused.
 it: they are answered directly by `JwtAuthenticationEntryPoint`
 (`infrastructure/security/JwtAuthenticationEntryPoint.java:26-42`). Message strings are
 centralized in `shared/exception/ErrorMessages.java`, though three call sites bypass it
-with string literals (`application/service/impl/JobApplicationServiceImpl.java:110`,
+with string literals (`application/service/impl/JobApplicationServiceImpl.java:123`,
 `:350`, `application/service/impl/ApplicationEventServiceImpl.java:371`). Status codes
 and body shapes are documented on [the API reference page](./03-api-reference.md).
 
@@ -285,7 +285,7 @@ is used by the HTTP message converter and injected into
 > `src/test`. All three controllers hardcode the version segment
 > (`application/controller/AuthController.java:19`,
 > `application/controller/ConfigController.java:25`,
-> `application/controller/JobApplicationController.java:53`), and so do the security
+> `application/controller/JobApplicationController.java:54`), and so do the security
 > matchers (`config/SecurityConfig.java:64-66`).
 
 **Auditing.** Enabled once, by `@EnableJpaAuditing` on the entry point
@@ -337,11 +337,11 @@ What it costs:
 - Deletion is also enforced in code, because the persistence context needs it.
   `deleteApplication` explicitly calls `eventRepository.deleteByApplicationId(id)` before
   deleting the application, with a comment explaining why
-  (`application/service/impl/JobApplicationServiceImpl.java:262-267`).
+  (`application/service/impl/JobApplicationServiceImpl.java:275-280`).
 - One justification elsewhere in the codebase is now stale. `captureApplicationState`
   copies 21 fields by hand instead of using ModelMapper, and its comments cite a
   "circular reference" risk from the bidirectional `User` relationship that no longer
-  exists (`application/service/impl/JobApplicationServiceImpl.java:217-219`, `:227-228`).
+  exists (`application/service/impl/JobApplicationServiceImpl.java:230-232`, `:227-228`).
 
 ### A hand-built `@Primary` ObjectMapper
 
@@ -380,7 +380,7 @@ secret's length silently changes the algorithm. Details are on
 `JobApplicationServiceImpl` takes its four core dependencies through
 `@RequiredArgsConstructor`, but receives `ApplicationEventService` through
 `@Autowired(required = false)` setter injection
-(`application/service/impl/JobApplicationServiceImpl.java:60`, `:70-71`). The stated
+(`application/service/impl/JobApplicationServiceImpl.java:73`, `:70-71`). The stated
 reason is to let the service run in tests without event logging.
 
 What it costs: every write path must null-check before logging

@@ -21,18 +21,18 @@ Job Tracker has two independent test suites that never talk to each other: a Mav
 
 ## 1. The two suites at a glance
 
-Both suites were executed against this commit to produce the numbers in Table 1. The backend numbers come from the surefire summary line printed by `mvn --batch-mode verify` (`Tests run: 237, Failures: 0, Errors: 0, Skipped: 0`). The frontend numbers come from the Jest summary printed by `CI=true npx react-scripts test --watchAll=false` (`Test Suites: 28 passed, 28 total` and `Tests: 2 skipped, 603 passed, 605 total`). These are collected counts from a real run, not counts of `@Test` annotations or `it(` calls.
+Both suites were executed against this commit to produce the numbers in Table 1. The backend numbers come from the surefire summary line printed by `mvn --batch-mode verify` (`Tests run: 278, Failures: 0, Errors: 0, Skipped: 0`). The frontend numbers come from the Jest summary printed by `CI=true npx react-scripts test --watchAll=false` (`Test Suites: 26 passed, 26 total` and `Tests: 2 skipped, 600 passed, 602 total`). These are collected counts from a real run, not counts of `@Test` annotations or `it(` calls.
 
 **Table 1.** *The two suites, their runners, and the counts each one reports on a full run.*
 
 | # | Suite | Runner | Command CI runs | Suites | Tests | Passed | Skipped |
 | - | ----- | ------ | --------------- | ------ | ----- | ------ | ------- |
-| 1 | Backend | JUnit 5 on maven-surefire-plugin 3.5.3, inherited from `spring-boot-starter-parent` 3.4.5 | `mvn --batch-mode verify` | 15 classes | 237 | 237 | 0 |
-| 2 | Frontend | Jest 27.5.1, bundled with react-scripts 5.0.1 | `npm test -- --watchAll=false` with `CI=true` | 28 | 605 | 603 | 2 |
+| 1 | Backend | JUnit 5 on maven-surefire-plugin 3.5.3, inherited from `spring-boot-starter-parent` 3.4.5 | `mvn --batch-mode verify` | 17 classes | 278 | 278 | 0 |
+| 2 | Frontend | Jest 27.5.1, bundled with react-scripts 5.0.1 | `npm test -- --watchAll=false` with `CI=true` | 26 | 602 | 600 | 2 |
 
-Two facts about the backend count are worth stating up front. First, `src/test/java` declares 261 `@Test` methods, not 237: three integration classes are never collected, for the reason given in section 2. Second, the backend has no skipped tests at all. There is no `@Disabled`, no `@Ignore`, and no `Assumptions.assumeTrue` anywhere under `src/test`, and there are no `@ParameterizedTest` or `@RepeatedTest` methods either.
+Two facts about the backend count are worth stating up front. First, `src/test/java` declares 303 `@Test` methods, not 278: three integration classes are never collected, for the reason given in section 2. Second, the backend has no skipped tests at all. There is no `@Disabled`, no `@Ignore`, and no `Assumptions.assumeTrue` anywhere under `src/test`, and there are no `@ParameterizedTest` or `@RepeatedTest` methods either.
 
-The frontend's 605 is larger than the number of literal `it(` and `test(` calls in the tree, because eight `it.each` tables expand to more than one test each.
+The frontend's 602 is larger than the number of literal `it(` and `test(` calls in the tree, because eight `it.each` tables expand to more than one test each.
 
 ---
 
@@ -383,12 +383,12 @@ The two jobs, `backend` and `frontend`, both run on `ubuntu-latest` with no `nee
 | - | --- | ---- | -------- | ------------ |
 | 1 | backend | `actions/checkout@v5` | 14 | Checkout |
 | 2 | backend | `actions/setup-java@v5` | 16-21 | JDK 17, Temurin, `cache: maven` |
-| 3 | backend | `mvn --batch-mode verify` | 25-26 | Compiles, runs 237 tests, writes the JaCoCo report at the `test` phase, enforces the gate at the `verify` phase, packages the jar |
+| 3 | backend | `mvn --batch-mode verify` | 25-26 | Compiles, runs 278 tests, writes the JaCoCo report at the `test` phase, enforces the gate at the `verify` phase, packages the jar |
 | 4 | backend | `actions/upload-artifact@v5` | 28-34 | Uploads `target/site/jacoco/` as `jacoco-report`, with `if: always()` and `if-no-files-found: warn` |
 | 5 | frontend | `actions/checkout@v5` | 43 | Checkout |
 | 6 | frontend | `actions/setup-node@v5` | 45-50 | Node 22, `cache: npm`, keyed on `frontend/package-lock.json` |
 | 7 | frontend | `npm ci` | 52-53 | Clean install from the lockfile |
-| 8 | frontend | `npm test -- --watchAll=false` with `env: CI: true` | 55-58 | Runs all 28 Jest suites |
+| 8 | frontend | `npm test -- --watchAll=false` with `env: CI: true` | 55-58 | Runs all 26 Jest suites |
 | 9 | frontend | `npm run build` | 60-61 | `react-scripts build` |
 
 Every `run:` step in the frontend job inherits `working-directory: frontend` from `ci.yml:39-41`.

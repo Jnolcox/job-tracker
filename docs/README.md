@@ -34,7 +34,7 @@ have read a developer page, and no page assumes you have read a later one.
 | 2 | [Dashboard and navigation](./user-guide/02-dashboard-and-navigation.md) | Learn the header, the stat cards, the charts, and the applications table |
 | 3 | [Tracking applications](./user-guide/03-tracking-applications.md) | The form, the eighteen statuses, the journey history, search and filters |
 | 4 | [Analytics and insights](./user-guide/04-analytics-and-insights.md) | What each number means, and what it deliberately does not tell you |
-| 5 | [Settings and shortcuts](./user-guide/05-settings-and-shortcuts.md) | Turn views on and off, and learn the keyboard reference |
+| 5 | [Settings and shortcuts](./user-guide/05-settings-and-shortcuts.md) | Turn views on and off, delete applications in bulk, and learn the keyboard reference |
 | 6 | [Troubleshooting](./user-guide/06-troubleshooting.md) | Read it when something breaks, not before |
 
 **Table 2.** *Reading path: running Job Tracker.*
@@ -79,7 +79,7 @@ describe the interface as a user sees it and cite no file paths.
 | [02. Dashboard and navigation](./user-guide/02-dashboard-and-navigation.md) | What is on the dashboard, what do the stat cards and charts show, which views are switched off by default, and how do I move around without the mouse? |
 | [03. Tracking applications](./user-guide/03-tracking-applications.md) | How do I add an application, what do the eighteen statuses mean, how do I move one through the pipeline, and how do I find it again? |
 | [04. Analytics and insights](./user-guide/04-analytics-and-insights.md) | What question does each number answer, why do two views sometimes disagree, and how much history does each one need before it means anything? |
-| [05. Settings and shortcuts](./user-guide/05-settings-and-shortcuts.md) | What can I switch on and off, where are my preferences stored, and which keyboard shortcuts really exist? |
+| [05. Settings and shortcuts](./user-guide/05-settings-and-shortcuts.md) | What can I switch on and off, where are my preferences stored, how do I clear out old applications, and which keyboard shortcuts really exist? |
 | [06. Troubleshooting](./user-guide/06-troubleshooting.md) | Why can I not sign in, why is a dashboard panel empty or wrong, and why will the Compose stack not start? |
 
 ---

@@ -88,7 +88,7 @@ are kept as a record, not as a list of things to investigate.
 > **Status: not wired.** `ConfigController`
 > (`src/main/java/com/nolcox/jobtracking/application/controller/ConfigController.java:25`)
 > serves status and option metadata over `/v1/config`, and nothing in the interface calls
-> it. `configAPI` (`frontend/src/services/api.js:180`) is used only by `ConfigContext`
+> it. `configAPI` (`frontend/src/services/api.js:238`) is used only by `ConfigContext`
 > (`frontend/src/context/ConfigContext.js:84-85`), and `ConfigProvider` is never mounted:
 > `App.js` wraps the tree in `AuthProvider` and `KeyboardShortcutProvider` only. The
 > endpoints remain part of the documented API surface, so they are kept rather than
@@ -101,8 +101,9 @@ are kept as a record, not as a list of things to investigate.
 `JobApplicationServiceImpl` implements `getApplicationStatistics`,
 `getApplicationsByStatus`, `searchApplications`, `updateApplicationStatus`, and the
 two-argument `getUserApplications`. `JobApplicationController` calls only the four-argument
-`getUserApplications`, `getApplication`, `createApplication`, `updateApplication`, and
-`deleteApplication`.
+`getUserApplications`, `getApplication`, `createApplication`, `updateApplication`,
+`deleteApplication`, and the three bulk methods `deleteAllApplications`,
+`deleteNonActiveApplications` and `countNonActiveApplications`.
 
 Worth knowing before you go looking for it: `updateApplicationStatus` is the only path that
 emits a standalone `STATUS_CHANGED` event, and it is unreachable. Several repository query

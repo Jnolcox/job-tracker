@@ -245,11 +245,11 @@ private Long getUserIdFromAuthentication(Authentication authentication) {
 }
 ```
 
-That is `src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:449-452`, and every endpoint on that controller calls it. The principal is the entity that `JwtAuthenticationFilter.java:61` loaded from the database using the token's subject. The `userId` claim inside the token is never read for authorization: `JwtService.extractUserId` (`JwtService.java:33-36`) has no production caller. A forged `userId` claim, which would require the signing key in any case, could not select another user's rows.
+That is `src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:516-519`, and every endpoint on that controller calls it. The principal is the entity that `JwtAuthenticationFilter.java:61` loaded from the database using the token's subject. The `userId` claim inside the token is never read for authorization: `JwtService.extractUserId` (`JwtService.java:33-36`) has no production caller. A forged `userId` claim, which would require the signing key in any case, could not select another user's rows.
 
 Two enforcement patterns are in use.
 
-**Queries scoped in SQL.** All list, count, and analytics endpoints go through repository methods that filter on the user id, for example `findByUserIdWithFilters` and `findAllByUserId` (`domain/repository/JobApplicationRepository.java`), and the event queries join through to the owner with `WHERE e.application.user.id = :userId` (`domain/repository/ApplicationEventRepository.java:121-122`). No endpoint accepts a `userId` parameter from the request.
+**Queries scoped in SQL.** All list, count, and analytics endpoints go through repository methods that filter on the user id, for example `findByUserIdWithFilters` and `findAllByUserId` (`domain/repository/JobApplicationRepository.java`), and the event queries join through to the owner with `WHERE e.application.user.id = :userId` (`domain/repository/ApplicationEventRepository.java:123-124`). No endpoint accepts a `userId` parameter from the request.
 
 **Load then assert.** Endpoints that take a path id load the row by id and then check ownership:
 
@@ -261,7 +261,7 @@ private void assertUserOwnsApplication(JobApplication application, Long userId) 
 }
 ```
 
-The method exists twice, verbatim, at `application/service/impl/JobApplicationServiceImpl.java:348-352` and `application/service/impl/ApplicationEventServiceImpl.java:369-373`. It is called from `getApplication` (`JobApplicationServiceImpl.java:93`), `updateApplication` (`:168`), `deleteApplication` (`:260`), `updateApplicationStatus` (`:310`), and `getEventsForApplication` (`ApplicationEventServiceImpl.java:222`). Both copies use the string literal `"Access denied"` while `ErrorMessages.ACCESS_DENIED` exists (`shared/exception/ErrorMessages.java:38`) and is never referenced.
+The method exists twice, verbatim, at `application/service/impl/JobApplicationServiceImpl.java:411-415` and `application/service/impl/ApplicationEventServiceImpl.java:369-373`. It is called from `getApplication` (`JobApplicationServiceImpl.java:106`), `updateApplication` (`:168`), `deleteApplication` (`:260`), `updateApplicationStatus` (`:310`), and `getEventsForApplication` (`ApplicationEventServiceImpl.java:222`). Both copies use the string literal `"Access denied"` while `ErrorMessages.ACCESS_DENIED` exists (`shared/exception/ErrorMessages.java:38`) and is never referenced.
 
 Nothing enforces the pattern structurally. There is no `@PostAuthorize`, no Hibernate filter, and no row-level security in the database. A new service that forgets to copy the check is a new insecure direct object reference, and the duplication makes that easy to do.
 
@@ -291,7 +291,7 @@ These are real, present in the code as written, and each one is cited. They are 
 
 **Swagger UI is public on every profile.** `SecurityConfig.java:67` exempts `/api-docs` and `/swagger-ui.html` unconditionally, and springdoc is configured under both runnable profiles (`application.yml:39-43`, `application-docker.yml:44-48`). Any deployment publishes its full API surface without authentication.
 
-**No pagination cap.** `Pageable` is bound straight from the request (`JobApplicationController.java:67`) with no `@PageableDefault` and no `spring.data.web.pageable.max-page-size` in any YAML, so only Spring Boot's own default cap applies. The frontend's `MAX_SIZE: 100` (`frontend/src/constants/api.js:41`) is a client-side constant that the backend does not know about.
+**No pagination cap.** `Pageable` is bound straight from the request (`JobApplicationController.java:71`) with no `@PageableDefault` and no `spring.data.web.pageable.max-page-size` in any YAML, so only Spring Boot's own default cap applies. The frontend's `MAX_SIZE: 100` (`frontend/src/constants/api.js:41`) is a client-side constant that the backend does not know about.
 
 **The `User` entity's generated `toString()` includes the password hash.** `@Data` on `User` (`domain/entity/User.java:21`) covers every field, including `password` (`:35-36`), with no `@ToString.Exclude`. Nothing in `src/main` currently logs the whole entity, but any future `log.info("{}", user)` would print the hash.
 

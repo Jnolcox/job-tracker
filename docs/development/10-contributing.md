@@ -334,10 +334,10 @@ only classes that touch repositories. Keep it that way.
 
 **Constructor injection with Lombok.** Twelve classes across the controllers, service
 implementations, security components and config use `@RequiredArgsConstructor` over `final`
-fields, for example `JobApplicationController` (`src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:54,58-60`).
+fields, for example `JobApplicationController` (`src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:55,62-64`).
 Do not introduce field injection. There is exactly one deliberate exception, a setter
 injected optional dependency at
-`src/main/java/com/nolcox/jobtracking/application/service/impl/JobApplicationServiceImpl.java:70`,
+`src/main/java/com/nolcox/jobtracking/application/service/impl/JobApplicationServiceImpl.java:83`,
 where `@Autowired(required = false)` makes the audit event service optional so the service
 can run without event logging. Its Javadoc explains why. Treat that as a documented
 one-off, not a pattern to copy.

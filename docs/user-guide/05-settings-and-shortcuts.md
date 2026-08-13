@@ -1,8 +1,8 @@
 # Settings and shortcuts
 
-> **Audience:** People using Job Tracker day to day.  ·  **Scope:** The dashboard Settings dialog, where your preferences are stored, and the complete keyboard reference including the places where the in-app help list is wrong.
+> **Audience:** People using Job Tracker day to day.  ·  **Scope:** The dashboard Settings dialog, where your preferences are stored, the bulk delete actions, and the complete keyboard reference including the places where the in-app help list is wrong.
 
-Job Tracker has one settings dialog and no settings page. It controls which parts of the dashboard are visible and nothing else. The second half of this page is the keyboard reference, taken from what the application actually responds to rather than from the list it shows you when you press `?`.
+Job Tracker has one settings dialog and no settings page. It controls which parts of the dashboard are visible, and it holds the Danger Zone, the only place you can delete many applications at once. The last part of this page is the keyboard reference, taken from what the application actually responds to rather than from the list it shows you when you press `?`.
 
 ## Contents
 
@@ -10,8 +10,9 @@ Job Tracker has one settings dialog and no settings page. It controls which part
 - [2. What each switch controls](#2-what-each-switch-controls)
 - [3. Where your preferences are stored](#3-where-your-preferences-are-stored)
 - [4. Resetting](#4-resetting)
-- [5. The keyboard reference](#5-the-keyboard-reference)
-- [6. Where the in-app help disagrees with reality](#6-where-the-in-app-help-disagrees-with-reality)
+- [5. Deleting applications in bulk](#5-deleting-applications-in-bulk)
+- [6. The keyboard reference](#6-the-keyboard-reference)
+- [7. Where the in-app help disagrees with reality](#7-where-the-in-app-help-disagrees-with-reality)
 - [See also](#see-also)
 
 ---
@@ -22,6 +23,8 @@ Click **Settings** at the top right of the dashboard. A dialog headed "Dashboard
 
 - **Statistics**, containing a single switch, Stat Cards, described as "Controls all statistics cards at the top". It shows and hides all ten cards together. There is no way to hide one card.
 - **Charts & Analytics**, containing one switch per chart.
+
+Below the switches is a third section, **Danger Zone**, which is not about visibility at all: it deletes applications permanently. [Section 5](#5-deleting-applications-in-bulk) covers it.
 
 Toggling a switch takes effect immediately behind the dialog. Close it by clicking the `x`, or by clicking the dark area outside it. Escape does not close this dialog.
 
@@ -86,9 +89,43 @@ If the dialog itself will not open, or the dashboard looks broken in a way the s
 
 ---
 
-## 5. The keyboard reference
+## 5. Deleting applications in bulk
 
-Table 2 is the definitive list. It reflects what the application responds to, which is not identical to the list shown by the in-app help; [section 6](#6-where-the-in-app-help-disagrees-with-reality) covers the differences.
+At the bottom of the Settings dialog, below the switches, is a section headed **Danger Zone** in red. It holds the only two ways to delete more than one application at a time.
+
+| Button | What it deletes |
+| ------ | --------------- |
+| **Delete _n_** | Your rejected, withdrawn and ghosted applications. The number on the button is how many that is right now. |
+| **Delete All** | Every application in your account. |
+
+A button is greyed out when it would delete nothing, so **Delete All** is unavailable on an empty account and **Delete 0** when you have no closed-out applications.
+
+### The confirmation
+
+Neither button deletes anything on its own. Each opens a confirmation asking you to type a phrase exactly before its red button becomes active:
+
+- **Delete All** asks you to type `DELETE ALL`
+- **Delete _n_** asks you to type `DELETE`
+
+The phrases are deliberately different so that clearing out old rejections cannot turn into wiping the account by reflex. Typing is case-sensitive: `delete all` will not do. If you change your mind, **Cancel** or click outside the confirmation; whatever you typed is discarded, and reopening it starts blank.
+
+### What "non-active" means
+
+**Delete _n_** removes applications in exactly three statuses: **Rejected**, **Withdrawn** and **Ghosted**.
+
+It is worth being clear about what it leaves alone, because "finished" is not the same as "non-active" here. **Offer Declined** and **Offer Accepted** are also outcomes you can no longer act on, but they are **not** deleted. Neither is **On Hold** or **Waiting for Response**. If you want those gone, delete them individually from the table.
+
+### This cannot be undone
+
+Both actions are permanent. There is no trash, no undo, and no export step beforehand. Deleting an application also deletes its history, so the record of when it moved between stages goes with it, and your analytics change accordingly: charts recalculate from what remains, and figures like response rate will move.
+
+If you want a record before clearing anything out, copy what you need from the table first. The application has no export feature.
+
+---
+
+## 6. The keyboard reference
+
+Table 2 is the definitive list. It reflects what the application responds to, which is not identical to the list shown by the in-app help; [section 7](#7-where-the-in-app-help-disagrees-with-reality) covers the differences.
 
 Nothing in the table works on the landing, login or registration pages. Every shortcut belongs to the dashboard.
 
@@ -127,7 +164,7 @@ While you are typing in a text box, a number box, a dropdown or a text area, the
 
 ---
 
-## 6. Where the in-app help disagrees with reality
+## 7. Where the in-app help disagrees with reality
 
 The list you get from pressing `?` is written by hand and is not derived from the shortcuts the application registers. It has drifted. Four differences will catch you out.
 

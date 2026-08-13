@@ -172,7 +172,7 @@ Three hooks live in `frontend/src/hooks`. The barrel (`frontend/src/hooks/index.
 
 **`useKeyboardShortcuts`** matches an event against the `shortcuts` array in array order, comparing `event.key` with an exact case-sensitive string equality (`:98`). If a shortcut declares `meta`, `ctrl`, or `cmdOrCtrl`, the modifiers must match (`:101-102`, helpers at `:65-67,75-86`). If it declares no modifier, no modifier check runs at all: the `else` branch is a comment with no code (`:103-107`). When the event target is an input, textarea, select, or contenteditable element, the shortcut is skipped unless its key is `Escape` or it requires a modifier (`:113-120`). Only the first match fires, because the loop `break`s after calling the handler (`:128-129`).
 
-**`useAnalytics`** issues twelve requests and settles them independently, so a single failing endpoint sets only its own slice to `null`. The top-level `error` is populated only when all twelve fail. `refetch` exists but the dashboard does not destructure it (`frontend/src/Dashboard.jsx:88-101`), so analytics are not refreshed after a create, update, or delete. The dashboard also drops `error` and `stageDurations` from the same destructure.
+**`useAnalytics`** issues twelve requests and settles them independently, so a single failing endpoint sets only its own slice to `null`. The top-level `error` is populated only when all twelve fail. `refetch` exists but the dashboard does not destructure it (`frontend/src/Dashboard.jsx:114-128`), so analytics are not refreshed after a create, update, or delete. The dashboard also drops `error` and `stageDurations` from the same destructure.
 
 **`useDashboardSettings`** loads from localStorage by spreading the stored map over the defaults (`:98`), so a component added in a later release picks up its default rather than being treated as hidden. A parse failure logs a warning and falls back to the defaults (`:99-103`). `areAllHidden` is returned but nothing in the application consumes it.
 
@@ -212,7 +212,7 @@ Keys are declared at `frontend/src/hooks/useDashboardSettings.js:21-35`, display
 
 Three views default to hidden: the status transition heatmap, funnel analytics, and the application health dashboard. The reason is written into the code as a comment at `frontend/src/hooks/useDashboardSettings.js:59-65`: the advanced views are opt-in so that a first-run dashboard stays readable, because they only become meaningful once a user has accumulated enough applications to show a trend. On a fresh account those three panels would render empty or near-empty grids, which is why they are off until the user turns them on in the settings modal.
 
-The applications table is deliberately not toggleable. It has no key in `DASHBOARD_COMPONENTS`, it is rendered unconditionally (`frontend/src/Dashboard.jsx:596-605`), and the settings modal states this in its footer.
+The applications table is deliberately not toggleable. It has no key in `DASHBOARD_COMPONENTS`, it is rendered unconditionally (`frontend/src/Dashboard.jsx:682-691`), and the settings modal states this in its footer.
 
 ### Render order
 
@@ -220,20 +220,36 @@ The applications table is deliberately not toggleable. It has no key in `DASHBOA
 
 | # | Section | Gate | Source |
 | - | ------- | ---- | ------ |
-| 1 | Header and error banner | always rendered | `frontend/src/Dashboard.jsx:314-407` |
-| 2 | Stat cards | `statCards` | `frontend/src/Dashboard.jsx:410` |
-| 3 | `StageFunnel`, `SalaryRangeChart`, `MaxTimePerStageChart` | OR of the three keys | `frontend/src/Dashboard.jsx:475,477,484,491` |
-| 4 | `CompanyInsights`, `LocationInsights`, `PositionInsights` | OR of the three keys | `frontend/src/Dashboard.jsx:498,500,507,514` |
-| 5 | `StatusTransitionHeatmap`, `FunnelAnalytics`, `ApplicationHealthDashboard` | OR of the three keys | `frontend/src/Dashboard.jsx:525,527,534,541` |
-| 6 | `DayOfWeekBar`, `HourBar` | OR of the two keys | `frontend/src/Dashboard.jsx:552,554,561` |
-| 7 | `ActivityHeatmap` | `activityHeatmap` | `frontend/src/Dashboard.jsx:572` |
-| 8 | `AppTable` | never gated | `frontend/src/Dashboard.jsx:596-605` |
-| 9 | Keyboard shortcut hint | always rendered | `frontend/src/Dashboard.jsx:607-616` |
-| 10 | `ApplicationModal` | `editing` is truthy | `frontend/src/Dashboard.jsx:619-627` |
-| 11 | `ApplicationViewModal` | `viewing` is truthy | `frontend/src/Dashboard.jsx:629-635` |
-| 12 | `DashboardSettingsModal` | always mounted, self-gates on `isOpen` | `frontend/src/Dashboard.jsx:637-644` |
+| 1 | Header and error banner | always rendered | `frontend/src/Dashboard.jsx:388-493` |
+| 2 | Stat cards | `statCards` | `frontend/src/Dashboard.jsx:496` |
+| 3 | `StageFunnel`, `SalaryRangeChart`, `MaxTimePerStageChart` | OR of the three keys | `frontend/src/Dashboard.jsx:561,563,570,577` |
+| 4 | `CompanyInsights`, `LocationInsights`, `PositionInsights` | OR of the three keys | `frontend/src/Dashboard.jsx:584,586,593,600` |
+| 5 | `StatusTransitionHeatmap`, `FunnelAnalytics`, `ApplicationHealthDashboard` | OR of the three keys | `frontend/src/Dashboard.jsx:611,613,620,627` |
+| 6 | `DayOfWeekBar`, `HourBar` | OR of the two keys | `frontend/src/Dashboard.jsx:638,640,647` |
+| 7 | `ActivityHeatmap` | `activityHeatmap` | `frontend/src/Dashboard.jsx:658` |
+| 8 | `AppTable` | never gated | `frontend/src/Dashboard.jsx:682-691` |
+| 9 | Keyboard shortcut hint | always rendered | `frontend/src/Dashboard.jsx:693-702` |
+| 10 | `ApplicationModal` | `editing` is truthy | `frontend/src/Dashboard.jsx:705-713` |
+| 11 | `ApplicationViewModal` | `viewing` is truthy | `frontend/src/Dashboard.jsx:715-721` |
+| 12 | `DashboardSettingsModal` | always mounted, self-gates on `isOpen` | `frontend/src/Dashboard.jsx:723-736` |
 
-The settings modal lists chart toggles in `Object.values(DASHBOARD_COMPONENTS)` order (`frontend/src/components/settings/DashboardSettingsModal.jsx:154-156`), which places the day-of-week and hour charts before the insights row. The dashboard renders the insights row first (Table 6, rows 4 and 6). The two orders do not match.
+The settings modal lists chart toggles in `Object.values(DASHBOARD_COMPONENTS)` order (`frontend/src/components/settings/DashboardSettingsModal.jsx:259-261`), which places the day-of-week and hour charts before the insights row. The dashboard renders the insights row first (Table 6, rows 4 and 6). The two orders do not match.
+
+### Danger Zone
+
+Below the toggles, the settings modal renders a Danger Zone with the two bulk deletes (`DashboardSettingsModal.jsx:400-436`). Each row is disabled when it would delete nothing: the non-active row when `nonActiveCount` is `0`, the delete-all row when `totalApps` is `0`.
+
+Clicking either row opens a `ConfirmDeleteModal` rather than deleting immediately. The confirm phrase differs by severity, `DELETE ALL` for everything and `DELETE` for the non-active subset, so muscle memory from one cannot fire the other.
+
+Three details in this interaction are easy to get wrong and are worth naming:
+
+- **The confirmations are nested inside the settings backdrop**, which closes the settings modal on click. Without intervention every click inside a confirmation would bubble up and dismiss the modal underneath it. A wrapper stops propagation (`DashboardSettingsModal.jsx:486-490`).
+- **Failure keeps the confirmation open.** `confirmDeletion` closes the dialog only when the handler resolves (`DashboardSettingsModal.jsx:247-256`); a rejected handler leaves it open so the error stays on screen. This is why `Dashboard.jsx` re-throws after setting `deleteError` (`:246`, `:263`).
+- **The typed phrase resets on close**, via an effect keyed on `isOpen` (`ConfirmDeleteModal.jsx:52-57`). Reopening a confirmation always starts guarded.
+
+The dashboard owns the data side. `nonActiveCount` is refetched every time the settings modal opens (`Dashboard.jsx:214-226`) rather than being kept in sync continuously, since applications change status while the modal is closed. On success each handler updates local state optimistically instead of refetching the list: delete-all empties `apps`, and the non-active delete filters against `NON_ACTIVE_STATUSES` (`Dashboard.jsx:257`). Both then call `refetchAnalytics`.
+
+That filter is a second, independent definition of "non-active" living in `frontend/src/constants/statuses.js:123`. The server-side `NON_ACTIVE_STATUSES` decides what is actually deleted; the frontend copy only decides which rows disappear from the table without a refetch. If the two drift, the table will disagree with the database until the next load.
 
 ---
 
@@ -241,7 +257,7 @@ The settings modal lists chart toggles in `Object.values(DASHBOARD_COMPONENTS)` 
 
 `KeyboardShortcutContext` registers no key handlers. It holds the help modal's open state and a hand-maintained `SHORTCUT_DEFINITIONS` array that exists solely to render that modal (`frontend/src/context/KeyboardShortcutContext.js:40-68`). All real key handling happens at four `useKeyboardShortcuts` call sites:
 
-1. `frontend/src/Dashboard.jsx:177`, enabled when `!editing && !viewing && !loading` (`:190`)
+1. `frontend/src/Dashboard.jsx:276`, enabled when `!editing && !viewing && !loading` (`:289`)
 2. `frontend/src/components/KeyboardShortcutHelp.js:166`, enabled when `isHelpOpen` (`:168`)
 3. `frontend/src/components/modal/ApplicationModal.jsx:83`, enabled when `!!app` (`:87`)
 4. `frontend/src/components/modal/ApplicationViewModal.jsx:158`, enabled when `!!app` (`:160`)
@@ -250,18 +266,18 @@ The settings modal lists chart toggles in `Object.values(DASHBOARD_COMPONENTS)` 
 
 | Key or chord | Action | Active when | Source |
 | ------------ | ------ | ----------- | ------ |
-| `n` | Open the New Application modal | dashboard, no modal open, after applications load | `frontend/src/Dashboard.jsx:178` |
-| `/` | Focus the table search input | same | `frontend/src/Dashboard.jsx:179` |
-| `?` | Toggle the keyboard shortcut help modal | same | `frontend/src/Dashboard.jsx:180` |
-| `Escape` | Close the edit modal, else the view modal, else clear the row selection | same | `frontend/src/Dashboard.jsx:181` |
-| `j` | Select the next table row | same | `frontend/src/Dashboard.jsx:182` |
-| `ArrowDown` | Select the next table row | same | `frontend/src/Dashboard.jsx:183` |
-| `k` | Select the previous table row | same | `frontend/src/Dashboard.jsx:184` |
-| `ArrowUp` | Select the previous table row | same | `frontend/src/Dashboard.jsx:185` |
-| `Enter` | Open the read-only view modal for the selected row | same | `frontend/src/Dashboard.jsx:186` |
-| `e` | Open the edit modal for the selected row | same | `frontend/src/Dashboard.jsx:187` |
-| `Delete` | Delete the selected row, after a browser confirm | same | `frontend/src/Dashboard.jsx:188` |
-| `Backspace` | Delete the selected row, after a browser confirm | same | `frontend/src/Dashboard.jsx:189` |
+| `n` | Open the New Application modal | dashboard, no modal open, after applications load | `frontend/src/Dashboard.jsx:277` |
+| `/` | Focus the table search input | same | `frontend/src/Dashboard.jsx:278` |
+| `?` | Toggle the keyboard shortcut help modal | same | `frontend/src/Dashboard.jsx:279` |
+| `Escape` | Close the edit modal, else the view modal, else clear the row selection | same | `frontend/src/Dashboard.jsx:280` |
+| `j` | Select the next table row | same | `frontend/src/Dashboard.jsx:281` |
+| `ArrowDown` | Select the next table row | same | `frontend/src/Dashboard.jsx:282` |
+| `k` | Select the previous table row | same | `frontend/src/Dashboard.jsx:283` |
+| `ArrowUp` | Select the previous table row | same | `frontend/src/Dashboard.jsx:284` |
+| `Enter` | Open the read-only view modal for the selected row | same | `frontend/src/Dashboard.jsx:285` |
+| `e` | Open the edit modal for the selected row | same | `frontend/src/Dashboard.jsx:286` |
+| `Delete` | Delete the selected row, after a browser confirm | same | `frontend/src/Dashboard.jsx:287` |
+| `Backspace` | Delete the selected row, after a browser confirm | same | `frontend/src/Dashboard.jsx:288` |
 | `Cmd+Enter` or `Ctrl+Enter` | Save and close | while the create or edit modal is open | `frontend/src/components/modal/ApplicationModal.jsx:84` |
 | `Cmd+S` or `Ctrl+S` | Save and close | while the create or edit modal is open | `frontend/src/components/modal/ApplicationModal.jsx:85` |
 | `Escape` | Cancel and close | while the create or edit modal is open | `frontend/src/components/modal/ApplicationModal.jsx:86` |
@@ -294,7 +310,7 @@ The help modal renders `SHORTCUT_DEFINITIONS` verbatim. That array is a hand-mai
 | Table Navigation | `Delete` | Delete selected (with confirm) | yes |
 | (absent) | `Backspace` | Delete selected (with confirm) | **registered but not displayed** |
 
-Displayed rows are at `frontend/src/context/KeyboardShortcutContext.js:44-47,53-55,61-65`. The one drift is `Backspace`: it is a live shortcut (`frontend/src/Dashboard.jsx:189`) and it deletes the selected application, but the Table Navigation group does not list it. Users pressing `Backspace` outside an input field on the dashboard will trigger a delete confirmation that the help screen never told them about.
+Displayed rows are at `frontend/src/context/KeyboardShortcutContext.js:44-47,53-55,61-65`. The one drift is `Backspace`: it is a live shortcut (`frontend/src/Dashboard.jsx:288`) and it deletes the selected application, but the Table Navigation group does not list it. Users pressing `Backspace` outside an input field on the dashboard will trigger a delete confirmation that the help screen never told them about.
 
 Two further behaviors follow from the matching algorithm and are worth knowing when reading Table 7:
 
@@ -334,8 +350,9 @@ Both are recorded in [known gaps](./11-known-gaps.md).
 | ---- | ------- |
 | `StatCard.jsx` | Dark stat tile with an accent bar, label, large value, optional sub text, and shimmer placeholders while loading. |
 | `Badge.jsx` | Status pill colored from `STATUS_COLORS` and labeled from `STATUS_LABELS`. |
-| `Modal.jsx` | Generic modal shell with `role="dialog"` and `aria-modal`. Exported from the barrel but imported by no component. |
-| `Spinner.jsx` | `Spinner`, `SpinnerWithLabel`, and two style helpers. Exported from the barrel but imported by no component; every loading indicator in the app is hand-inlined instead. |
+| `ConfirmDeleteModal.jsx` | Type-to-confirm dialog for destructive actions. Holds the typed phrase in local state and enables its confirm button only on an exact match; resets that state whenever it closes. Used twice by `DashboardSettingsModal`. |
+
+There is no shared `Modal.jsx` in this directory. Every modal in the app builds its own backdrop and dialog element inline, `ConfirmDeleteModal` included.
 
 **Table 12.** *`frontend/src/components/charts`, barrel at `charts/index.js`.*
 
@@ -366,7 +383,7 @@ Both are recorded in [known gaps](./11-known-gaps.md).
 | `modal/ApplicationViewModal.jsx` | Read-only detail modal that fetches and renders the per-application audit trail. |
 | `modal/AuditTrailTimeline.jsx` | Vertical event timeline, newest first, with per-event-type icons. |
 | `modal/JourneyTimeline.jsx` | Per-stage duration bars. Not in the modal barrel and imported by nothing. |
-| `settings/DashboardSettingsModal.jsx` | Toggle list for dashboard component visibility, with a reset button. |
+| `settings/DashboardSettingsModal.jsx` | Toggle list for dashboard component visibility, with a reset button and a Danger Zone holding the two bulk deletes. |
 
 **Table 14.** *Non-component modules.*
 
@@ -383,7 +400,7 @@ Both are recorded in [known gaps](./11-known-gaps.md).
 | `test-utils/factories`, `test-utils/helpers` | Fixtures and helpers for the test suite. |
 
 > [!NOTE]
-> `Status: not wired.` `ConfigProvider` in `frontend/src/context/ConfigContext.js` is never mounted and `useConfig` is never called, so `configAPI.getStatuses` and `configAPI.getOptions` (`frontend/src/services/api.js:204,213`) are never requested. Statuses, levels, and RTO types come entirely from the hardcoded constants in `frontend/src/constants/statuses.js`, even though a comment in that file directs new code to prefer the backend-driven config.
+> `Status: not wired.` `ConfigProvider` in `frontend/src/context/ConfigContext.js` is never mounted and `useConfig` is never called, so `configAPI.getStatuses` and `configAPI.getOptions` (`frontend/src/services/api.js:246,255`) are never requested. Statuses, levels, and RTO types come entirely from the hardcoded constants in `frontend/src/constants/statuses.js`, even though a comment in that file directs new code to prefer the backend-driven config.
 
 ---
 
@@ -410,7 +427,7 @@ Four modules under `frontend/src/constants`, star-exported through `frontend/src
 
 | Module | Principal exports | Source |
 | ------ | ----------------- | ------ |
-| `statuses.js` | `APPLICATION_STATUS` (18 keys where key equals value, `:17`), `APPLICATION_STATUSES` (`:43`), `STATUS_LABELS` (`:50`), `STATUS_GROUPS` (`:76`), `RESPONSE_STATUSES` (`:99`), `INTERVIEW_STATUSES` (`:120`), `OFFER_STATUSES` (`:135`), `TECHNICAL_STATUSES` (`:149`), `isStatusInGroup` (`:168`), `isTerminalStatus` (`:184`), `LEVEL_TYPES` (`:197`), `LEVEL_LABELS` (`:213`), `RTO_TYPES` (`:229`), `RTO_LABELS` (`:242`) | `frontend/src/constants/statuses.js` |
+| `statuses.js` | `APPLICATION_STATUS` (18 keys where key equals value, `:17`), `APPLICATION_STATUSES` (`:43`), `STATUS_LABELS` (`:50`), `STATUS_GROUPS` (`:76`), `RESPONSE_STATUSES` (`:99`), `NON_ACTIVE_STATUSES` (`:123`), `INTERVIEW_STATUSES` (`:134`), `OFFER_STATUSES` (`:149`), `TECHNICAL_STATUSES` (`:163`), `isStatusInGroup` (`:182`), `isTerminalStatus` (`:198`), `LEVEL_TYPES` (`:211`), `LEVEL_LABELS` (`:229`), `RTO_TYPES` (`:247`), `RTO_LABELS` (`:260`) | `frontend/src/constants/statuses.js` |
 | `colors.js` | `STATUS_COLORS` (`:13`), `FUNNEL_COLORS` (`:47`), `CHART_COLORS` (`:62`), `RTO_COLORS` (`:97`), `LEVEL_COLORS` (`:111`), `getUrgencyColor` (`:135`), `getDurationColor` (`:152`) | `frontend/src/constants/colors.js` |
 | `dashboard.js` | `FUNNEL_GROUPS` (`:18`), `FILTER_OPTIONS` (`:34`), `HOURS` (`:40`), `DAYS` (`:47`), `DAYS_SUNDAY_START` (`:54`), `getDayIndex` (`:67`) | `frontend/src/constants/dashboard.js` |
 | `api.js` | `API_CONFIG` (`:2`), `AUTH` (`:46`), `HTTP_STATUS` (`:53`) | `frontend/src/constants/api.js` |
