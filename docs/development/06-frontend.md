@@ -28,7 +28,7 @@ The frontend is a Create React App project on `react-scripts` 5. It has not been
 
 | Fact | Value | Source |
 | ---- | ----- | ------ |
-| Package name and version | `job-tracking-frontend`, `2.0.0` | `frontend/package.json:2-3` |
+| Package name and version | `job-tracking-frontend`, `2.1.0` | `frontend/package.json:2-3` |
 | Toolchain | `react-scripts` ^5.0.1, not ejected | `frontend/package.json:21,23-28` |
 | React | ^18.2.0 | `frontend/package.json:18` |
 | Router | `react-router-dom` ^6.20.1 | `frontend/package.json:20` |
@@ -510,4 +510,4 @@ Three more exports complete the boundary:
 - [Known gaps](./11-known-gaps.md) for the defects referenced from this page.
 - [Settings and shortcuts](../user-guide/05-settings-and-shortcuts.md) for the user-facing view of the settings modal and the shortcut list.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

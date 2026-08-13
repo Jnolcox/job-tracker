@@ -2,7 +2,7 @@
 
 > **Audience:** Anyone running Job Tracker who has hit a problem.  ·  **Scope:** The failure modes that actually happen, in the form symptom, cause, fix. Covers signing in, the dashboard, and starting the Docker Compose stack.
 
-Every entry on this page is a real, reproducible behavior of Job Tracker 2.0.0, not a general list of things that might go wrong. Several of them are known defects rather than mistakes on your part, and those are labeled as such.
+Every entry on this page is a real, reproducible behavior of Job Tracker 2.1.0, not a general list of things that might go wrong. Several of them are known defects rather than mistakes on your part, and those are labeled as such.
 
 ## Contents
 
@@ -207,4 +207,4 @@ If none of that explains it, check [Known gaps](../development/11-known-gaps.md)
 - [Known gaps](../development/11-known-gaps.md), for the tracked list of defects.
 - [Deployment and operations](../development/09-deployment-and-operations.md), for running the stack beyond a single machine.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

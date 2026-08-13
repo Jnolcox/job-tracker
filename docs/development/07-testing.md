@@ -446,4 +446,4 @@ A short checklist drawn from everything above.
 - [Domain and persistence](./02-domain-and-persistence.md) for the entities that `schema.sql` has to track by hand.
 - [Contributing](../../CONTRIBUTING.md) for the workflow around opening a pull request against `develop`.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

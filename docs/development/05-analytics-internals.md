@@ -4,7 +4,7 @@
 
 The analytics are the product. Twelve endpoints turn a user's application rows into rates, distributions, and health signals, and most of them are single-pass Java stream aggregations over every application the user owns. This page states, for each endpoint, what it computes, the formula in words, the response shape, what happens on empty or degenerate input, and the exact bucketing and rounding values. It also states three things that a reader will otherwise get wrong: what data each endpoint actually reads, which computations are broken, and what a single dashboard load costs the database.
 
-Everything below is against Job Tracker 2.0.0 on `develop`. The engine lives in one file, `src/main/java/com/nolcox/jobtracking/application/service/impl/AnalyticsServiceImpl.java`, 1279 lines, and all line citations without another path are to that file.
+Everything below is against Job Tracker 2.1.0 on `develop`. The engine lives in one file, `src/main/java/com/nolcox/jobtracking/application/service/impl/AnalyticsServiceImpl.java`, 1279 lines, and all line citations without another path are to that file.
 
 ## Contents
 
@@ -603,4 +603,4 @@ Note also that the dashboard fetches `/analytics/stage-durations` on every load 
 - [Frontend](./06-frontend.md) for how `useAnalytics` fans out and how the hand-written SVG charts consume these payloads.
 - [Analytics and insights](../user-guide/04-analytics-and-insights.md) for the same metrics described from the user's side.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*
