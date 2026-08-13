@@ -713,4 +713,4 @@ in production.
 - [Known gaps](./11-known-gaps.md) for the full list of schema drift and dead query
   methods.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

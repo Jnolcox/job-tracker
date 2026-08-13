@@ -317,4 +317,4 @@ Other dead security code worth knowing about when reading the codebase: the `/pu
 - [Configuration](./08-configuration.md) for the full property and environment-variable inventory.
 - [Known gaps](./11-known-gaps.md) for defects outside the security area.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

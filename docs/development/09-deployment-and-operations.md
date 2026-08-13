@@ -333,7 +333,7 @@ One thing to expect on that first dashboard load: `GET /api/v1/job-applications/
 
 You cannot, without editing the file.
 
-No service sets `container_name`, so Compose derives container names from the project name and a second copy of the stack can run alongside the first. Until 1.3.2 the names were pinned, which made `docker compose -p other up` fail with a name conflict.
+No service sets `container_name`, so Compose derives container names from the project name and a second copy of the stack can run alongside the first. Until 2.0.0 the names were pinned, which made `docker compose -p other up` fail with a name conflict.
 
 > [!WARNING]
 > `docker compose -p other up` gives you a second instance only if you also override the published host ports. 3000, 8080 and 3306 are fixed in the file and collide between copies.
@@ -376,4 +376,4 @@ Report anything here that has drifted from the code as an issue. Security-releva
 
 ---
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

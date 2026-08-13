@@ -34,7 +34,7 @@ analytics derived from that data. There are two deployable pieces plus a databas
 | Database | `mysql:8.3.0` | 3306 | The three tables `users`, `job_applications`, `application_events` |
 
 The backend is a Spring Boot 3.4.5 application on Java 17, built with Maven under the
-coordinates `com.nolcox:jobtracking:1.3.1` (`pom.xml:8-14`). The servlet context path is
+coordinates `com.nolcox:jobtracking:2.0.0` (`pom.xml:8-14`). The servlet context path is
 `/api` and the port is 8080 (`src/main/resources/application.yml:1-4`), so a controller
 mapped at `/v1/job-applications` is reachable at `/api/v1/job-applications`.
 
@@ -422,4 +422,4 @@ the entities. See [Domain and persistence](./02-domain-and-persistence.md), sect
   behind the dashboard.
 - [Known gaps](./11-known-gaps.md) for the full list of defects, dead code and drift.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

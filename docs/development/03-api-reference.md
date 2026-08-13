@@ -1,10 +1,10 @@
 # API reference
 
-> **Audience:** Developers writing a client against the Job Tracker backend, or extending it.  ·  **Scope:** Every HTTP route the Spring Boot application exposes at version 1.3.1, with parameters, bodies, response shapes, and status codes.
+> **Audience:** Developers writing a client against the Job Tracker backend, or extending it.  ·  **Scope:** Every HTTP route the Spring Boot application exposes at version 2.0.0, with parameters, bodies, response shapes, and status codes.
 
 The backend serves 23 application routes plus the springdoc documentation endpoints. This page lists all of them, grouped by area, and documents the cross-cutting rules a client author needs first: how the bearer token is obtained, how timestamps serialize, what an error body looks like, and how pagination is parameterized.
 
-Response examples on this page were captured from a running 1.3.1 stack under the `docker` profile against the seeded demo account created by `DataInitializer`. The numbers are therefore small and real rather than illustrative, and some samples are abridged where noted.
+Response examples on this page were captured from a running stack under the `docker` profile against the seeded demo account created by `DataInitializer`. The numbers are therefore small and real rather than illustrative, and some samples are abridged where noted.
 
 ## Contents
 
@@ -89,7 +89,7 @@ Tokens are signed with an HMAC key derived by Base64-decoding `app.jwt.secret` a
 ## 3. Serialization rules
 
 > [!IMPORTANT]
-> Timestamps serialize as ISO 8601 strings, for example `"2026-08-13T04:05:13Z"`. Until 1.3.2 they rendered as epoch-second decimals, because a hand-built `@Primary ObjectMapper` made Spring Boot's Jackson auto-configuration back off and left every `spring.jackson.*` property inert. That mapper is now a builder customizer, so `write-dates-as-timestamps: false` applies as written. A client built against the old format should parse strings, not numbers.
+> Timestamps serialize as ISO 8601 strings, for example `"2026-08-13T04:05:13Z"`. Until 2.0.0 they rendered as epoch-second decimals, because a hand-built `@Primary ObjectMapper` made Spring Boot's Jackson auto-configuration back off and left every `spring.jackson.*` property inert. That mapper is now a builder customizer, so `write-dates-as-timestamps: false` applies as written. A client built against the old format should parse strings, not numbers.
 
 This applies uniformly: `appliedDate`, `createdAt`, `updatedAt`, `statusChangedAt`, `interviewDate`, event `createdAt`, and the `timestamp` on error bodies.
 
@@ -738,7 +738,7 @@ The document metadata is assembled in `src/main/java/com/nolcox/jobtracking/conf
 Two things about the generated spec will mislead a client generator.
 
 > [!NOTE]
-> `info.version` is the hardcoded string `"1.0"` (`OpenApiConfig.java:21`) while the Maven artifact is `1.3.1` (`pom.xml:15`). The spec version does not track releases.
+> `info.version` is read from the build information Maven generates, so the published specification reports the version that was built. Until 2.0.0 it was the hardcoded string `"1.0"`.
 >
 > The `bearerAuth` security requirement is added at the document root (`OpenApiConfig.java:29`), not per operation, and no operation overrides it. The published spec therefore marks `POST /v1/auth/register`, `POST /v1/auth/login`, `GET /v1/config/statuses`, and `GET /v1/config/options` as requiring a bearer token even though `SecurityConfig` permits them anonymously. Generated clients will send an `Authorization` header on the very calls that mint the token.
 
@@ -754,4 +754,4 @@ The controllers use only `@Tag`, `@Operation`, and one `@ParameterObject`. There
 - [Known gaps](./11-known-gaps.md) for the stage-durations failure, the double-counted quick outcomes, and the `JWT_EXPIRATION` drift.
 - [Getting started](../user-guide/01-getting-started.md) if you want a running stack to call these routes against.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*

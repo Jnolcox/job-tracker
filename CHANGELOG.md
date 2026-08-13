@@ -10,8 +10,31 @@ releases, so they are less granular than entries written at the time.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-13
+
 Closes the defects catalogued in
 [docs/development/11-known-gaps.md](docs/development/11-known-gaps.md) at 1.3.1.
+
+The major version reflects four changes that an existing client or deployment can notice.
+Read the Breaking section before upgrading; the rest of the release is fixes.
+
+### Breaking
+
+- **Timestamps are ISO-8601 strings**, for example `"2026-08-13T04:05:13Z"`. They were
+  epoch-second decimals, for example `1786590482.142765877`. Any client that parses them
+  as numbers must be updated. The bundled web interface already accepted both formats and
+  needed no change.
+- **`PUT /api/v1/job-applications/{id}` replaces rather than merges.** An optional field
+  the body omits, or sends as null, is now cleared. Previously it was left untouched,
+  which is why an optional field could never be emptied. A client that sends partial
+  bodies will silently clear the fields it leaves out: send the complete record, or
+  migrate it before upgrading.
+- **The demo account is no longer seeded by default.** `app.demo-data.enabled` defaults to
+  false. The Docker Compose stack sets `DEMO_DATA_ENABLED=true` so the quick start still
+  works, and any other deployment that wants `test@example.com` must opt in.
+- **Container names are no longer pinned.** Compose derives them from the project name, so
+  scripts referring to `jobtracking-backend`, `jobtracking-mysql` or `jobtracking-frontend`
+  need updating. In exchange, a second copy of the stack can run alongside the first.
 
 ### Fixed
 
@@ -225,7 +248,8 @@ Spring Boot API.
 - Docker Compose configuration for the database, backend and frontend.
 - Swagger UI for API exploration.
 
-[Unreleased]: https://github.com/Jnolcox/job-tracker/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/Jnolcox/job-tracker/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Jnolcox/job-tracker/compare/v1.3.1...v2.0.0
 [1.3.1]: https://github.com/Jnolcox/job-tracker/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Jnolcox/job-tracker/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/Jnolcox/job-tracker/compare/v1.2.1...v1.2.2

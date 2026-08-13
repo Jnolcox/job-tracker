@@ -172,4 +172,4 @@ There is a hard ceiling: only your first 100 applications are loaded when the da
 - [Settings and shortcuts](./05-settings-and-shortcuts.md), for the complete keyboard reference.
 - [Troubleshooting](./06-troubleshooting.md), for what to do when a save or a delete fails.
 
-*Documentation current as of Job Tracker 1.3.1 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
