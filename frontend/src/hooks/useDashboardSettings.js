@@ -60,7 +60,7 @@ const COMPONENT_DISPLAY_NAMES = {
  * Default component visibility.
  *
  * Core cards and charts are on out of the box. The three advanced analytics
- * views are opt-in so a first-run dashboard stays readable — they only become
+ * views are opt-in so a first-run dashboard stays readable. They only become
  * meaningful once a user has enough applications to show a trend.
  *
  * @constant {Object}

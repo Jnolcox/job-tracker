@@ -103,7 +103,6 @@ export default function SalaryRangeChart({ salaryDistribution, loading }) {
   return (
     <ChartContainer
       title="Salary Range Distribution"
-      // subtitle={`${count} application${count !== 1 ? "s" : ""} — min salary (x) vs max salary (y)`}
       loading={loading}
     >
       <svg
