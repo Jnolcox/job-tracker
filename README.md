@@ -63,7 +63,7 @@ The pipeline has 18 statuses, from `APPLIED` through recruiter and technical scr
 
 ## 2. Features
 
-**Tracking.** Full create, read, update and delete over applications, each carrying company, position, location, salary range, level, and a remote/hybrid/onsite (RTO) type. Every status change writes an `ApplicationEvent`, and those events render as a per-application journey timeline.
+**Tracking.** Full create, read, update and delete over applications, each carrying company, position, location, salary range, level, and a remote/hybrid/onsite (RTO) type. Every status change writes an `ApplicationEvent`, and those events render as an activity timeline inside the application's detail view.
 
 **Analytics.** The dashboard is assembled from independently toggleable views: metric cards, a stage funnel, salary distribution, time-in-stage, an activity heatmap, day-of-week and hour-of-day patterns, a status transition matrix, and company, location, and position insights. Funnel analytics and application health are off by default and enabled in dashboard settings.
 
@@ -95,7 +95,7 @@ For the user-facing walkthrough, start at [docs/user-guide/01-getting-started.md
 | Frontend | React 18 on Create React App (react-scripts 5) | `frontend/package.json:17-21` |
 | Routing and HTTP | React Router 6, Axios 1.6 | Axios interceptors attach the token |
 | Charts | none | hand-written SVG and CSS |
-| Backend tests | JUnit 5, Mockito, Spring Security Test, JaCoCo | 85% line coverage minimum (`pom.xml:187`) |
+| Backend tests | JUnit 5, Mockito, Spring Security Test, JaCoCo | 85% line coverage minimum (`pom.xml:196`) |
 | Frontend tests | Jest, React Testing Library, jest-axe | accessibility assertions included |
 | Containers | MySQL 8.3, `eclipse-temurin:17-jre`, `nginx:1.25-alpine` | built by `docker-compose.yml` |
 
@@ -161,7 +161,7 @@ Tear down with `docker compose down`, or `docker compose down -v` to also drop t
 > openssl rand -base64 48
 > ```
 >
-> The backend Base64-decodes the secret before deriving the signing key (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java:89-91`), and the decoded length selects the HMAC variant, so 48 bytes keeps it on HS384. Change the MySQL passwords in the same pass. See [SECURITY.md](SECURITY.md) and [docs/development/04-security-and-authentication.md](docs/development/04-security-and-authentication.md).
+> The backend Base64-decodes the secret before deriving the signing key (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtService.java:77-79`), and the decoded length selects the HMAC variant, so 48 bytes keeps it on HS384. Change the MySQL passwords in the same pass. See [SECURITY.md](SECURITY.md) and [docs/development/04-security-and-authentication.md](docs/development/04-security-and-authentication.md).
 
 ### Option 2: Local development
 
@@ -175,7 +175,7 @@ CREATE USER 'jobtracker'@'localhost' IDENTIFIED BY 'jobtracker123';
 GRANT ALL PRIVILEGES ON job_tracking_db.* TO 'jobtracker'@'localhost';
 ```
 
-Hibernate creates and updates the schema at startup (`ddl-auto: update`). The checked-in script `src/main/resources/database/job_tracking_db_1.sql` is behind the entity model and is missing the `level` column, so Hibernate closes the gap either way.
+Hibernate creates and updates the schema at startup (`ddl-auto: update`), so you do not need to load a schema by hand. The checked-in script `src/main/resources/database/job_tracking_db_1.sql`, which Compose mounts as the MySQL init script, matches the entity model. Nothing enforces that the two stay in step: there is no migration tool.
 
 Start the backend:
 
@@ -195,15 +195,16 @@ The Create React App dev server runs on http://localhost:3000 and proxies API ca
 
 ### Demo credentials
 
-On startup outside the `test` profile, `DataInitializer` seeds a user with five sample applications and logs the credentials in plaintext (`src/main/java/com/nolcox/jobtracking/config/DataInitializer.java:25`):
+`DataInitializer` seeds a user with five sample applications, but only when
+`app.demo-data.enabled` is true. It defaults to false, and the `docker` profile turns it
+on, so a `docker compose up` gives you:
 
 - Email: `test@example.com`
 - Password: `password123`
 
-This runs under the Docker profile too, so a `docker compose up` creates the account. Remove or disable the seeding before any real deployment.
-
-> [!IMPORTANT]
-> On a freshly seeded install, `GET /api/v1/job-applications/analytics/stage-durations` returns HTTP 500. The seeded applications have a null `statusChangedAt`, and `AnalyticsServiceImpl.java:523` dereferences it without a guard. The dashboard swallows the failure, so nothing visibly breaks, but the endpoint is unusable until you add applications through the UI. Details are in [docs/development/11-known-gaps.md](docs/development/11-known-gaps.md).
+That password is published in this repository, so set `DEMO_DATA_ENABLED=false` in `.env`
+before the stack is reachable by anyone else. A local development run does not seed the
+account unless you ask for it.
 
 ---
 
@@ -220,8 +221,8 @@ Configuration is Spring YAML plus a small set of environment variables. Two runn
 | `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | Database credentials |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins |
 | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | Read by Compose only, for the `mysql` service and the backend JDBC URL |
-
-`DEMO_DATA_ENABLED` is worth knowing about before you deploy anything. It seeds an account whose password is published in this repository, and it defaults to true under Compose because that stack exists for local evaluation. Set it to false for anything others can reach.
+| `JWT_EXPIRATION` | Token lifetime in milliseconds. 30 days by default, 1 day under Compose |
+| `DEMO_DATA_ENABLED` | Seeds the demo account. False by default, true under Compose. Set it to false for anything others can reach |
 
 Full detail, profile by profile and property by property, is in [docs/development/08-configuration.md](docs/development/08-configuration.md).
 
@@ -237,7 +238,7 @@ Start at the documentation index, [docs/README.md](docs/README.md).
 | --- | --- |
 | [01-getting-started.md](docs/user-guide/01-getting-started.md) | Accounts, first login, adding a first application |
 | [02-dashboard-and-navigation.md](docs/user-guide/02-dashboard-and-navigation.md) | The dashboard layout and how to move around it |
-| [03-tracking-applications.md](docs/user-guide/03-tracking-applications.md) | The pipeline statuses, editing, and the journey timeline |
+| [03-tracking-applications.md](docs/user-guide/03-tracking-applications.md) | The pipeline statuses, editing, and the activity timeline |
 | [04-analytics-and-insights.md](docs/user-guide/04-analytics-and-insights.md) | What each chart means and how it is computed |
 | [05-settings-and-shortcuts.md](docs/user-guide/05-settings-and-shortcuts.md) | Dashboard settings and keyboard shortcuts |
 | [06-troubleshooting.md](docs/user-guide/06-troubleshooting.md) | Common problems and what to do about them |
@@ -272,7 +273,7 @@ Run the backend suite and the coverage gate together:
 mvn verify
 ```
 
-The JaCoCo report lands in `target/site/jacoco/index.html`. The gate is a bundle-level 85% line coverage minimum (`pom.xml:187`), with `DataInitializer`, `OpenApiConfig`, the repository package, and the application entry point excluded.
+The JaCoCo report lands in `target/site/jacoco/index.html`. The gate is a bundle-level 85% line coverage minimum (`pom.xml:196`), with `DataInitializer`, `OpenApiConfig`, the repository package, and the application entry point excluded.
 
 Run the frontend suite:
 
@@ -289,20 +290,35 @@ More detail is in [docs/development/07-testing.md](docs/development/07-testing.m
 
 ## 9. Project status
 
-Version 1.3.1. Actively developed against the `develop` branch. Both CI jobs pass at this version: `mvn verify` clears the 85% gate, and the frontend suite reports 603 passed and 2 skipped across 28 suites.
+Version 2.0.0. Actively developed against the `develop` branch. Both CI jobs pass at this
+version: `mvn verify` clears the 85% gate over 232 backend tests, and the frontend suite
+reports 554 passed and 2 skipped across 25 suites.
 
-Stable and exercised: registration and login, the JWT filter chain and user-scoped authorization, application CRUD, the audit trail, the configuration endpoints that populate the UI dropdowns, and 11 of the 12 analytics endpoints, which return 200 against a seeded account.
+Stable and exercised: registration and login, the JWT filter chain and user-scoped
+authorization, application CRUD, the audit trail, and all twelve analytics endpoints,
+which return 200 against a seeded account.
 
-Known rough edges, stated plainly:
+2.0.0 closed every confirmed defect recorded against 1.3.1. What remains is design
+characteristics and unfinished edges rather than breakage:
 
-- `analytics/stage-durations` returns 500 on a freshly seeded install (see the callout in section 5).
-- A failed login clears credentials and hard-reloads the page, so the user never sees the error message the backend returned (`frontend/src/services/api.js:25-31`).
-- Funnel and conversion analytics read each application's current status only, never its event history. An application that passed three interview rounds and was then rejected contributes nothing to any interview rate, while the event-derived transition matrix shows all three hops. The two views can disagree, and both are behaving as written.
-- Analytics do not refresh after a create, update or delete; the page needs a manual reload.
-- Quick wins and quick losses both count `OFFER_DECLINED` and `OFFER_RESCINDED`, so applications in those statuses are counted twice.
-- Every Compose service sets an explicit `container_name`, so a second instance cannot run alongside the first even under a different project name.
+- Analytics are computed in memory. Each endpoint loads the user's whole table and
+  aggregates in Java, so a dashboard load costs several full scans. Invisible on demo
+  data, not on a few thousand applications.
+- The applications table loads the first 100 records and exposes no paging, while the
+  analytics beside it count everything, so the two halves disagree past that point.
+- Stat cards, offer and response rates still read each application's current status only.
+  The funnel and the transition matrix read the event history, so those views can
+  legitimately disagree with the cards.
+- `/v1/config` serves status metadata that no client calls, so the frontend carries a
+  second copy of the same table.
+- Requesting another user's application returns 403 rather than 404, which discloses
+  whether an id exists.
+- Activity heatmaps bucket by the server's time zone, not the viewer's.
+- There is no migration tool. Two schema sources are kept in step by hand.
 
-The full list, with citations and severity, is [docs/development/11-known-gaps.md](docs/development/11-known-gaps.md). Read it before deploying this anywhere that matters.
+The full list, with citations and severity, is
+[docs/development/11-known-gaps.md](docs/development/11-known-gaps.md), which also records
+what 2.0.0 closed. Read it before deploying this anywhere that matters.
 
 ---
 
