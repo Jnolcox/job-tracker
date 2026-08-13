@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +63,7 @@ class JwtAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(null);
         
         testUser = User.builder()
                 .id(1L)
@@ -76,6 +78,11 @@ class JwtAuthenticationFilterTest {
                 .build();
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void testDoFilterInternal_WithoutAuthorizationHeader_ShouldBypassAuthentication() throws ServletException, IOException {
         // Given
@@ -88,7 +95,7 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
         verify(jwtService, never()).extractUsername(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -103,7 +110,7 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
         verify(jwtService, never()).extractUsername(anyString());
         verify(userDetailsService, never()).loadUserByUsername(anyString());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -133,7 +140,7 @@ class JwtAuthenticationFilterTest {
 
         // Then
         verify(filterChain).doFilter(request, response);
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -153,11 +160,9 @@ class JwtAuthenticationFilterTest {
         verify(userDetailsService).loadUserByUsername(userEmail);
         verify(jwtService).isTokenValid(validToken, testUser);
         
-        ArgumentCaptor<UsernamePasswordAuthenticationToken> authTokenCaptor = 
-                ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
-        verify(securityContext).setAuthentication(authTokenCaptor.capture());
-        
-        UsernamePasswordAuthenticationToken capturedToken = authTokenCaptor.getValue();
+        UsernamePasswordAuthenticationToken capturedToken =
+                (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        assertThat(capturedToken).isNotNull();
         assertThat(capturedToken.getPrincipal()).isEqualTo(testUser);
         assertThat(capturedToken.getCredentials()).isNull();
         assertThat(capturedToken.getAuthorities()).isEqualTo(testUser.getAuthorities());
@@ -182,7 +187,7 @@ class JwtAuthenticationFilterTest {
         verify(jwtService).extractUsername(validToken);
         verify(userDetailsService).loadUserByUsername(userEmail);
         verify(jwtService).isTokenValid(validToken, testUser);
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
     }
 
@@ -202,7 +207,8 @@ class JwtAuthenticationFilterTest {
         verify(jwtService).extractUsername(validToken);
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(jwtService, never()).isTokenValid(anyString(), any());
-        verify(securityContext, never()).setAuthentication(any());
+        // The already-authenticated context must survive untouched.
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isSameAs(existingAuth);
         verify(filterChain).doFilter(request, response);
     }
 
@@ -219,7 +225,7 @@ class JwtAuthenticationFilterTest {
         verify(jwtService).extractUsername(validToken);
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(jwtService, never()).isTokenValid(anyString(), any());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
     }
 
@@ -239,7 +245,7 @@ class JwtAuthenticationFilterTest {
         verify(jwtService).extractUsername(validToken);
         verify(userDetailsService).loadUserByUsername(userEmail);
         verify(jwtService, never()).isTokenValid(anyString(), any());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
     }
 
@@ -256,7 +262,7 @@ class JwtAuthenticationFilterTest {
         verify(jwtService).extractUsername(validToken);
         verify(userDetailsService, never()).loadUserByUsername(anyString());
         verify(jwtService, never()).isTokenValid(anyString(), any());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
     }
 
@@ -273,7 +279,7 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
         verify(jwtService).extractUsername("");
         verify(userDetailsService, never()).loadUserByUsername(anyString());
-        verify(securityContext, never()).setAuthentication(any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -309,11 +315,9 @@ class JwtAuthenticationFilterTest {
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
         
         // Then
-        ArgumentCaptor<UsernamePasswordAuthenticationToken> authTokenCaptor = 
-                ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
-        verify(securityContext).setAuthentication(authTokenCaptor.capture());
-        
-        UsernamePasswordAuthenticationToken capturedToken = authTokenCaptor.getValue();
+        UsernamePasswordAuthenticationToken capturedToken =
+                (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        assertThat(capturedToken).isNotNull();
         assertThat(capturedToken.getDetails()).isNotNull();
         assertThat(capturedToken.getDetails()).isInstanceOf(
                 WebAuthenticationDetailsSource.class.getName().contains("WebAuthenticationDetails") ? 

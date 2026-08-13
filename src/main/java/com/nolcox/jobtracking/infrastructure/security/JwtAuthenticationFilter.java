@@ -8,6 +8,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -70,8 +71,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new WebAuthenticationDetailsSource().buildDetails(request)
                     );
 
-                    // Update SecurityContext
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Publish a fresh context rather than mutating the one the holder
+                    // hands back. Since Spring Security 6 the context is resolved lazily
+                    // by SecurityContextHolderFilter, so mutating the deferred instance
+                    // can be discarded before AuthorizationFilter reads it, which
+                    // presents as a 401 on a request that authenticated successfully.
+                    SecurityContext context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(authToken);
+                    SecurityContextHolder.setContext(context);
 
                     log.debug("User {} authenticated successfully", userEmail);
                 } else {
