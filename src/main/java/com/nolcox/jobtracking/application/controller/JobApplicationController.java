@@ -5,6 +5,7 @@ import com.nolcox.jobtracking.application.dto.request.JobApplicationUpdateReques
 import com.nolcox.jobtracking.application.dto.response.ActivityHeatmapResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationEventResponse;
 import com.nolcox.jobtracking.application.dto.response.ApplicationHealthResponse;
+import com.nolcox.jobtracking.application.dto.response.BulkDeleteResponse;
 import com.nolcox.jobtracking.application.dto.response.CompanyInsightsResponse;
 import com.nolcox.jobtracking.application.dto.response.FunnelAnalyticsResponse;
 import com.nolcox.jobtracking.application.dto.response.JobApplicationResponse;
@@ -54,6 +55,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "Job Application", description = "Job application management and analytics endpoints")
 public class JobApplicationController {
+
+    /** Response key for the non-active application count endpoint. */
+    private static final String NON_ACTIVE_COUNT_KEY = "count";
 
     private final JobApplicationService applicationService;
     private final ApplicationEventService eventService;
@@ -128,6 +132,69 @@ public class JobApplicationController {
         Long userId = getUserIdFromAuthentication(authentication);
         applicationService.deleteApplication(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Deletes every job application belonging to the current user.
+     *
+     * <p>This is a destructive, irreversible operation intended for users who want
+     * to start over. Associated audit events are removed along with the
+     * applications.</p>
+     *
+     * @param authentication the current user's authentication
+     * @return the number of applications deleted
+     */
+    @DeleteMapping("/bulk/all")
+    @Operation(summary = "Delete all job applications",
+            description = "Permanently deletes every job application for the current user, "
+                    + "including their audit events. This operation cannot be undone.")
+    public ResponseEntity<BulkDeleteResponse> deleteAllApplications(Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        int deletedCount = applicationService.deleteAllApplications(userId);
+        return ResponseEntity.ok(new BulkDeleteResponse(
+                deletedCount,
+                "Deleted %d application(s)".formatted(deletedCount)));
+    }
+
+    /**
+     * Deletes the current user's closed-out job applications.
+     *
+     * <p>Removes applications in a non-active status (REJECTED, WITHDRAWN or
+     * GHOSTED) so the dashboard reflects only live opportunities. Associated
+     * audit events are removed along with the applications.</p>
+     *
+     * @param authentication the current user's authentication
+     * @return the number of applications deleted
+     */
+    @DeleteMapping("/bulk/non-active")
+    @Operation(summary = "Delete non-active job applications",
+            description = "Permanently deletes the current user's REJECTED, WITHDRAWN and GHOSTED "
+                    + "applications, including their audit events. This operation cannot be undone.")
+    public ResponseEntity<BulkDeleteResponse> deleteNonActiveApplications(Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        int deletedCount = applicationService.deleteNonActiveApplications(userId);
+        return ResponseEntity.ok(new BulkDeleteResponse(
+                deletedCount,
+                "Deleted %d non-active application(s)".formatted(deletedCount)));
+    }
+
+    /**
+     * Counts the current user's closed-out job applications.
+     *
+     * <p>Used by the frontend to show how many applications a non-active cleanup
+     * would remove before the user confirms it.</p>
+     *
+     * @param authentication the current user's authentication
+     * @return a map with a single "count" key
+     */
+    @GetMapping("/counts/non-active")
+    @Operation(summary = "Count non-active job applications",
+            description = "Returns the number of REJECTED, WITHDRAWN and GHOSTED applications "
+                    + "for the current user")
+    public ResponseEntity<Map<String, Long>> countNonActiveApplications(Authentication authentication) {
+        Long userId = getUserIdFromAuthentication(authentication);
+        long count = applicationService.countNonActiveApplications(userId);
+        return ResponseEntity.ok(Map.of(NON_ACTIVE_COUNT_KEY, count));
     }
 
     /**

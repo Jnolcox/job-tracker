@@ -10,6 +10,21 @@ releases, so they are less granular than entries written at the time.
 
 ## [Unreleased]
 
+### Added
+
+- **Bulk delete for job applications.** The dashboard Settings dialog gains a Danger Zone
+  with two actions: delete every application, or delete only the closed-out ones
+  (`REJECTED`, `WITHDRAWN`, `GHOSTED`). Both are guarded by a type-to-confirm dialog, and
+  the non-active button shows how many applications it would remove.
+- **Three endpoints backing it:** `DELETE /api/v1/job-applications/bulk/all`,
+  `DELETE /api/v1/job-applications/bulk/non-active`, and
+  `GET /api/v1/job-applications/counts/non-active`. The deletes return the number of
+  applications removed. All three are authenticated and scoped to the calling user.
+
+  Both deletes are permanent and remove each application's audit events along with it.
+  Note that "non-active" is narrower than "terminal": `OFFER_ACCEPTED` and
+  `OFFER_DECLINED` are **not** deleted.
+
 ## [2.0.0] - 2026-08-13
 
 Closes the defects catalogued in

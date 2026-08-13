@@ -26,6 +26,9 @@ jest.mock('./services/api', () => ({
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    deleteAll: jest.fn(),
+    deleteNonActive: jest.fn(),
+    countNonActive: jest.fn(),
   },
 }));
 
@@ -150,6 +153,8 @@ describe('JobTracker (Dashboard)', () => {
     mockUseKeyboardShortcuts.mockClear();
     // Reset to default settings
     mockUseDashboardSettings.mockReturnValue(defaultMockDashboardSettings);
+    // The settings modal fetches this on open; individual tests override it.
+    jobApplicationsAPI.countNonActive.mockResolvedValue({ data: { count: 0 } });
   });
 
   describe('Default sorting by lastUpdate date', () => {
@@ -1082,6 +1087,163 @@ describe('JobTracker (Dashboard)', () => {
       // Close settings
       await user.click(screen.getByRole('button', { name: /close/i }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    describe('bulk delete', () => {
+      /**
+       * Renders the dashboard with the given applications and opens the
+       * settings modal, where the Danger Zone lives.
+       */
+      const openSettingsWith = async (user, applications) => {
+        jobApplicationsAPI.getAll.mockResolvedValueOnce({
+          data: { content: applications },
+        });
+
+        renderJobTracker();
+
+        await waitFor(() => {
+          expect(screen.getByRole('table')).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole('button', { name: /settings/i }));
+      };
+
+      const confirmWithPhrase = async (user, phrase) => {
+        await user.type(screen.getByLabelText(/type .* to confirm/i), phrase);
+        await user.click(screen.getByTestId('confirm-delete-button'));
+      };
+
+      it('should fetch the non-active count when settings opens', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.countNonActive.mockResolvedValue({ data: { count: 3 } });
+
+        await openSettingsWith(user, [createMockApplication()]);
+
+        await waitFor(() => {
+          expect(jobApplicationsAPI.countNonActive).toHaveBeenCalled();
+        });
+      });
+
+      it('should show the fetched non-active count on the delete button', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.countNonActive.mockResolvedValue({ data: { count: 3 } });
+
+        await openSettingsWith(user, [createMockApplication()]);
+
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /^delete 3$/i })).toBeInTheDocument();
+        });
+      });
+
+      it('should call the delete all endpoint after confirmation', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.deleteAll.mockResolvedValue({ data: { deletedCount: 1 } });
+
+        await openSettingsWith(user, [createMockApplication()]);
+        await user.click(screen.getByRole('button', { name: /^delete all$/i }));
+        await confirmWithPhrase(user, 'DELETE ALL');
+
+        await waitFor(() => {
+          expect(jobApplicationsAPI.deleteAll).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      it('should empty the table after deleting all applications', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.deleteAll.mockResolvedValue({ data: { deletedCount: 1 } });
+
+        await openSettingsWith(user, [
+          createMockApplication({ id: 'a1', companyName: 'Acme Corp' }),
+        ]);
+        await user.click(screen.getByRole('button', { name: /^delete all$/i }));
+        await confirmWithPhrase(user, 'DELETE ALL');
+
+        await waitFor(() => {
+          expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+        });
+      });
+
+      it('should close the settings modal after deleting all applications', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.deleteAll.mockResolvedValue({ data: { deletedCount: 1 } });
+
+        await openSettingsWith(user, [createMockApplication()]);
+        await user.click(screen.getByRole('button', { name: /^delete all$/i }));
+        await confirmWithPhrase(user, 'DELETE ALL');
+
+        await waitFor(() => {
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        });
+      });
+
+      it('should call the non-active delete endpoint after confirmation', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.countNonActive.mockResolvedValue({ data: { count: 1 } });
+        jobApplicationsAPI.deleteNonActive.mockResolvedValue({ data: { deletedCount: 1 } });
+
+        await openSettingsWith(user, [
+          createMockApplication({ id: 'r1', companyName: 'Rejected Co', status: 'REJECTED' }),
+        ]);
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /^delete 1$/i })).toBeInTheDocument();
+        });
+        await user.click(screen.getByRole('button', { name: /^delete 1$/i }));
+        await confirmWithPhrase(user, 'DELETE');
+
+        await waitFor(() => {
+          expect(jobApplicationsAPI.deleteNonActive).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      it('should keep active applications after a non-active delete', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.countNonActive.mockResolvedValue({ data: { count: 1 } });
+        jobApplicationsAPI.deleteNonActive.mockResolvedValue({ data: { deletedCount: 1 } });
+
+        await openSettingsWith(user, [
+          createMockApplication({ id: 'r1', companyName: 'Rejected Co', status: 'REJECTED' }),
+          createMockApplication({ id: 'a1', companyName: 'Active Co', status: 'APPLIED' }),
+        ]);
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /^delete 1$/i })).toBeInTheDocument();
+        });
+        await user.click(screen.getByRole('button', { name: /^delete 1$/i }));
+        await confirmWithPhrase(user, 'DELETE');
+
+        await waitFor(() => {
+          expect(jobApplicationsAPI.deleteNonActive).toHaveBeenCalled();
+        });
+        expect(within(screen.getByRole('table')).getByText('Active Co')).toBeInTheDocument();
+      });
+
+      it('should show an error when the delete fails', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.deleteAll.mockRejectedValue(new Error('network down'));
+
+        await openSettingsWith(user, [createMockApplication()]);
+        await user.click(screen.getByRole('button', { name: /^delete all$/i }));
+        await confirmWithPhrase(user, 'DELETE ALL');
+
+        await waitFor(() => {
+          expect(screen.getByRole('alert')).toBeInTheDocument();
+        });
+      });
+
+      it('should keep the applications when the delete fails', async () => {
+        const user = userEvent.setup();
+        jobApplicationsAPI.deleteAll.mockRejectedValue(new Error('network down'));
+
+        await openSettingsWith(user, [
+          createMockApplication({ id: 'a1', companyName: 'Acme Corp' }),
+        ]);
+        await user.click(screen.getByRole('button', { name: /^delete all$/i }));
+        await confirmWithPhrase(user, 'DELETE ALL');
+
+        await waitFor(() => {
+          expect(screen.getByRole('alert')).toBeInTheDocument();
+        });
+        expect(within(screen.getByRole('table')).getByText('Acme Corp')).toBeInTheDocument();
+      });
     });
 
     it('should hide stat cards when statCards setting is false', async () => {

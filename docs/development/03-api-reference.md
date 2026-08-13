@@ -2,7 +2,7 @@
 
 > **Audience:** Developers writing a client against the Job Tracker backend, or extending it.  ·  **Scope:** Every HTTP route the Spring Boot application exposes at version 2.0.0, with parameters, bodies, response shapes, and status codes.
 
-The backend serves 23 application routes plus the springdoc documentation endpoints. This page lists all of them, grouped by area, and documents the cross-cutting rules a client author needs first: how the bearer token is obtained, how timestamps serialize, what an error body looks like, and how pagination is parameterized.
+The backend serves 26 application routes plus the springdoc documentation endpoints. This page lists all of them, grouped by area, and documents the cross-cutting rules a client author needs first: how the bearer token is obtained, how timestamps serialize, what an error body looks like, and how pagination is parameterized.
 
 Response examples on this page were captured from a running stack under the `docker` profile against the seeded demo account created by `DataInitializer`. The numbers are therefore small and real rather than illustrative, and some samples are abridged where noted.
 
@@ -34,7 +34,7 @@ Every externally visible URL is the origin, plus the servlet context path `/api`
 | Server port | `8080` | `src/main/resources/application.yml:2` |
 | Servlet context path | `/api` | `src/main/resources/application.yml:4` |
 | Auth controller | `/v1/auth` | `src/main/java/com/nolcox/jobtracking/application/controller/AuthController.java:19` |
-| Job application controller | `/v1/job-applications` | `src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:53` |
+| Job application controller | `/v1/job-applications` | `src/main/java/com/nolcox/jobtracking/application/controller/JobApplicationController.java:54` |
 | Config controller | `/v1/config` | `src/main/java/com/nolcox/jobtracking/application/controller/ConfigController.java:25` |
 
 So a login is `POST http://localhost:8080/api/v1/auth/login`.
@@ -61,7 +61,7 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9...
 
 `JwtAuthenticationFilter` requires the exact prefix `Bearer ` (`src/main/java/com/nolcox/jobtracking/infrastructure/security/JwtAuthenticationFilter.java:42-49`). If the header is absent, malformed, or the token fails validation, the filter swallows the exception and lets the request continue unauthenticated; `JwtAuthenticationEntryPoint` then writes the 401 (`JwtAuthenticationEntryPoint.java:26-43`).
 
-The token's subject is the user's email. It also carries `userId` and `role` claims (`AuthServiceImpl.java:159-164`), but nothing on the server reads them: the filter loads the `User` entity by email and the controller takes the id from that entity (`JobApplicationController.java:449-452`).
+The token's subject is the user's email. It also carries `userId` and `role` claims (`AuthServiceImpl.java:159-164`), but nothing on the server reads them: the filter loads the `User` entity by email and the controller takes the id from that entity (`JobApplicationController.java:516-519`).
 
 ### Token lifetime
 
@@ -153,7 +153,7 @@ Canonical messages are in `src/main/java/com/nolcox/jobtracking/shared/exception
 
 ## 5. Pagination
 
-Exactly one endpoint is paginated: `GET /api/v1/job-applications`. It binds a Spring Data `Pageable` (`JobApplicationController.java:67`). No `spring.data.web.*` properties are set in either `application.yml` or `application-docker.yml`, so Spring Boot's defaults apply.
+Exactly one endpoint is paginated: `GET /api/v1/job-applications`. It binds a Spring Data `Pageable` (`JobApplicationController.java:71`). No `spring.data.web.*` properties are set in either `application.yml` or `application-docker.yml`, so Spring Boot's defaults apply.
 
 **Table 4.** *Pagination query parameters and their defaults.*
 
@@ -163,7 +163,7 @@ Exactly one endpoint is paginated: `GET /api/v1/job-applications`. It binds a Sp
 | `size` | integer | `20` | Spring Boot caps page size at 2000. |
 | `sort` | string, repeatable | none | `property,asc` or `property,desc`. |
 
-There is no default sort. `findByUserIdWithFilters` carries no `ORDER BY` (`src/main/java/com/nolcox/jobtracking/domain/repository/JobApplicationRepository.java:21-27`) and the controller supplies no fallback `Sort`, so page ordering is whatever the database returns. Pass an explicit `sort` if order matters to your client.
+There is no default sort. `findByUserIdWithFilters` carries no `ORDER BY` (`src/main/java/com/nolcox/jobtracking/domain/repository/JobApplicationRepository.java:24-30`) and the controller supplies no fallback `Sort`, so page ordering is whatever the database returns. Pass an explicit `sort` if order matters to your client.
 
 The response is a `Page<JobApplicationResponse>` returned directly, so the JSON envelope is Jackson's bean rendering of `PageImpl`. Spring Boot 3.3 and later warn against relying on this envelope, and no `spring.data.web.pageable.serialization-mode` is configured. Only `content` is asserted by the test suite. Treat `content`, `totalElements`, `totalPages`, `size`, and `number` as the practical contract and the rest as incidental.
 
@@ -260,18 +260,18 @@ Status codes:
 
 All five routes require a bearer token. The owning user is always taken from the authenticated principal, never from the request body or a query parameter.
 
-Ownership is enforced two different ways, and the difference is observable. The list endpoint scopes at the query level. The single-resource endpoints fetch first and then check, so requesting another user's application returns **403**, not 404 (`src/main/java/com/nolcox/jobtracking/application/service/impl/JobApplicationServiceImpl.java:91-93`, `:348-351`). A client can therefore distinguish "this id does not exist" from "this id belongs to someone else".
+Ownership is enforced two different ways, and the difference is observable. The list endpoint scopes at the query level. The single-resource endpoints fetch first and then check, so requesting another user's application returns **403**, not 404 (`src/main/java/com/nolcox/jobtracking/application/service/impl/JobApplicationServiceImpl.java:104-106`, `:348-351`). A client can therefore distinguish "this id does not exist" from "this id belongs to someone else".
 
 ### `GET /api/v1/job-applications`
 
-Lists the caller's applications, paginated. Handler at `JobApplicationController.java:62-75`.
+Lists the caller's applications, paginated. Handler at `JobApplicationController.java:66-79`.
 
 **Table 7.** *Query parameters for the list endpoint.*
 
 | Parameter | Type | Required | Default | Behavior |
 | --------- | ---- | -------- | ------- | -------- |
 | `status` | `ApplicationStatus` enum name | no | none | Exact match. An unrecognized value is not handled and is expected to surface as 500 (see section 4). |
-| `companyName` | string | no | none | Case-insensitive substring match (`JobApplicationRepository.java:23`). |
+| `companyName` | string | no | none | Case-insensitive substring match (`JobApplicationRepository.java:26`). |
 | `page`, `size`, `sort` | see Table 4 | no | `0`, `20`, unsorted | Standard Spring Data binding. |
 
 Returns **200** with a page envelope. Captured from the seeded account with `size=1`, abridged after the envelope keys shown:
@@ -322,7 +322,7 @@ Note `statusChangedAt: null` on that seeded row. That null is the direct cause o
 
 ### `GET /api/v1/job-applications/{id}`
 
-Fetches one application. Handler at `JobApplicationController.java:77-86`. Path parameter `id` is a `Long` with no validation annotation.
+Fetches one application. Handler at `JobApplicationController.java:81-90`. Path parameter `id` is a `Long` with no validation annotation.
 
 - **200 OK** with a `JobApplicationResponse`.
 - **403 Forbidden** (`Access denied`) if the application belongs to another user.
@@ -330,7 +330,7 @@ Fetches one application. Handler at `JobApplicationController.java:77-86`. Path 
 
 ### `POST /api/v1/job-applications`
 
-Creates an application. Handler at `JobApplicationController.java:88-108`. Body is a `JobApplicationCreateRequest`.
+Creates an application. Handler at `JobApplicationController.java:92-112`. Body is a `JobApplicationCreateRequest`.
 
 **Table 8.** *`JobApplicationCreateRequest` fields, in declaration order.*
 
@@ -368,32 +368,81 @@ Field definitions are at `src/main/java/com/nolcox/jobtracking/application/dto/r
 }
 ```
 
-`appliedDate` and `statusChangedAt` both default to the current instant when omitted (`JobApplicationServiceImpl.java:114`, `:116`), and an `APPLICATION_CREATED` audit event is written.
+`appliedDate` and `statusChangedAt` both default to the current instant when omitted (`JobApplicationServiceImpl.java:127`, `:116`), and an `APPLICATION_CREATED` audit event is written.
 
-- **201 Created**, body is the created `JobApplicationResponse`, with a `Location` header pointing at the new resource (`JobApplicationController.java:97-103`). If no servlet context is available the controller falls back to 201 with no `Location` (`:104-107`).
+- **201 Created**, body is the created `JobApplicationResponse`, with a `Location` header pointing at the new resource (`JobApplicationController.java:101-107`). If no servlet context is available the controller falls back to 201 with no `Location` (`:104-107`).
 - **400 Bad Request** with a `ValidationErrorResponse` on constraint failure.
 
 ### `PUT /api/v1/job-applications/{id}`
 
-Updates an application. Handler at `JobApplicationController.java:110-120`. Body is a `JobApplicationUpdateRequest` (`.../request/JobApplicationUpdateRequest.java:14-62`), which has the same 17 fields and the same constraints as the create request but declares them in a different order.
+Updates an application. Handler at `JobApplicationController.java:114-124`. Body is a `JobApplicationUpdateRequest` (`.../request/JobApplicationUpdateRequest.java:14-62`), which has the same 17 fields and the same constraints as the create request but declares them in a different order.
 
 Despite the `PUT` verb, the semantics are a merge, not a replace: the mapper is configured with `setSkipNullEnabled(true)` (`src/main/java/com/nolcox/jobtracking/config/ModelMapperConfig.java:12-16`), so a null field in the body leaves the stored column untouched rather than clearing it. `companyName`, `positionTitle`, and `status` are still required by validation.
 
-`statusChangedAt` is resolved in priority order: the request value if present, otherwise the current instant if the status changed, otherwise the original value (`JobApplicationServiceImpl.java:188-198`). A field-level diff is written to the audit trail.
+`statusChangedAt` is resolved in priority order: the request value if present, otherwise the current instant if the status changed, otherwise the original value (`JobApplicationServiceImpl.java:201-211`). A field-level diff is written to the audit trail.
 
 - **200 OK** with the updated `JobApplicationResponse`.
 - **400**, **403**, **404** as for the single-resource read.
 
 ### `DELETE /api/v1/job-applications/{id}`
 
-Deletes an application and its audit events. Handler at `JobApplicationController.java:122-131`.
+Deletes an application and its audit events. Handler at `JobApplicationController.java:126-135`.
 
 - **204 No Content**, empty body.
 - **403 Forbidden** or **404 Not Found** as above.
 
+### Bulk delete
+
+Three endpoints operate on a set of applications rather than one. All three take no request body and no parameters; the set is derived entirely from the authenticated user.
+
+Both deletes remove the associated audit events first, then the applications (`JobApplicationServiceImpl.java:368-383`, `:387-402`). The order is not incidental: `ApplicationEvent` holds the foreign key, so deleting applications first leaves the persistence context inconsistent. The service owns that ordering so no caller can get it wrong.
+
+Deletion is permanent. There is no soft-delete flag, no undo, and the audit trail that would have recorded the deletion is itself removed. Neither endpoint writes an audit event.
+
+#### `DELETE /api/v1/job-applications/bulk/all`
+
+Deletes every application belonging to the caller. Handler at `JobApplicationController.java:147-159`.
+
+- **200 OK** with a `BulkDeleteResponse`.
+- **200 OK** with `deletedCount: 0` when the caller has no applications. Deleting nothing is not an error.
+
+#### `DELETE /api/v1/job-applications/bulk/non-active`
+
+Deletes only the caller's closed-out applications. Handler at `JobApplicationController.java:169-181`.
+
+"Non-active" means `REJECTED`, `WITHDRAWN`, or `GHOSTED`, defined once as `NON_ACTIVE_STATUSES` (`JobApplicationServiceImpl.java:60-63`). It is a fixed set, not a client parameter: a caller cannot choose which statuses to purge. Note that this is a narrower set than the terminal statuses used elsewhere in the app; `OFFER_DECLINED` and `OFFER_ACCEPTED` are terminal but are **not** deleted.
+
+The service resolves matching IDs before deleting (`JobApplicationServiceImpl.java:388`) and returns early when the list is empty (`:391-394`). That early return is load-bearing, not just an optimization: both delete queries use an `IN (:ids)` clause, which is invalid SQL when the list is empty.
+
+- **200 OK** with a `BulkDeleteResponse`.
+- **200 OK** with `deletedCount: 0` when nothing matches.
+
+#### `GET /api/v1/job-applications/counts/non-active`
+
+Counts what the non-active delete would remove, without removing it. Handler at `JobApplicationController.java:190-198`. The UI calls this to show the user a number before they confirm.
+
+Returns a single-key JSON object rather than a bare integer:
+
+```json
+{ "count": 7 }
+```
+
+The key is the constant `NON_ACTIVE_COUNT_KEY` (`JobApplicationController.java:60`). The count is pushed into the database as a `COUNT` query (`JobApplicationRepository.java:36-39`), not derived by materializing rows.
+
+#### `BulkDeleteResponse`
+
+**Table 9.** *`BulkDeleteResponse` fields (`.../response/BulkDeleteResponse.java:12-15`).*
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `deletedCount` | integer | Applications removed. Does not count the audit events removed alongside them. |
+| `message` | string | Human-readable summary, for example `Deleted 7 application(s)`. Intended for display; do not parse it. |
+
+For `bulk/all` the count is read before deletion (`JobApplicationServiceImpl.java:369`), because the bulk queries report rows affected at the JDBC level rather than through the repository API. A concurrent insert between the count and the delete would therefore be deleted but not counted.
+
 ### Response shape
 
-**Table 9.** *`JobApplicationResponse` fields, in serialization order.*
+**Table 10.** *`JobApplicationResponse` fields, in serialization order.*
 
 | Field | Type | Field | Type |
 | ----- | ---- | ----- | ---- |
@@ -412,7 +461,7 @@ Deletes an application and its audit events. Handler at `JobApplicationControlle
 
 Defined at `src/main/java/com/nolcox/jobtracking/application/dto/response/JobApplicationResponse.java:9-30`. There is no `userId` field; the response never discloses the owner.
 
-The 18 valid `ApplicationStatus` values are listed in Table 12. `RtoType` and `Level` values are in Tables 14 and 15.
+The 18 valid `ApplicationStatus` values are listed in Table 13. `RtoType` and `Level` values are in Tables 15 and 16.
 
 ---
 
@@ -422,7 +471,7 @@ Both return a bare JSON array (not a page envelope) of `ApplicationEventResponse
 
 ### `GET /api/v1/job-applications/events/all`
 
-Every event across all of the caller's applications. Handler at `JobApplicationController.java:146-155`; scoping is entirely at the query level (`ApplicationEventRepository.java:121-122`).
+Every event across all of the caller's applications. Handler at `JobApplicationController.java:213-222`; scoping is entirely at the query level (`ApplicationEventRepository.java:123-124`).
 
 This endpoint is unbounded. It takes no parameters, applies no cap, and returns the user's complete event history in one response. For a long-lived account that grows without limit.
 
@@ -430,7 +479,7 @@ This endpoint is unbounded. It takes no parameters, applies no cap, and returns 
 
 ### `GET /api/v1/job-applications/{id}/events`
 
-The audit trail for one application. Handler at `JobApplicationController.java:168-178`. It loads the application first, checks ownership, and only then reads events (`ApplicationEventServiceImpl.java:215-222`).
+The audit trail for one application. Handler at `JobApplicationController.java:235-245`. It loads the application first, checks ownership, and only then reads events (`ApplicationEventServiceImpl.java:215-222`).
 
 - **200 OK** with a JSON array.
 - **403 Forbidden** if the application belongs to another user.
@@ -438,7 +487,7 @@ The audit trail for one application. Handler at `JobApplicationController.java:1
 
 Route precedence between the literal `/events/all` and the templated `/{id}/events` relies on Spring's pattern comparator preferring the literal segment. No test pins this.
 
-**Table 10.** *`ApplicationEventResponse` fields.*
+**Table 11.** *`ApplicationEventResponse` fields.*
 
 | Field | Type | Notes |
 | ----- | ---- | ----- |
@@ -459,7 +508,7 @@ Defined at `src/main/java/com/nolcox/jobtracking/application/dto/response/Applic
 
 Twelve `GET` routes, all requiring a bearer token, all scoped by passing the authenticated user's id into a repository query. Ten take no parameters at all.
 
-**Table 11.** *The twelve analytics routes. All paths are prefixed with `/api/v1/job-applications`.*
+**Table 12.** *The twelve analytics routes. All paths are prefixed with `/api/v1/job-applications`.*
 
 | Path | Parameters | Response type | Handler |
 | ---- | ---------- | ------------- | ------- |
@@ -511,7 +560,7 @@ Headline rates and counts. `MetricsResponse` (`.../response/MetricsResponse.java
 
 ### `/counts-by-status`
 
-A raw JSON object keyed by status name, with integer counts. The query groups by status (`JobApplicationRepository.java:33-35`), so **statuses with no applications are absent from the map**, not present with a zero. Clients must supply their own zero default.
+A raw JSON object keyed by status name, with integer counts. The query groups by status (`JobApplicationRepository.java:44-46`), so **statuses with no applications are absent from the map**, not present with a zero. Clients must supply their own zero default.
 
 ```json
 {
@@ -648,7 +697,7 @@ Handler at `ConfigController.java:55-61`. Returns a `StatusConfigResponse` (`...
 
 The `statuses` array follows enum declaration order. The `groups` object is backed by a `HashMap` (`ConfigServiceImpl.java:52`), so its key order is unspecified.
 
-**Table 12.** *The 18 statuses returned by `/config/statuses`, with their display metadata (`ConfigServiceImpl.java:57-110`).*
+**Table 13.** *The 18 statuses returned by `/config/statuses`, with their display metadata (`ConfigServiceImpl.java:57-110`).*
 
 | key | label | color | group |
 | --- | ----- | ----- | ----- |
@@ -673,7 +722,7 @@ The `statuses` array follows enum declaration order. The `groups` object is back
 
 The rows are listed in enum declaration order (`src/main/java/com/nolcox/jobtracking/domain/entity/ApplicationStatus.java:3-22`). A status with no metadata entry falls back to a formatted label, the color `#9CA3AF`, and the group `OTHER` (`ConfigServiceImpl.java:158-159`).
 
-**Table 13.** *The `groups` map (`ConfigServiceImpl.java:113-123`).*
+**Table 14.** *The `groups` map (`ConfigServiceImpl.java:113-123`).*
 
 | Group | Statuses |
 | ----- | -------- |
@@ -701,7 +750,7 @@ Captured, abridged to the first two entries:
 
 Handler at `ConfigController.java:87-93`. Returns an `OptionsConfigResponse` (`.../response/OptionsConfigResponse.java:15-17`) with `rtoTypes` and `levels`, each a list of `{ key, label }` in enum declaration order. Always **200**.
 
-**Table 14.** *`rtoTypes` (`ConfigServiceImpl.java:129-135`).*
+**Table 15.** *`rtoTypes` (`ConfigServiceImpl.java:129-135`).*
 
 | key | label |
 | --- | ----- |
@@ -711,7 +760,7 @@ Handler at `ConfigController.java:87-93`. Returns an `OptionsConfigResponse` (`.
 | `HYBRID_4` | Hybrid (4 days/week) |
 | `ONSITE` | On-site |
 
-**Table 15.** *`levels` (`ConfigServiceImpl.java:140-150`).*
+**Table 16.** *`levels` (`ConfigServiceImpl.java:140-150`).*
 
 | key | label |
 | --- | ----- |
@@ -725,7 +774,7 @@ Handler at `ConfigController.java:87-93`. Returns an `OptionsConfigResponse` (`.
 | `DIRECTOR` | Director |
 | `VP` | VP |
 
-`EventType` is not exposed by any config endpoint; its values are listed in Table 10.
+`EventType` is not exposed by any config endpoint; its values are listed in Table 11.
 
 ---
 

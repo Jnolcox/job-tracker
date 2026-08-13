@@ -113,6 +113,20 @@ export const RESPONSE_STATUSES = [
 ];
 
 /**
+ * Non-active statuses - closed-out applications the user can no longer act on.
+ * Eligible for bulk cleanup from the dashboard's Danger Zone.
+ *
+ * Must stay in sync with NON_ACTIVE_STATUSES in JobApplicationServiceImpl.java,
+ * which decides what the bulk delete endpoint actually removes.
+ * @constant {string[]}
+ */
+export const NON_ACTIVE_STATUSES = [
+  'REJECTED',
+  'WITHDRAWN',
+  'GHOSTED',
+];
+
+/**
  * Interview statuses - any stage involving interviews or assessments.
  * Used by metricsEngine for calculating true interview rate.
  * @constant {string[]}

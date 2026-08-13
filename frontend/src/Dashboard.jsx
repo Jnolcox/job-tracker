@@ -8,6 +8,7 @@ import { useAuth } from "./context/AuthContext";
 import { useKeyboardShortcutContext } from "./context/KeyboardShortcutContext";
 import { useKeyboardShortcuts, useAnalytics, useDashboardSettings } from "./hooks";
 import { jobApplicationsAPI } from "./services/api";
+import { NON_ACTIVE_STATUSES } from "./constants/statuses";
 import {
   toUIFormat,
   toBackendFormat,
@@ -84,6 +85,9 @@ export default function JobTracker() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [nonActiveCount, setNonActiveCount] = useState(0);
 
   // Dashboard settings for component visibility
   const {
@@ -202,6 +206,63 @@ export default function JobTracker() {
     } catch (err) {
       console.error("Failed to delete application:", err);
       setError(messageFrom(err, "Failed to delete application. Please try again."));
+    }
+  }, [refetchAnalytics]);
+
+  // Refresh the cleanup count each time settings opens, since applications may
+  // have changed status since the last time it was shown.
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const fetchNonActiveCount = async () => {
+      try {
+        const response = await jobApplicationsAPI.countNonActive();
+        setNonActiveCount(response.data.count);
+      } catch (err) {
+        console.error("Failed to fetch non-active count:", err);
+      }
+    };
+
+    fetchNonActiveCount();
+  }, [isSettingsOpen]);
+
+  const closeSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+    setDeleteError(null);
+  }, []);
+
+  const handleDeleteAll = useCallback(async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await jobApplicationsAPI.deleteAll();
+      setApps([]);
+      setNonActiveCount(0);
+      refetchAnalytics();
+      setIsSettingsOpen(false);
+    } catch (err) {
+      console.error("Failed to delete all applications:", err);
+      setDeleteError(messageFrom(err, "Failed to delete applications. Please try again."));
+      throw err;
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [refetchAnalytics]);
+
+  const handleDeleteNonActive = useCallback(async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await jobApplicationsAPI.deleteNonActive();
+      setApps(prev => prev.filter(a => !NON_ACTIVE_STATUSES.includes(a.status)));
+      setNonActiveCount(0);
+      refetchAnalytics();
+    } catch (err) {
+      console.error("Failed to delete non-active applications:", err);
+      setDeleteError(messageFrom(err, "Failed to delete applications. Please try again."));
+      throw err;
+    } finally {
+      setDeleteLoading(false);
     }
   }, [refetchAnalytics]);
 
@@ -661,11 +722,17 @@ export default function JobTracker() {
 
       <DashboardSettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={closeSettings}
         settings={dashboardSettings}
         onToggle={toggleComponent}
         onReset={resetSettings}
         componentDisplayNames={componentDisplayNames}
+        totalApps={apps.length}
+        nonActiveCount={nonActiveCount}
+        onDeleteAll={handleDeleteAll}
+        onDeleteNonActive={handleDeleteNonActive}
+        deleteLoading={deleteLoading}
+        deleteError={deleteError}
       />
     </>
   );

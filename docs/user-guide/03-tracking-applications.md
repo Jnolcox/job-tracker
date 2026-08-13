@@ -133,6 +133,8 @@ To delete, click **Del** on the row, or select the row and press Delete or Backs
 > [!WARNING]
 > Deleting is permanent and immediate. There is no undo, no trash, and no export. The application's entire recorded history is deleted with it. If you are unsure, set the status to Withdrawn instead: that keeps the record and its history while taking it out of the Active view.
 
+To clear out many at once rather than one at a time, use the Danger Zone in the Settings dialog, which can delete all your closed-out applications or all of them outright. See [settings and shortcuts](./05-settings-and-shortcuts.md#5-deleting-applications-in-bulk). Note that setting something to Withdrawn to get it out of the Active view does put it in range of that bulk delete.
+
 ---
 
 ## 6. Finding things again

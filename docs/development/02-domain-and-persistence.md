@@ -218,7 +218,12 @@ Three consequences follow.
 2. **Deletion is also enforced in code.** `deleteApplication` calls
    `eventRepository.deleteByApplicationId(id)` before deleting the application, with a
    comment explaining that the persistence context needs it even though the database
-   cascades (`application/service/impl/JobApplicationServiceImpl.java:262-269`).
+   cascades (`application/service/impl/JobApplicationServiceImpl.java:275-282`).
+   The two bulk deletes follow the same events-first rule
+   (`JobApplicationServiceImpl.java:368-383`, `:387-402`), but for a stronger reason:
+   they issue native `DELETE` statements that bypass JPA entirely, so the database
+   cascade is the only thing that would otherwise clean up events, and the test schema
+   does not have it.
 3. **`spring.jpa.open-in-view` is `false`** in both runnable profiles
    (`src/main/resources/application.yml:29`,
    `src/main/resources/application-docker.yml:34`), so a lazy `user` or `application`
@@ -274,7 +279,7 @@ race raises `ObjectOptimisticLockingFailureException`.
 > (`application/controller/GlobalExceptionHandler.java:24-120`), so a lost update surfaces
 > to the client as a generic 500 with the body message `"An unexpected error occurred"`.
 > `version` is also not included in `JobApplicationResponse`
-> (`application/service/impl/JobApplicationServiceImpl.java:354-377`), so a client has no
+> (`application/service/impl/JobApplicationServiceImpl.java:417-440`), so a client has no
 > way to send it back for a conditional update.
 
 ---
@@ -323,7 +328,7 @@ stages with their member statuses, and it agrees with Table 6.
 > `AnalyticsServiceImpl` defines seven further `EnumSet` groupings for its own
 > calculations (`AnalyticsServiceImpl.java:98-198`), and
 > `ApplicationEventRepository.findTerminalStatusTransitionsByUserId` hardcodes a
-> six-name `IN` list as string literals (`ApplicationEventRepository.java:208`). The
+> six-name `IN` list as string literals (`ApplicationEventRepository.java:210`). The
 > groupings do not all agree: `REFERENCE_CHECK` is `INTERVIEWING` here but is a member of
 > `TECH_STATUSES` in analytics (`AnalyticsServiceImpl.java:110-123`). There is no single
 > source of truth for which statuses are terminal.
@@ -419,41 +424,67 @@ Spring Data proxies the interface regardless.
 
 | Method | Kind | Returns | Source |
 | ------ | ---- | ------- | ------ |
-| `findByUserId(Long, Pageable)` | derived | `Page<JobApplication>` | `:18` |
-| `findByUserIdAndStatus(Long, ApplicationStatus, Pageable)` | derived | `Page<JobApplication>` | `:19` |
-| `findByUserIdWithFilters(Long, ApplicationStatus, String, Pageable)` | `@Query` | `Page<JobApplication>` | `:21-27` |
-| `countByUserIdAndStatus(Long, ApplicationStatus)` | `@Query` | `Long` | `:29-32` |
-| `countByStatusForUserRaw(Long)` | `@Query` | `List<Object[]>` | `:34-36` |
-| `countByStatusForUser(Long)` | `default` | `Map<ApplicationStatus, Long>` | `:38-45` |
-| `searchApplications(Long, String, ApplicationStatus, Pageable)` | `@Query` | `Page<JobApplication>` | `:47-55` |
-| `findRecentApplicationsByUserId(Long, Pageable)` | `@Query` | `List<JobApplication>` | `:57-60` |
-| `findRecentApplicationsByUserId(Long, int)` | `default` | `List<JobApplication>` | `:62-65` |
-| `findAllByUserId(Long)` | derived | `List<JobApplication>` | `:76` |
+| `findByUserId(Long, Pageable)` | derived | `Page<JobApplication>` | `:20` |
+| `findByUserIdAndStatus(Long, ApplicationStatus, Pageable)` | derived | `Page<JobApplication>` | `:21` |
+| `findByUserIdWithFilters(Long, ApplicationStatus, String, Pageable)` | `@Query` | `Page<JobApplication>` | `:23-30` |
+| `countByUserIdAndStatus(Long, ApplicationStatus)` | `@Query` | `Long` | `:31-34` |
+| `countByUserIdAndStatusIn(Long, Set<ApplicationStatus>)` | `@Query` | `long` | `:36-39` |
+| `countByUserId(Long)` | `@Query` | `long` | `:41-42` |
+| `countByStatusForUserRaw(Long)` | `@Query` | `List<Object[]>` | `:44-46` |
+| `countByStatusForUser(Long)` | `default` | `Map<ApplicationStatus, Long>` | `:48-55` |
+| `searchApplications(Long, String, ApplicationStatus, Pageable)` | `@Query` | `Page<JobApplication>` | `:57-65` |
+| `findRecentApplicationsByUserId(Long, Pageable)` | `@Query` | `List<JobApplication>` | `:67-70` |
+| `findRecentApplicationsByUserId(Long, int)` | `default` | `List<JobApplication>` | `:72-75` |
+| `findAllByUserId(Long)` | derived | `List<JobApplication>` | `:86` |
+| `deleteAllByUserId(Long)` | `@Modifying` native | `void` | `:106-109` |
+| `findIdsByUserIdAndStatusIn(Long, Set<ApplicationStatus>)` | `@Query` | `List<Long>` | `:126-128` |
+| `deleteAllByIdIn(List<Long>)` | `@Modifying` native | `void` | `:152-155` |
 
 The JPQL, verbatim:
 
 ```sql
--- findByUserIdWithFilters (JobApplicationRepository.java:21-23)
+-- findByUserIdWithFilters (JobApplicationRepository.java:24-26)
 SELECT ja FROM JobApplication ja WHERE ja.user.id = :userId
 AND (:status IS NULL OR ja.status = :status)
 AND (:companyName IS NULL OR LOWER(ja.companyName) LIKE LOWER(CONCAT('%', :companyName, '%')))
 
--- countByUserIdAndStatus (:29-30)
+-- countByUserIdAndStatus (:31-32)
 SELECT COUNT(ja) FROM JobApplication ja WHERE ja.user.id = :userId AND ja.status = :status
 
--- countByStatusForUserRaw (:34-35)
+-- countByUserIdAndStatusIn (:36-37)
+SELECT COUNT(ja) FROM JobApplication ja WHERE ja.user.id = :userId AND ja.status IN :statuses
+
+-- countByUserId (:41)
+SELECT COUNT(ja) FROM JobApplication ja WHERE ja.user.id = :userId
+
+-- countByStatusForUserRaw (:44-45)
 SELECT ja.status, COUNT(ja) FROM JobApplication ja WHERE ja.user.id = :userId GROUP BY ja.status
 
--- searchApplications (:47-51)
+-- findIdsByUserIdAndStatusIn (:126)
+SELECT ja.id FROM JobApplication ja WHERE ja.user.id = :userId AND ja.status IN :statuses
+
+-- searchApplications (:57-61)
 SELECT ja FROM JobApplication ja WHERE ja.user.id = :userId
 AND (:searchTerm IS NULL OR
      LOWER(ja.companyName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
      LOWER(ja.positionTitle) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
 AND (:status IS NULL OR ja.status = :status)
 
--- findRecentApplicationsByUserId (:57-58)
+-- findRecentApplicationsByUserId (:67-68)
 SELECT ja FROM JobApplication ja WHERE ja.user.id = :userId ORDER BY ja.appliedDate DESC
 ```
+
+The two bulk deletes are the only native SQL on this interface (`:108`, `:154`):
+
+```sql
+-- deleteAllByUserId (:108)
+DELETE FROM job_applications WHERE user_id = :userId
+
+-- deleteAllByIdIn (:154)
+DELETE FROM job_applications WHERE id IN (:ids)
+```
+
+Both carry `@Modifying(clearAutomatically = true)` and `@Transactional`. `clearAutomatically` matters here: a bulk delete bypasses the persistence context, so without it entities already loaded in the session would survive as stale managed instances. Neither method is safe to call on its own; the corresponding events must be deleted first, and `JobApplicationServiceImpl` is the only caller that enforces that order. `deleteAllByIdIn` must not be called with an empty list, since `IN ()` is invalid SQL.
 
 `countByStatusForUserRaw` returns rows whose element `[0]` is an `ApplicationStatus` and
 `[1]` a `Long`. The `default` method `countByStatusForUser` streams them into
@@ -467,36 +498,39 @@ result size; it returns a plain `List`, not a `Page`.
 `AnalyticsServiceImpl` calls it and aggregates the full per-user result set in Java.
 
 > [!NOTE]
-> Status: not wired. `JobApplicationRepository` extends `JpaSpecificationExecutor`
-> (`:17`), but no `Specification` is constructed anywhere in `src/main` or `src/test`.
-> `countByUserIdAndStatus` (`:29-32`) also has no caller.
+> Status: not wired. `countByUserIdAndStatus` (`:31-34`) has no production caller.
+> The single-status count is superseded by `countByStatusForUser`, which returns
+> every status in one query, and by `countByUserIdAndStatusIn` for the non-active
+> subset.
 
 ### ApplicationEventRepository
 
 `domain/repository/ApplicationEventRepository.java`. Extends
-`JpaRepository<ApplicationEvent, Long>` (`:27-28`).
+`JpaRepository<ApplicationEvent, Long>` (`:29-30`).
 
 **Table 12.** *Declared methods on `ApplicationEventRepository`, with their production caller.*
 
 | Method | Kind | Caller | Source |
 | ------ | ---- | ------ | ------ |
-| `findByApplicationIdOrderByCreatedAtDesc(Long)` | derived | `getEventsForApplication` | `:40` |
-| `findByApplicationId(Long, Pageable)` | derived | none | `:52` |
-| `findByApplicationIdAndEventTypeOrderByCreatedAtDesc(Long, EventType)` | derived | none | `:64-65` |
-| `findByApplicationIdAndCreatedAtBetween(Long, Instant, Instant)` | `@Query` | none | `:78-84` |
-| `countByApplicationId(Long)` | derived | none | `:94` |
-| `deleteByApplicationId(Long)` | derived | `deleteApplication` | `:105` |
-| `findAllByUserId(Long)` | `@Query` | `getAllEventsForUser` | `:121-122` |
-| `findStatusTransitionsByUserId(Long)` | `@Query` | `getTransitionMatrix` | `:136-141` |
-| `findByApplicationIdAndCreatedAtAfter(Long, Instant)` | `@Query` | none | `:153-159` |
-| `countRecentEventsByApplicationForUser(Long, Instant)` | `@Query` | `getApplicationHealth` | `:172-178` |
-| `findLastEventTimestampByApplicationForUser(Long)` | `@Query` | `getApplicationHealth` | `:189-192` |
-| `findTerminalStatusTransitionsByUserId(Long)` | `@Query` | none | `:204-210` |
+| `findByApplicationIdOrderByCreatedAtDesc(Long)` | derived | `getEventsForApplication` | `:42` |
+| `findByApplicationId(Long, Pageable)` | derived | none | `:54` |
+| `findByApplicationIdAndEventTypeOrderByCreatedAtDesc(Long, EventType)` | derived | none | `:66-67` |
+| `findByApplicationIdAndCreatedAtBetween(Long, Instant, Instant)` | `@Query` | none | `:80-86` |
+| `countByApplicationId(Long)` | derived | none | `:96` |
+| `deleteByApplicationId(Long)` | derived | `deleteApplication` | `:107` |
+| `findAllByUserId(Long)` | `@Query` | `getAllEventsForUser` | `:123-124` |
+| `findStatusTransitionsByUserId(Long)` | `@Query` | `getTransitionMatrix` | `:138-143` |
+| `findByApplicationIdAndCreatedAtAfter(Long, Instant)` | `@Query` | none | `:155-161` |
+| `countRecentEventsByApplicationForUser(Long, Instant)` | `@Query` | `getApplicationHealth` | `:174-180` |
+| `findLastEventTimestampByApplicationForUser(Long)` | `@Query` | `getApplicationHealth` | `:191-194` |
+| `findTerminalStatusTransitionsByUserId(Long)` | `@Query` | none | `:206-212` |
+| `deleteAllByUserId(Long)` | `@Modifying` native | `deleteAllApplications` | `:240-243` |
+| `deleteAllByApplicationIdIn(List<Long>)` | `@Modifying` native | `deleteNonActiveApplications` | `:267-270` |
 
 The JPQL for the methods that have callers:
 
 ```sql
--- findAllByUserId (ApplicationEventRepository.java:121)
+-- findAllByUserId (ApplicationEventRepository.java:123)
 SELECT e FROM ApplicationEvent e WHERE e.application.user.id = :userId ORDER BY e.createdAt DESC
 
 -- findStatusTransitionsByUserId (:136-140)
@@ -524,13 +558,13 @@ The unused terminal-status query hardcodes the status names as string literals
 
 `deleteByApplicationId` is a derived delete with no `@Modifying` or `@Transactional` on
 the method itself. It works because its only caller runs inside a transaction
-(`application/service/impl/JobApplicationServiceImpl.java:255-256`).
+(`application/service/impl/JobApplicationServiceImpl.java:268-269`).
 
 ---
 
 ## 7. DTO to entity mapping
 
-Requests and responses are Java `record`s. There are four request records and nineteen
+Requests and responses are Java `record`s. There are four request records and twenty
 response types.
 
 ### Inbound: ModelMapper, at two call sites only
@@ -607,7 +641,7 @@ ModelMapper is not used for responses. Every entity-to-DTO conversion is an expl
 constructor call:
 
 - `JobApplication` to `JobApplicationResponse`: 20 positional arguments
-  (`application/service/impl/JobApplicationServiceImpl.java:354-377`). `user` and
+  (`application/service/impl/JobApplicationServiceImpl.java:417-440`). `user` and
   `version` are deliberately omitted.
 - `ApplicationEvent` to `ApplicationEventResponse`: 8 arguments, reading
   `event.getApplication().getId()`, which is safe on a lazy proxy
@@ -619,7 +653,7 @@ constructor call:
 One further hand-written copy is not a DTO conversion at all:
 `captureApplicationState` builds a detached `JobApplication` snapshot field by field so
 that `compareAndLogChanges` can diff it
-(`application/service/impl/JobApplicationServiceImpl.java:226-252`). Its comments justify
+(`application/service/impl/JobApplicationServiceImpl.java:239-265`). Its comments justify
 the manual approach by citing a bidirectional `User` relationship that no longer exists
 (`:217-219`, `:227-228`).
 

@@ -63,7 +63,7 @@ The pipeline has 18 statuses, from `APPLIED` through recruiter and technical scr
 
 ## 2. Features
 
-**Tracking.** Full create, read, update and delete over applications, each carrying company, position, location, salary range, level, and a remote/hybrid/onsite (RTO) type. Every status change writes an `ApplicationEvent`, and those events render as an activity timeline inside the application's detail view.
+**Tracking.** Full create, read, update and delete over applications, each carrying company, position, location, salary range, level, and a remote/hybrid/onsite (RTO) type. Every status change writes an `ApplicationEvent`, and those events render as an activity timeline inside the application's detail view. A Danger Zone in dashboard settings deletes applications in bulk, either every application or only the closed-out ones, behind a type-to-confirm prompt.
 
 **Analytics.** The dashboard is assembled from independently toggleable views: metric cards, a stage funnel, salary distribution, time-in-stage, an activity heatmap, day-of-week and hour-of-day patterns, a status transition matrix, and company, location, and position insights. Funnel analytics and application health are off by default and enabled in dashboard settings.
 
@@ -291,12 +291,12 @@ More detail is in [docs/development/07-testing.md](docs/development/07-testing.m
 ## 9. Project status
 
 Version 2.0.0. Actively developed against the `develop` branch. Both CI jobs pass at this
-version: `mvn verify` clears the 85% gate over 232 backend tests, and the frontend suite
-reports 554 passed and 2 skipped across 25 suites.
+version: `mvn verify` clears the 85% gate over 278 backend tests, and the frontend suite
+reports 600 passed and 2 skipped across 26 suites.
 
 Stable and exercised: registration and login, the JWT filter chain and user-scoped
-authorization, application CRUD, the audit trail, and all twelve analytics endpoints,
-which return 200 against a seeded account.
+authorization, application CRUD, bulk delete, the audit trail, and all twelve analytics
+endpoints, which return 200 against a seeded account.
 
 2.0.0 closed every confirmed defect recorded against 1.3.1. What remains is design
 characteristics and unfinished edges rather than breakage:

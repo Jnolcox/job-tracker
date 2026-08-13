@@ -57,7 +57,7 @@ So the transition matrix asserts that this user reached a technical interview an
 Two related effects follow from the same mechanism:
 
 - `WITHDRAWN` belongs to none of `RESPONSE_STATUSES`, `INTERVIEW_STATUSES`, or `OFFER_STATUSES` (:154-162, :132-138, :98-104). Withdrawing after receiving an offer removes that offer from `trueOfferRate`, `overallSuccessRate`, and every per-group success rate. It still appears as a drop-off point and as a quick loss.
-- Deleting an application deletes its events first (`application/service/impl/JobApplicationServiceImpl.java:267`), so the transition matrix is rewritten retroactively at the same time the status-derived counts drop.
+- Deleting an application deletes its events first (`application/service/impl/JobApplicationServiceImpl.java:280`), so the transition matrix is rewritten retroactively at the same time the status-derived counts drop.
 
 > [!IMPORTANT]
 > When the transition matrix and the funnel disagree, neither is malfunctioning. They are answering different questions: "what paths were walked" versus "where does everything sit now". Do not reconcile them in a consumer; label them.
@@ -80,7 +80,7 @@ The double count is gone: quick losses now draw from `QUICK_LOSS_STATUSES`, whic
 
 ### Related rough edges
 
-These are documented in full on [known gaps](./11-known-gaps.md) rather than repeated here: `WAITING_FOR_RESPONSE` counting as a response (:154-162), `stageConversionRates` returning exactly one key (:666-681), `extractPositionType` matching substrings inside unrelated words (:762-779), salary coalescing biasing both averages (:395-401), `staleDays` and `topN` being unvalidated (`application/controller/JobApplicationController.java:375,400`).
+These are documented in full on [known gaps](./11-known-gaps.md) rather than repeated here: `WAITING_FOR_RESPONSE` counting as a response (:154-162), `stageConversionRates` returning exactly one key (:666-681), `extractPositionType` matching substrings inside unrelated words (:762-779), salary coalescing biasing both averages (:395-401), `staleDays` and `topN` being unvalidated (`application/controller/JobApplicationController.java:442,467`).
 
 ---
 
@@ -88,7 +88,7 @@ These are documented in full on [known gaps](./11-known-gaps.md) rather than rep
 
 There is no caching anywhere in the backend. No `@Cacheable` annotation exists under `src/main/java`. The service is `@Transactional(readOnly = true)` at the class level (:80), and that is the only cross-cutting concern applied to it.
 
-Ten of the twelve endpoints open with an independent, unbounded `repository.findAllByUserId(userId)` and materialize every application the user owns into a `List` before aggregating in Java streams. Those ten call sites are lines 230, 379, 438, 470, 498, 624, 789, 973, 1075, and 1177. The two exceptions are `counts-by-status`, which pushes a `GROUP BY` into JPQL (`src/main/java/com/nolcox/jobtracking/domain/repository/JobApplicationRepository.java:34-45`), and `transition-matrix`, which reads only the event log.
+Ten of the twelve endpoints open with an independent, unbounded `repository.findAllByUserId(userId)` and materialize every application the user owns into a `List` before aggregating in Java streams. Those ten call sites are lines 230, 379, 438, 470, 498, 624, 789, 973, 1075, and 1177. The two exceptions are `counts-by-status`, which pushes a `GROUP BY` into JPQL (`src/main/java/com/nolcox/jobtracking/domain/repository/JobApplicationRepository.java:45-56`), and `transition-matrix`, which reads only the event log.
 
 The dashboard fires all twelve in parallel on every load (`frontend/src/hooks/useAnalytics.js:169-230`, dispatched at :233). So one page view costs roughly:
 
@@ -140,7 +140,7 @@ The full status enum has 18 values in declaration order (`src/main/java/com/nolc
 | 5 | `MAX_BOTTLENECK_STAGES` | 5 | Cap on the `bottleneckStages` list | 224 |
 | 6 | `DEFAULT_TOP_N_COMPANIES` | 10 | Service-side default for the `topN` company-insights parameter | 967 |
 
-Rows 1 and 6 are unreachable through HTTP. The controller supplies `defaultValue = "14"` and `defaultValue = "10"` itself (`JobApplicationController.java:375,400`), so the service never sees null on those parameters.
+Rows 1 and 6 are unreachable through HTTP. The controller supplies `defaultValue = "14"` and `defaultValue = "10"` itself (`JobApplicationController.java:442,467`), so the service never sees null on those parameters.
 
 ### Rounding
 
@@ -159,7 +159,7 @@ It is at lines 558-560. `Math.round` on the scaled value rounds halves up, so 12
 Every timestamp on the entities is a `java.time.Instant`, which carries no zone. Two consequences follow.
 
 - Day counts use `ChronoUnit.DAYS.between(Instant, Instant)`, which truncates toward zero. Twenty-three hours to a response counts as 0 days, not 1.
-- Only two endpoints convert to a calendar, `activity-heatmap` (:449-451) and `time-patterns` (:480), and both use `ZoneId.systemDefault()`. That is the JVM's zone, not the user's. The heatmap's default year is server local as well (`JobApplicationController.java:256`). A user in a different zone from the server will see applications land on the wrong day and in the wrong hour bucket.
+- Only two endpoints convert to a calendar, `activity-heatmap` (:449-451) and `time-patterns` (:480), and both use `ZoneId.systemDefault()`. That is the JVM's zone, not the user's. The heatmap's default year is server local as well (`JobApplicationController.java:323`). A user in a different zone from the server will see applications land on the wrong day and in the wrong hour bucket.
 
 Timestamps serialize as ISO-8601 strings, for example `"lastEventAt": "2026-08-13T04:05:13Z"`. They were epoch-second decimals until 2.0.0, when the `@Primary ObjectMapper` that suppressed the `spring.jackson.*` properties was replaced with a builder customizer. See [configuration](./08-configuration.md).
 
@@ -167,7 +167,7 @@ Timestamps serialize as ISO-8601 strings, for example `"lastEventAt": "2026-08-1
 
 ## 5. Endpoint reference
 
-All twelve sit on `JobApplicationController`, `@RequestMapping("/v1/job-applications")` (`JobApplicationController.java:53`), under the `/api` servlet context path. All require authentication, and the user id comes from the JWT principal (`JobApplicationController.java:449-451`), so every repository call is scoped by user id. Path naming is inconsistent: `metrics` and `counts-by-status` sit directly on the collection, the other ten sit under `analytics/`.
+All twelve sit on `JobApplicationController`, `@RequestMapping("/v1/job-applications")` (`JobApplicationController.java:54`), under the `/api` servlet context path. All require authentication, and the user id comes from the JWT principal (`JobApplicationController.java:516-518`), so every repository call is scoped by user id. Path naming is inconsistent: `metrics` and `counts-by-status` sit directly on the collection, the other ten sit under `analytics/`.
 
 **Table 4.** *Behavior of each endpoint when the user has no applications, or no data of the relevant kind.*
 
@@ -190,7 +190,7 @@ Rows 4 and 5 have no early return at all; their loops simply never execute.
 
 ### `GET /metrics`
 
-Headline rates for the dashboard. Controller at `JobApplicationController.java:191-199`, service `getMetrics` at :227-274.
+Headline rates for the dashboard. Controller at `JobApplicationController.java:258-266`, service `getMetrics` at :227-274.
 
 Formulas, all against current status, `total` being every application the user owns:
 
@@ -225,9 +225,9 @@ The `0.0` for `avgDaysToResponse` here is the "no qualifying data" case, not a r
 
 ### `GET /counts-by-status`
 
-Raw counts per status. Controller at `JobApplicationController.java:210-218`; the service method is one line delegating to the repository (:370-373).
+Raw counts per status. Controller at `JobApplicationController.java:277-285`; the service method is one line delegating to the repository (:370-373).
 
-This is the only aggregation pushed into the database. `countByStatusForUserRaw` runs `SELECT ja.status, COUNT(ja) ... WHERE ja.user.id = :userId GROUP BY ja.status`, and a default method collects the rows into a map (`JobApplicationRepository.java:34-45`).
+This is the only aggregation pushed into the database. `countByStatusForUserRaw` runs `SELECT ja.status, COUNT(ja) ... WHERE ja.user.id = :userId GROUP BY ja.status`, and a default method collects the rows into a map (`JobApplicationRepository.java:45-56`).
 
 ```json
 {
@@ -242,7 +242,7 @@ Statuses with no applications are absent from the map rather than present with a
 
 ### `GET /analytics/salary-distribution`
 
-Scatter data and reference lines for expected compensation. Controller at `JobApplicationController.java:229-237`, service at :376-432.
+Scatter data and reference lines for expected compensation. Controller at `JobApplicationController.java:296-304`, service at :376-432.
 
 Filter (:384-387): drop applications whose status is in `TERMINAL_STATUSES` (`REJECTED`, `WITHDRAWN`, `GHOSTED`), then keep those with at least one of `salaryMin` and `salaryMax`. `OFFER_ACCEPTED`, `OFFER_DECLINED`, and `OFFER_RESCINDED` are *not* excluded here, even though they are terminal everywhere else in the service.
 
@@ -271,7 +271,7 @@ Null-ing rule (:426-427): `avgMin` and `avgMax` are emitted as `null` when the c
 
 ### `GET /analytics/activity-heatmap?year=`
 
-Applications per calendar day, for a contribution-graph style chart. Controller at `JobApplicationController.java:249-259`, service at :435-464.
+Applications per calendar day, for a contribution-graph style chart. Controller at `JobApplicationController.java:316-326`, service at :435-464.
 
 `year` is optional; the controller substitutes `Year.now().getValue()` when it is absent (:256), so the service always receives a non-null year.
 
@@ -285,7 +285,7 @@ Bucketing is one bucket per calendar day. Days with no applications are absent f
 
 ### `GET /analytics/time-patterns`
 
-When during the week and the day the user applies. Controller at `JobApplicationController.java:270-278`, service at :467-492.
+When during the week and the day the user applies. Controller at `JobApplicationController.java:337-345`, service at :467-492.
 
 For each application with a non-null `appliedDate`, take the zoned date-time in the JVM's default zone and increment two counters: one keyed by `DayOfWeek`, one keyed by hour of day 0 through 23 (:480-488).
 
@@ -309,7 +309,7 @@ Hour keys serialize as strings because they are JSON object keys. In this sample
 
 ### `GET /analytics/stage-durations`
 
-Average days per stage, plus the slowest stages. Controller at `JobApplicationController.java:289-297`, service at :495-553.
+Average days per stage, plus the slowest stages. Controller at `JobApplicationController.java:356-364`, service at :495-553.
 
 Algorithm, per application, skipping any with a null `appliedDate` (:511-533):
 
@@ -333,9 +333,9 @@ This is not time spent in a stage. It is elapsed time from application to the mo
 
 ### `GET /analytics/transition-matrix`
 
-Counts of every observed status hop. Controller at `JobApplicationController.java:315-324`, service at :565-618. This is the only endpoint computed purely from the event log.
+Counts of every observed status hop. Controller at `JobApplicationController.java:382-391`, service at :565-618. This is the only endpoint computed purely from the event log.
 
-Source query (`src/main/java/com/nolcox/jobtracking/domain/repository/ApplicationEventRepository.java:136-141`):
+Source query (`src/main/java/com/nolcox/jobtracking/domain/repository/ApplicationEventRepository.java:138-143`):
 
 ```sql
 SELECT e FROM ApplicationEvent e
@@ -359,7 +359,7 @@ Algorithm (:579-615): skip any event with a null `oldValue` or `newValue`; parse
 
 ### `GET /analytics/funnel`
 
-Conversion, drop-off, and success rates by company and by position type. Controller at `JobApplicationController.java:341-350`, service at :621-658. Despite the name, all four sub-computations read current status only.
+Conversion, drop-off, and success rates by company and by position type. Controller at `JobApplicationController.java:408-417`, service at :621-658. Despite the name, all four sub-computations read current status only.
 
 - `stageConversionRates` (`calculateStageConversionRates`, :666-681): the map is populated with exactly one key, `APPLIED`, whose value is the percentage of applications whose status is anything other than `APPLIED`. No other status is ever added, so the promised "percentage advancing from each status" is a single number.
 - `dropOffPoints` (`calculateDropOffPoints`, :686-704): group applications whose status is in `ALL_TERMINAL_STATUSES` by status, count each, compute `count * 100 / total`, sort by count descending. The set used here includes `OFFER_ACCEPTED`, so an accepted offer is reported as a drop-off point.
@@ -415,14 +415,14 @@ A live response, truncated after the first three companies:
 
 ### `GET /analytics/health?staleDays=`
 
-Which applications need attention. Controller at `JobApplicationController.java:370-380`, service at :782-849. This is the one endpoint that mixes row data and the event log.
+Which applications need attention. Controller at `JobApplicationController.java:437-447`, service at :782-849. This is the one endpoint that mixes row data and the event log.
 
 `staleDays` carries `@RequestParam(required = false, defaultValue = "14")` and no validation annotation. Negative and absurdly large values are accepted: `staleDays=-5` puts the threshold in the future and marks every non-terminal application stale.
 
 Data gathering, with `now` captured once at line 787:
 
-- `lastEventByAppId` from `findLastEventTimestampByApplicationForUser`, JPQL `SELECT e.application.id, MAX(e.createdAt) ... GROUP BY e.application.id` (`ApplicationEventRepository.java:189-192`), read at :800-805.
-- `recentEventCountByAppId` from `countRecentEventsByApplicationForUser` with `since = now - 7 days`, JPQL `SELECT e.application.id, COUNT(e) ... WHERE e.createdAt >= :since GROUP BY e.application.id` (`ApplicationEventRepository.java:172-178`), read at :808-814.
+- `lastEventByAppId` from `findLastEventTimestampByApplicationForUser`, JPQL `SELECT e.application.id, MAX(e.createdAt) ... GROUP BY e.application.id` (`ApplicationEventRepository.java:191-194`), read at :800-805.
+- `recentEventCountByAppId` from `countRecentEventsByApplicationForUser` with `since = now - 7 days`, JPQL `SELECT e.application.id, COUNT(e) ... WHERE e.createdAt >= :since GROUP BY e.application.id` (`ApplicationEventRepository.java:174-180`), read at :808-814.
 
 The four categories:
 
@@ -463,7 +463,7 @@ Each `quickWins` and `quickLosses` element has the shape `{ applicationId, compa
 
 ### `GET /analytics/company-insights?topN=`
 
-Per-company response, ghost, and interview rates. Controller at `JobApplicationController.java:395-405`, service at :970-996.
+Per-company response, ghost, and interview rates. Controller at `JobApplicationController.java:462-472`, service at :970-996.
 
 `topN` carries `@RequestParam(required = false, defaultValue = "10")` and no validation. `topN=0` returns an empty list; `topN=-1` makes `Stream.limit` throw `IllegalArgumentException` and the request fails.
 
@@ -489,7 +489,7 @@ The primitive and boxed split is deliberate in the record: the three rates are p
 
 ### `GET /analytics/location-insights`
 
-Salary and success broken down by place and by return-to-office arrangement. Controller at `JobApplicationController.java:417-426`, service at :1072-1090. No parameters, no truncation.
+Salary and success broken down by place and by return-to-office arrangement. Controller at `JobApplicationController.java:484-493`, service at :1072-1090. No parameters, no truncation.
 
 `byLocation` (`calculateLocationMetrics`, :1101-1128): group by the exact `location` string with a null mapped to the literal `"Not Specified"` (:1104). No normalization, so `"Austin, TX"` and `"austin, tx"` are separate rows. Per group, `successRate` is `OFFER_STATUSES` count over the group count, and the two salary averages come from `calculateAverageSalaryMin` and `calculateAverageSalaryMax` (:1242-1278), each of which filters independently and returns `null` when no application in the group carries that field. Because the two averages are computed over potentially different subsets, a row can report an average min above its average max. Sorted by application count descending.
 
@@ -507,7 +507,7 @@ Salary and success broken down by place and by return-to-office arrangement. Con
 
 ### `GET /analytics/position-insights`
 
-Success and interview rates by seniority level. Controller at `JobApplicationController.java:438-447`, service at :1174-1197. No parameters, no truncation.
+Success and interview rates by seniority level. Controller at `JobApplicationController.java:505-514`, service at :1174-1197. No parameters, no truncation.
 
 Group by the `Level` enum column, with null mapped to `"Not Specified"` (:1185-1189). This is a different notion of position type from the funnel endpoint, which derives its buckets from title keywords instead of from the column. The two will disagree whenever a title says "Senior" and the `level` column says something else, or is unset.
 
@@ -551,17 +551,17 @@ There is deliberately no `@OneToMany` from `JobApplication` back to its events. 
 
 `EventType` has six values (`src/main/java/com/nolcox/jobtracking/domain/entity/EventType.java:27-56`): `APPLICATION_CREATED`, `STATUS_CHANGED`, `INTERVIEW_SCHEDULED`, `INTERVIEW_UPDATED`, `FIELD_UPDATED`, `NOTE_ADDED`.
 
-The writer is `ApplicationEventServiceImpl`, injected into `JobApplicationServiceImpl` by optional setter injection, `@Autowired(required = false)` (`JobApplicationServiceImpl.java:70`). Every call site is null-guarded, so if the bean is absent the audit trail stops silently and every event-derived metric reports zero without erroring.
+The writer is `ApplicationEventServiceImpl`, injected into `JobApplicationServiceImpl` by optional setter injection, `@Autowired(required = false)` (`JobApplicationServiceImpl.java:83`). Every call site is null-guarded, so if the bean is absent the audit trail stops silently and every event-derived metric reports zero without erroring.
 
 **Table 7.** *What writes an event, and what it writes.*
 
 | # | Trigger | Event written | Call site |
 | - | ------- | ------------- | --------- |
-| 1 | `POST /v1/job-applications` | One `APPLICATION_CREATED` with `fieldName`, `oldValue`, and `newValue` all null and a human-readable `details` string | `JobApplicationServiceImpl.java:123` |
-| 2 | `PUT /v1/job-applications/{id}` | Zero or more events, one per changed field, via `compareAndLogChanges` | `JobApplicationServiceImpl.java:205` |
-| 3 | `updateApplicationStatus` service method | One `STATUS_CHANGED` | `JobApplicationServiceImpl.java:323` |
+| 1 | `POST /v1/job-applications` | One `APPLICATION_CREATED` with `fieldName`, `oldValue`, and `newValue` all null and a human-readable `details` string | `JobApplicationServiceImpl.java:136` |
+| 2 | `PUT /v1/job-applications/{id}` | Zero or more events, one per changed field, via `compareAndLogChanges` | `JobApplicationServiceImpl.java:218` |
+| 3 | `updateApplicationStatus` service method | One `STATUS_CHANGED` | `JobApplicationServiceImpl.java:336` |
 
-Row 3 is unreachable over HTTP. No controller maps `updateApplicationStatus`; a grep across `src/main` finds only its interface declaration (`application/service/JobApplicationService.java:109`) and the implementation (`JobApplicationServiceImpl.java:304`). In practice every `STATUS_CHANGED` event comes from row 2.
+Row 3 is unreachable over HTTP. No controller maps `updateApplicationStatus`; a grep across `src/main` finds only its interface declaration (`application/service/JobApplicationService.java:109`) and the implementation (`JobApplicationServiceImpl.java:317`). In practice every `STATUS_CHANGED` event comes from row 2.
 
 `compareAndLogChanges` (`ApplicationEventServiceImpl.java:249-311`) diffs an old-state snapshot against the saved entity and emits:
 
@@ -570,11 +570,11 @@ Row 3 is unreachable over HTTP. No controller maps `updateApplicationStatus`; a 
 - `NOTE_ADDED` whenever `notes` changes at all, including edits and clearing (:274-276).
 - `FIELD_UPDATED` for `companyName`, `positionTitle`, `location`, `jobUrl`, `contactName`, `contactEmail`, `contactPhone`, `jobDescription`, `salaryMin`, `salaryMax`, `rtoType`, and `level`, through the generic `compareField` helper (:283-310, helper at :339-351).
 
-Never audited: `appliedDate`, `statusChangedAt`, `user`, and `version`. The old-state snapshot is a hand-written builder copy, `captureApplicationState` (`JobApplicationServiceImpl.java:226`), which must be maintained by hand when fields are added.
+Never audited: `appliedDate`, `statusChangedAt`, `user`, and `version`. The old-state snapshot is a hand-written builder copy, `captureApplicationState` (`JobApplicationServiceImpl.java:239`), which must be maintained by hand when fields are added.
 
-One consequence deserves emphasis. On update, a caller-supplied `statusChangedAt` wins outright (`JobApplicationServiceImpl.java:193`); only when the caller omits it and the status changed does the service stamp `Instant.now()`. The corresponding event's `createdAt` is always the real write time. Backdating an application therefore moves `avgDaysToResponse`, `stage-durations`, and quick wins and losses while leaving stale, hot, and the transition matrix untouched.
+One consequence deserves emphasis. On update, a caller-supplied `statusChangedAt` wins outright (`JobApplicationServiceImpl.java:206`); only when the caller omits it and the status changed does the service stamp `Instant.now()`. The corresponding event's `createdAt` is always the real write time. Backdating an application therefore moves `avgDaysToResponse`, `stage-durations`, and quick wins and losses while leaving stale, hot, and the transition matrix untouched.
 
-Deletion destroys history: `deleteApplication` calls `eventRepository.deleteByApplicationId(id)` before removing the row (`JobApplicationServiceImpl.java:267`).
+Deletion destroys history: `deleteApplication` calls `eventRepository.deleteByApplicationId(id)` before removing the row (`JobApplicationServiceImpl.java:280`).
 
 ### Reading events
 
@@ -591,7 +591,7 @@ The **backend** `/analytics/stage-durations` reads only the two timestamp column
 
 The frontend rendered a second, independent stage walk in a journey timeline component. That component and its helper were removed in 2.0.0: nothing mounted them, and the walk branched on an event type the backend never writes, so it silently dropped the initial `APPLIED` stage. Stage durations now come from the API alone.
 
-Note also that the dashboard fetches `/analytics/stage-durations` on every load but never reads the result: `Dashboard.jsx` does not destructure `stageDurations` from `useAnalytics` (`frontend/src/Dashboard.jsx:88-101`). The request is paid for and discarded, and its 500 on a fresh install is therefore invisible in the UI.
+Note also that the dashboard fetches `/analytics/stage-durations` on every load but never reads the result: `Dashboard.jsx` does not destructure `stageDurations` from `useAnalytics` (`frontend/src/Dashboard.jsx:114-128`). The request is paid for and discarded, and its 500 on a fresh install is therefore invisible in the UI.
 
 ---
 

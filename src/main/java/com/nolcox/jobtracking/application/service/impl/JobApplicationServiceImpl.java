@@ -1,8 +1,10 @@
 package com.nolcox.jobtracking.application.service.impl;
 
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,17 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class JobApplicationServiceImpl implements JobApplicationService {
+
+    /**
+     * Statuses that represent a closed-out application, eligible for bulk cleanup.
+     *
+     * <p>These are the outcomes a user can no longer act on, as opposed to
+     * in-flight statuses like ON_HOLD or WAITING_FOR_RESPONSE.</p>
+     */
+    private static final Set<ApplicationStatus> NON_ACTIVE_STATUSES = EnumSet.of(
+            ApplicationStatus.REJECTED,
+            ApplicationStatus.WITHDRAWN,
+            ApplicationStatus.GHOSTED);
 
     private final JobApplicationRepository repository;
     private final UserRepository userRepository;
@@ -341,6 +354,56 @@ public class JobApplicationServiceImpl implements JobApplicationService {
         return applications.stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Events are deleted before applications because ApplicationEvent holds the
+     * foreign key. The count is taken before deletion since the bulk delete queries
+     * report rows affected at the JDBC level rather than through the repository API.</p>
+     */
+    @Override
+    @Transactional
+    public int deleteAllApplications(Long userId) {
+        long deletedCount = repository.countByUserId(userId);
+
+        // ORDER MATTERS: events reference applications, so they must go first.
+        eventRepository.deleteAllByUserId(userId);
+        repository.deleteAllByUserId(userId);
+
+        log.info("Bulk deleted {} applications for user ID: {}", deletedCount, userId);
+        return (int) deletedCount;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Resolves the matching IDs first so the same set drives both the event
+     * cleanup and the application deletion.</p>
+     */
+    @Override
+    @Transactional
+    public int deleteNonActiveApplications(Long userId) {
+        List<Long> nonActiveIds = repository.findIdsByUserIdAndStatusIn(userId, NON_ACTIVE_STATUSES);
+
+        // The delete queries use an IN clause, which is invalid SQL when empty.
+        if (nonActiveIds.isEmpty()) {
+            log.debug("No non-active applications to delete for user ID: {}", userId);
+            return 0;
+        }
+
+        // ORDER MATTERS: events reference applications, so they must go first.
+        eventRepository.deleteAllByApplicationIdIn(nonActiveIds);
+        repository.deleteAllByIdIn(nonActiveIds);
+
+        log.info("Bulk deleted {} non-active applications for user ID: {}", nonActiveIds.size(), userId);
+        return nonActiveIds.size();
+    }
+
+    @Override
+    public long countNonActiveApplications(Long userId) {
+        return repository.countByUserIdAndStatusIn(userId, NON_ACTIVE_STATUSES);
     }
 
     /**

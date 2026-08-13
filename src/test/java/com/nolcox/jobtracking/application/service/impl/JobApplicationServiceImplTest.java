@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,9 +17,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +66,9 @@ class JobApplicationServiceImplTest {
 
     @Captor
     private ArgumentCaptor<JobApplication> applicationCaptor;
+
+    @Captor
+    private ArgumentCaptor<Set<ApplicationStatus>> statusSetCaptor;
 
     private User testUser;
     private JobApplication testApplication;
@@ -727,6 +733,194 @@ class JobApplicationServiceImplTest {
             assertThat(savedApplication.getStatusChangedAt())
                 .as("User-provided statusChangedAt should be honored even when status changes")
                 .isEqualTo(backdatedStatusChange);
+        }
+    }
+
+    @Nested
+    @DisplayName("Bulk Delete All Applications Tests")
+    class DeleteAllApplicationsTests {
+
+        @Test
+        @DisplayName("Should return the number of applications deleted")
+        void shouldReturnNumberOfApplicationsDeleted() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserId(userId)).thenReturn(7L);
+
+            // When
+            int deletedCount = jobApplicationService.deleteAllApplications(userId);
+
+            // Then
+            assertThat(deletedCount).isEqualTo(7);
+        }
+
+        @Test
+        @DisplayName("Should delete events before applications to respect the foreign key")
+        void shouldDeleteEventsBeforeApplications() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserId(userId)).thenReturn(3L);
+
+            // When
+            jobApplicationService.deleteAllApplications(userId);
+
+            // Then
+            InOrder deletionOrder = inOrder(eventRepository, repository);
+            deletionOrder.verify(eventRepository).deleteAllByUserId(userId);
+            deletionOrder.verify(repository).deleteAllByUserId(userId);
+        }
+
+        @Test
+        @DisplayName("Should return zero when the user has no applications")
+        void shouldReturnZeroWhenUserHasNoApplications() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserId(userId)).thenReturn(0L);
+
+            // When
+            int deletedCount = jobApplicationService.deleteAllApplications(userId);
+
+            // Then
+            assertThat(deletedCount).isZero();
+        }
+
+        @Test
+        @DisplayName("Should count applications before deleting them")
+        void shouldCountApplicationsBeforeDeletingThem() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserId(userId)).thenReturn(5L);
+
+            // When
+            jobApplicationService.deleteAllApplications(userId);
+
+            // Then
+            InOrder countThenDelete = inOrder(repository);
+            countThenDelete.verify(repository).countByUserId(userId);
+            countThenDelete.verify(repository).deleteAllByUserId(userId);
+        }
+    }
+
+    @Nested
+    @DisplayName("Bulk Delete Non-Active Applications Tests")
+    class DeleteNonActiveApplicationsTests {
+
+        @Test
+        @DisplayName("Should return the number of non-active applications deleted")
+        void shouldReturnNumberOfNonActiveApplicationsDeleted() {
+            // Given
+            Long userId = 1L;
+            when(repository.findIdsByUserIdAndStatusIn(eq(userId), any()))
+                .thenReturn(List.of(10L, 11L, 12L));
+
+            // When
+            int deletedCount = jobApplicationService.deleteNonActiveApplications(userId);
+
+            // Then
+            assertThat(deletedCount).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("Should delete events before applications to respect the foreign key")
+        void shouldDeleteEventsBeforeApplications() {
+            // Given
+            Long userId = 1L;
+            List<Long> nonActiveIds = List.of(10L, 11L);
+            when(repository.findIdsByUserIdAndStatusIn(eq(userId), any())).thenReturn(nonActiveIds);
+
+            // When
+            jobApplicationService.deleteNonActiveApplications(userId);
+
+            // Then
+            InOrder deletionOrder = inOrder(eventRepository, repository);
+            deletionOrder.verify(eventRepository).deleteAllByApplicationIdIn(nonActiveIds);
+            deletionOrder.verify(repository).deleteAllByIdIn(nonActiveIds);
+        }
+
+        @Test
+        @DisplayName("Should target only REJECTED, WITHDRAWN and GHOSTED applications")
+        void shouldTargetOnlyNonActiveStatuses() {
+            // Given
+            Long userId = 1L;
+            when(repository.findIdsByUserIdAndStatusIn(eq(userId), statusSetCaptor.capture()))
+                .thenReturn(List.of(10L));
+
+            // When
+            jobApplicationService.deleteNonActiveApplications(userId);
+
+            // Then
+            assertThat(statusSetCaptor.getValue()).containsExactlyInAnyOrder(
+                ApplicationStatus.REJECTED,
+                ApplicationStatus.WITHDRAWN,
+                ApplicationStatus.GHOSTED);
+        }
+
+        @Test
+        @DisplayName("Should return zero when no non-active applications exist")
+        void shouldReturnZeroWhenNoNonActiveApplicationsExist() {
+            // Given
+            Long userId = 1L;
+            when(repository.findIdsByUserIdAndStatusIn(eq(userId), any())).thenReturn(List.of());
+
+            // When
+            int deletedCount = jobApplicationService.deleteNonActiveApplications(userId);
+
+            // Then
+            assertThat(deletedCount).isZero();
+        }
+
+        @Test
+        @DisplayName("Should skip deletion entirely when no non-active applications exist")
+        void shouldSkipDeletionWhenNoNonActiveApplicationsExist() {
+            // Given
+            // An empty ID list would produce an invalid "IN ()" clause, so the
+            // service must not reach the delete queries at all.
+            Long userId = 1L;
+            when(repository.findIdsByUserIdAndStatusIn(eq(userId), any())).thenReturn(List.of());
+
+            // When
+            jobApplicationService.deleteNonActiveApplications(userId);
+
+            // Then
+            verify(eventRepository, never()).deleteAllByApplicationIdIn(any());
+            verify(repository, never()).deleteAllByIdIn(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Count Non-Active Applications Tests")
+    class CountNonActiveApplicationsTests {
+
+        @Test
+        @DisplayName("Should return the count of non-active applications")
+        void shouldReturnCountOfNonActiveApplications() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserIdAndStatusIn(eq(userId), any())).thenReturn(4L);
+
+            // When
+            long count = jobApplicationService.countNonActiveApplications(userId);
+
+            // Then
+            assertThat(count).isEqualTo(4L);
+        }
+
+        @Test
+        @DisplayName("Should count only REJECTED, WITHDRAWN and GHOSTED applications")
+        void shouldCountOnlyNonActiveStatuses() {
+            // Given
+            Long userId = 1L;
+            when(repository.countByUserIdAndStatusIn(eq(userId), statusSetCaptor.capture()))
+                .thenReturn(0L);
+
+            // When
+            jobApplicationService.countNonActiveApplications(userId);
+
+            // Then
+            assertThat(statusSetCaptor.getValue()).containsExactlyInAnyOrder(
+                ApplicationStatus.REJECTED,
+                ApplicationStatus.WITHDRAWN,
+                ApplicationStatus.GHOSTED);
         }
     }
 }
