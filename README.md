@@ -17,6 +17,7 @@
   <img alt="Spring Boot 3.4.5" src="https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=springboot&logoColor=white">
   <img alt="React 18" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black">
   <img alt="MySQL 8" src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white">
+  <img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-ready-2496ED?logo=docker&logoColor=white">
   <a href="https://github.com/Jnolcox/job-tracker/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/Jnolcox/job-tracker/develop"></a>
 </p>
 
