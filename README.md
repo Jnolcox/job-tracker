@@ -1,6 +1,24 @@
-# Job Tracker
+<h1 align="center">Job Tracker</h1>
 
-A full-stack job application tracking system — a React frontend and a Spring Boot REST API — with JWT authentication and a detailed analytics dashboard for your job search.
+<p align="center">
+  A full-stack job application tracking system — a React frontend and a Spring Boot REST API —<br>
+  with JWT authentication and a detailed analytics dashboard for your job search.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Jnolcox/job-tracker/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/Jnolcox/job-tracker/ci.yml?branch=develop&label=CI"></a>
+  <img alt="Coverage gate" src="https://img.shields.io/badge/coverage-%E2%89%A585%25-brightgreen">
+  <a href="https://github.com/Jnolcox/job-tracker/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Jnolcox/job-tracker"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/Jnolcox/job-tracker"></a>
+</p>
+
+<p align="center">
+  <img alt="Java 17" src="https://img.shields.io/badge/java-17-orange?logo=openjdk&logoColor=white">
+  <img alt="Spring Boot 3.4.5" src="https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=springboot&logoColor=white">
+  <img alt="React 18" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black">
+  <img alt="MySQL 8" src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white">
+  <a href="https://github.com/Jnolcox/job-tracker/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/Jnolcox/job-tracker/develop"></a>
+</p>
 
 ![Metrics](./img1.png)
 
