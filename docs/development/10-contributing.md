@@ -570,4 +570,4 @@ same terms that cover the project. See [LICENSE](../../LICENSE).
 - [11-known-gaps.md](./11-known-gaps.md), for the defects and rough edges referenced above.
 - [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md), which applies to all project spaces.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

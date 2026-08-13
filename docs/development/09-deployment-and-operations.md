@@ -376,4 +376,4 @@ Report anything here that has drifted from the code as an issue. Security-releva
 
 ---
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

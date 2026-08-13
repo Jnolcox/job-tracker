@@ -10,6 +10,11 @@ releases, so they are less granular than entries written at the time.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-13
+
+Adds bulk delete. Nothing existing changes behavior, so this is a minor version:
+every 2.0.0 endpoint keeps its path, payload and status codes.
+
 ### Added
 
 - **Bulk delete for job applications.** The dashboard Settings dialog gains a Danger Zone
@@ -263,7 +268,8 @@ Spring Boot API.
 - Docker Compose configuration for the database, backend and frontend.
 - Swagger UI for API exploration.
 
-[Unreleased]: https://github.com/Jnolcox/job-tracker/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Jnolcox/job-tracker/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Jnolcox/job-tracker/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/Jnolcox/job-tracker/compare/v1.3.1...v2.0.0
 [1.3.1]: https://github.com/Jnolcox/job-tracker/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/Jnolcox/job-tracker/compare/v1.2.2...v1.3.0

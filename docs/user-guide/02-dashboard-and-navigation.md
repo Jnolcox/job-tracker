@@ -161,4 +161,4 @@ One quirk to be aware of: holding Cmd or Ctrl does not suppress the plain-letter
 - [Settings and shortcuts](./05-settings-and-shortcuts.md), for the complete keyboard reference and the dashboard settings.
 - [Known gaps](../development/11-known-gaps.md), for the current list of defects and rough edges.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

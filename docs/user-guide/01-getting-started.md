@@ -153,4 +153,4 @@ After editing `.env`, run `docker compose up --build` again so the containers pi
 - [Troubleshooting](./06-troubleshooting.md), for what to do when something does not work.
 - [Configuration](../development/08-configuration.md), for the full list of settings and which of them actually take effect.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

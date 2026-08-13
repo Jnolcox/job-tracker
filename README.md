@@ -290,7 +290,7 @@ More detail is in [docs/development/07-testing.md](docs/development/07-testing.m
 
 ## 9. Project status
 
-Version 2.0.0. Actively developed against the `develop` branch. Both CI jobs pass at this
+Version 2.1.0. Actively developed against the `develop` branch. Both CI jobs pass at this
 version: `mvn verify` clears the 85% gate over 278 backend tests, and the frontend suite
 reports 600 passed and 2 skipped across 26 suites.
 

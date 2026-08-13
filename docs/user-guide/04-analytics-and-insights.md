@@ -232,4 +232,4 @@ Several views are technically working but meaningless on small data. Table 4 is 
 - [Known gaps](../development/11-known-gaps.md), for the current list of defects behind the limitations described here.
 - [Analytics internals](../development/05-analytics-internals.md), if you want the exact formulas.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

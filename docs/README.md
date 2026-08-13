@@ -5,7 +5,7 @@
 This is the map of Job Tracker's documentation: a six-page user guide covering everything
 you can do in the web interface, and an eleven-page developer and operator guide covering
 how the Spring Boot backend and the React frontend are built, configured, tested, and run.
-Every page is written against the code in this repository at version 2.0.0. Where an older
+Every page is written against the code in this repository at version 2.1.0. Where an older
 statement and the source disagree, the source wins and the discrepancy is recorded rather
 than smoothed over, which is why one of the eleven developer pages is a catalog of defects.
 Start with a reading path in section 1, or go straight to the page indexes in sections 2
@@ -211,4 +211,4 @@ should state the point in prose instead.
 - [Getting started](./user-guide/01-getting-started.md) if you have nothing running yet
 - [Architecture](./development/01-architecture.md) if you are about to read the source
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

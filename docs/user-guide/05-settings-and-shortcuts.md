@@ -187,4 +187,4 @@ One smaller detail: the help shows the save shortcut as `Cmd/Ctrl + S` with a ca
 - [Tracking applications](./03-tracking-applications.md), for the application form the save shortcuts apply to.
 - [Known gaps](../development/11-known-gaps.md), for the current list of defects including the shortcut drift described above.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

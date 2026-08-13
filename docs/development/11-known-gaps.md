@@ -311,4 +311,4 @@ request opens.
   several entries on this page.
 - [Contributing](./10-contributing.md) if you intend to fix one of these.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*

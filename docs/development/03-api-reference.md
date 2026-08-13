@@ -1,6 +1,6 @@
 # API reference
 
-> **Audience:** Developers writing a client against the Job Tracker backend, or extending it.  ·  **Scope:** Every HTTP route the Spring Boot application exposes at version 2.0.0, with parameters, bodies, response shapes, and status codes.
+> **Audience:** Developers writing a client against the Job Tracker backend, or extending it.  ·  **Scope:** Every HTTP route the Spring Boot application exposes at version 2.1.0, with parameters, bodies, response shapes, and status codes.
 
 The backend serves 26 application routes plus the springdoc documentation endpoints. This page lists all of them, grouped by area, and documents the cross-cutting rules a client author needs first: how the bearer token is obtained, how timestamps serialize, what an error body looks like, and how pagination is parameterized.
 
@@ -803,4 +803,4 @@ The controllers use only `@Tag`, `@Operation`, and one `@ParameterObject`. There
 - [Known gaps](./11-known-gaps.md) for the stage-durations failure, the double-counted quick outcomes, and the `JWT_EXPIRATION` drift.
 - [Getting started](../user-guide/01-getting-started.md) if you want a running stack to call these routes against.
 
-*Documentation current as of Job Tracker 2.0.0 (August 2026). Source of truth is the code; report drift as an issue.*
+*Documentation current as of Job Tracker 2.1.0 (August 2026). Source of truth is the code; report drift as an issue.*
