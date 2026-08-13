@@ -3,7 +3,7 @@
  * @description Tests for the useDashboardSettings hook.
  *
  * Tests cover:
- * - Default state (all components visible)
+ * - Default state (core components visible, advanced analytics opt-in)
  * - Toggling individual components
  * - Stat cards treated as a single group
  * - localStorage persistence
@@ -43,19 +43,27 @@ describe('useDashboardSettings', () => {
   });
 
   describe('default state', () => {
-    it('should have all components visible by default', () => {
+    it('should have core components visible by default', () => {
       const { result } = renderHook(() => useDashboardSettings());
 
       expect(result.current.settings.statCards).toBe(true);
       expect(result.current.settings.stageFunnel).toBe(true);
       expect(result.current.settings.salaryRangeChart).toBe(true);
       expect(result.current.settings.maxTimePerStageChart).toBe(true);
-      expect(result.current.settings.statusTransitionHeatmap).toBe(true);
-      expect(result.current.settings.funnelAnalytics).toBe(true);
-      expect(result.current.settings.applicationHealthDashboard).toBe(true);
       expect(result.current.settings.dayOfWeekBar).toBe(true);
       expect(result.current.settings.hourBar).toBe(true);
       expect(result.current.settings.activityHeatmap).toBe(true);
+      expect(result.current.settings.companyInsights).toBe(true);
+      expect(result.current.settings.locationInsights).toBe(true);
+      expect(result.current.settings.positionInsights).toBe(true);
+    });
+
+    it('should have advanced analytics hidden by default', () => {
+      const { result } = renderHook(() => useDashboardSettings());
+
+      expect(result.current.settings.statusTransitionHeatmap).toBe(false);
+      expect(result.current.settings.funnelAnalytics).toBe(false);
+      expect(result.current.settings.applicationHealthDashboard).toBe(false);
     });
 
     it('should return isComponentVisible function', () => {
@@ -225,7 +233,7 @@ describe('useDashboardSettings', () => {
   });
 
   describe('resetSettings', () => {
-    it('should reset all settings to default (all visible)', () => {
+    it('should reset all settings to their defaults', () => {
       const { result } = renderHook(() => useDashboardSettings());
 
       // Toggle some components off

@@ -57,7 +57,11 @@ const COMPONENT_DISPLAY_NAMES = {
 };
 
 /**
- * Default settings with all components visible.
+ * Default component visibility.
+ *
+ * Core cards and charts are on out of the box. The three advanced analytics
+ * views are opt-in so a first-run dashboard stays readable — they only become
+ * meaningful once a user has enough applications to show a trend.
  *
  * @constant {Object}
  */
@@ -115,13 +119,14 @@ function saveSettingsToStorage(settings) {
 /**
  * @hook useDashboardSettings
  * @description Manages dashboard component visibility settings with localStorage persistence.
- * All components are visible by default. Settings persist across browser sessions.
+ * Core components are visible by default, advanced analytics are opt-in (see
+ * DEFAULT_SETTINGS). Settings persist across browser sessions.
  *
  * @returns {Object} Dashboard settings state and controls
  * @returns {Object} return.settings - Current visibility settings for each component
  * @returns {Function} return.isComponentVisible - Check if a component is visible by key
  * @returns {Function} return.toggleComponent - Toggle visibility of a component by key
- * @returns {Function} return.resetSettings - Reset all settings to default (all visible)
+ * @returns {Function} return.resetSettings - Reset all settings to their defaults
  * @returns {boolean} return.areAllHidden - True if all toggleable components are hidden
  * @returns {Object} return.componentDisplayNames - Human-readable names for components
  *
@@ -174,7 +179,7 @@ export function useDashboardSettings() {
   }, []);
 
   /**
-   * Reset all settings to default (all components visible).
+   * Reset all settings to their defaults.
    */
   const resetSettings = useCallback(() => {
     const defaultSettings = { ...DEFAULT_SETTINGS };
